@@ -1,0 +1,12 @@
+[package]
+name = "spiral-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared types and IPC protocol for Spiral Browser"
+
+[dependencies]
+serde.workspace = true
+bincode.workspace = true
+thiserror.workspace = true
+log.workspace = true

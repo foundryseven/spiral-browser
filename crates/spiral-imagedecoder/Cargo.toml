@@ -1,0 +1,15 @@
+[package]
+name = "spiral-imagedecoder"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Image decoding for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+png.workspace = true
+zune-jpeg.workspace = true
+webp.workspace = true
+ravif.workspace = true
+log.workspace = true
+thiserror.workspace = true

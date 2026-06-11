@@ -1,0 +1,20 @@
+[package]
+name = "spiral-sandbox"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Process sandboxing for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+rustix.workspace = true
+caps.workspace = true
+log.workspace = true
+thiserror.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+rustix = { workspace = true, features = ["thread", "time"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+
+[target.'cfg(target_os = "windows")'.dependencies]

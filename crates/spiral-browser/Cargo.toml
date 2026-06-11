@@ -1,0 +1,16 @@
+[package]
+name = "spiral-browser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Main browser process for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-ipc.workspace = true
+spiral-ui.workspace = true
+spiral-theme.workspace = true
+tokio.workspace = true
+log.workspace = true
+env_logger.workspace = true
+thiserror.workspace = true

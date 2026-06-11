@@ -1,0 +1,12 @@
+[package]
+name = "spiral-crypto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Cryptographic primitives for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+rustls.workspace = true
+log.workspace = true
+thiserror.workspace = true

@@ -1,0 +1,11 @@
+[package]
+name = "spiral-dom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "DOM tree representation for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+log.workspace = true
+thiserror.workspace = true

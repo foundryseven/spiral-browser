@@ -1,0 +1,14 @@
+[package]
+name = "spiral-css"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "CSS parser and cascade engine for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-dom.workspace = true
+cssparser.workspace = true
+selectors.workspace = true
+log.workspace = true
+thiserror.workspace = true

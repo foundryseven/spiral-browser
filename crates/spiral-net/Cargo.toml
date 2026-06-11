@@ -1,0 +1,17 @@
+[package]
+name = "spiral-net"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "TLS and DNS resolution for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-network.workspace = true
+rustls.workspace = true
+rustls-pemfile.workspace = true
+webpki-roots.workspace = true
+hickory-resolver.workspace = true
+tokio.workspace = true
+log.workspace = true
+thiserror.workspace = true

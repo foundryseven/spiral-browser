@@ -1,0 +1,12 @@
+[package]
+name = "spiral-theme"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Theme engine for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+serde.workspace = true
+log.workspace = true
+thiserror.workspace = true

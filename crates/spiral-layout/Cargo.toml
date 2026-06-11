@@ -1,0 +1,14 @@
+[package]
+name = "spiral-layout"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Layout engine for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-css.workspace = true
+spiral-dom.workspace = true
+taffy.workspace = true
+log.workspace = true
+thiserror.workspace = true

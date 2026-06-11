@@ -1,0 +1,13 @@
+[package]
+name = "spiral-paint"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Display list and compositing for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-dom.workspace = true
+spiral-layout.workspace = true
+log.workspace = true
+thiserror.workspace = true

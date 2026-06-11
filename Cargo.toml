@@ -1,0 +1,97 @@
+[workspace]
+members = [
+    "crates/spiral-core",
+    "crates/spiral-browser",
+    "crates/spiral-html",
+    "crates/spiral-css",
+    "crates/spiral-layout",
+    "crates/spiral-render",
+    "crates/spiral-js",
+    "crates/spiral-dom",
+    "crates/spiral-paint",
+    "crates/spiral-network",
+    "crates/spiral-ipc",
+    "crates/spiral-sandbox",
+    "crates/spiral-ui",
+    "crates/spiral-theme",
+    "crates/spiral-net",
+    "crates/spiral-crypto",
+    "crates/spiral-gpu",
+    "crates/spiral-imagedecoder",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+repository = "https://github.com/your-org/spiral-browser"
+description = "A fully independent web browser built from scratch in Rust"
+authors = ["Spiral Contributors"]
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+bincode = "1"
+
+# HTML parsing
+html5ever = "0.29"
+
+# CSS parsing
+cssparser = "0.33"
+selectors = "0.25"
+
+# Layout
+taffy = "0.5"
+
+# Rendering
+vello = "0.3"
+wgpu = "23"
+
+# JavaScript
+boa_engine = "0.20"
+
+# Networking
+hyper = { version = "1", features = ["full"] }
+hyper-util = { version = "0.1", features = ["full"] }
+http-body-util = "0.1"
+
+# DNS
+hickory-resolver = "0.25"
+hickory-proto = "0.25"
+
+# TLS
+rustls = "0.23"
+rustls-pemfile = "2"
+webpki-roots = "0.26"
+
+# Text
+harfrust = "0.1"
+swash = "0.2"
+cosmic-text = "0.12"
+
+# Image decoding
+png = "0.17"
+zune-jpeg = "0.5"
+webp = "0.4"
+ravif = "0.11"
+
+# Sandbox
+rustix = { version = "0.38", features = ["process", "thread", "time"] }
+caps = "0.3"
+
+# Utilities
+log = "0.4"
+env_logger = "0.11"
+thiserror = "2"
+anyhow = "1"
+
+# Platform-specific
+[target.'cfg(unix)'.dependencies]
+tokio = { version = "1", features = ["net"] }
+
+[target.'cfg(windows)'.dependencies]
+tokio = { version = "1", features = ["net", "winapi"] }

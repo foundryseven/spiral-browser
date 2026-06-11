@@ -1,0 +1,12 @@
+[package]
+name = "spiral-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GPU abstraction layer for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+wgpu.workspace = true
+log.workspace = true
+thiserror.workspace = true

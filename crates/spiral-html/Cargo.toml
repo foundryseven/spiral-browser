@@ -1,0 +1,13 @@
+[package]
+name = "spiral-html"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "HTML5 parser for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-dom.workspace = true
+html5ever.workspace = true
+log.workspace = true
+thiserror.workspace = true

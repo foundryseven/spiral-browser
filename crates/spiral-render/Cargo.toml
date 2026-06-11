@@ -1,0 +1,15 @@
+[package]
+name = "spiral-render"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "2D GPU renderer for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-paint.workspace = true
+spiral-gpu.workspace = true
+vello.workspace = true
+wgpu.workspace = true
+log.workspace = true
+thiserror.workspace = true

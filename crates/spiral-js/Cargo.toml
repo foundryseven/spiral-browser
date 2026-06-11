@@ -1,0 +1,13 @@
+[package]
+name = "spiral-js"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "JavaScript engine integration for Spiral Browser"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-dom.workspace = true
+boa_engine.workspace = true
+log.workspace = true
+thiserror.workspace = true
