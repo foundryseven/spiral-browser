@@ -6,7 +6,6 @@
 use spiral_core::{IPCMessage, Error, Result};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
-use serde::{Serialize, Deserialize};
 
 /// IPC server that listens for renderer connections.
 pub struct IpcServer {

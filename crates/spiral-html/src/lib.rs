@@ -2,7 +2,7 @@
 //!
 //! HTML5 parser wrapping html5ever for the Spiral Browser.
 
-use spiral_core::{Error, Result};
+use spiral_core::Result;
 use spiral_dom::{Dom, NodeId};
 
 /// HTML parser.

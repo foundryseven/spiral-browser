@@ -1,0 +1,53 @@
+name: Feature Request
+description: Propose a new capability for Spiral Browser.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for new feature proposals. Tie the proposal back to a
+        phase in `ROADMAP.md` and the relevant crate in `ARCHITECTURE.md`.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user-facing problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: High-level design. Reference crates, IPC messages, or UI surfaces affected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+    validations:
+      required: false
+
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Target Phase
+      multiple: false
+      options:
+        - Phase 1: Foundation
+        - Phase 2: Core Engine
+        - Phase 3: Full Engine
+        - Phase 4: UI & Polish
+        - Phase 5: Production
+        - Post v0.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know this is done? Include test cases.

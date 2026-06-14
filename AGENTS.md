@@ -1,6 +1,48 @@
 # Spiral Browser — Multi-Model Workspace Instructions
 
 This document tells LLM agents how to work on the Spiral Browser codebase.
+Global developer instructions are in `~/.config/opencode/AGENTS.md` (read-only,
+do not override).
+
+---
+
+## Current Status
+
+| Field | Value |
+|-------|-------|
+| **Phase** | Phase 1 — Foundation (Months 1–3) |
+| **Sprint** | Sprint 0 — Repo scaffolding and documentation baseline |
+| **Active sprint state** | [`docs/active_context.md`](docs/active_context.md) |
+| **Task breakdown** | [`docs/phase1-tasks.md`](docs/phase1-tasks.md) |
+| **Architecture deltas** | [`docs/system_architecture.md`](docs/system_architecture.md) |
+| **Change log** | [`docs/progress_ledger.md`](docs/progress_ledger.md) |
+| **Full roadmap** | [`ROADMAP.md`](ROADMAP.md) |
+
+Read `docs/active_context.md` **before starting any task**. It is the single
+source of truth for what is in flight, what is blocked, and what you must not
+touch.
+
+---
+
+## Model Routing
+
+All agents in this repository use `ozore/custom` (1M context, 16k output).
+No model switching is configured at the repo level; the global config handles
+that. If you need a different model for a specific role, update
+`~/.config/opencode/opencode.jsonc`.
+
+---
+
+## SSOT Update Protocol
+
+After completing any task loop, the **implementer agent** must:
+
+1. Append an entry to `docs/progress_ledger.md`.
+2. Update `docs/active_context.md` if sprint state, blockers, or "do not touch"
+   zones changed.
+
+The **reviewer agent** must flag a stale `active_context.md` (last update older
+than the current task) as a blocking issue.
 
 ---
 
@@ -9,8 +51,9 @@ This document tells LLM agents how to work on the Spiral Browser codebase.
 1. Read `CODEX.md` for project overview
 2. Read `ARCHITECTURE.md` for system design
 3. Read `PLAN.md` for current phase and tasks
-4. Run `cargo build` to verify your environment
-5. Run `cargo test` to verify tests pass
+4. Read `docs/active_context.md` for live sprint state
+5. Run `cargo build` to verify your environment
+6. Run `cargo test` to verify tests pass
 
 ---
 

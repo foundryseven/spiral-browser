@@ -3,7 +3,7 @@
 //! Layout computation for the Spiral Browser.
 
 use spiral_core::{Error, Result};
-use spiral_css::{CssValue, Stylesheet};
+use spiral_css::Stylesheet;
 use spiral_dom::{Dom, NodeId};
 
 /// Layout dimensions.
@@ -59,7 +59,7 @@ impl LayoutEngine {
     }
 
     /// Compute layout for the DOM tree.
-    pub fn layout(&self, dom: &Dom, stylesheet: &Stylesheet) -> Result<LayoutNode> {
+    pub fn layout(&self, dom: &Dom, _stylesheet: &Stylesheet) -> Result<LayoutNode> {
         self.layout_node(dom, dom.root, 0.0, 0.0, self.viewport_width)
     }
 

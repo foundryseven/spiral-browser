@@ -2,7 +2,7 @@
 //!
 //! 2D GPU rendering pipeline for the Spiral Browser.
 
-use spiral_core::{Error, Result};
+use spiral_core::Result;
 use spiral_paint::{DisplayList, RenderOp};
 
 /// Renderer state.

@@ -1,0 +1,39 @@
+# CODEOWNERS
+
+# These owners will be requested for review on every pull request that
+# touches the matching paths. Routing is per-crate to give multi-model
+# review agents a deterministic target.
+
+/crates/spiral-core/         @spiral/core-maintainers
+/crates/spiral-ipc/          @spiral/core-maintainers
+/crates/spiral-dom/          @spiral/dom-maintainers
+/crates/spiral-html/         @spiral/dom-maintainers
+/crates/spiral-css/          @spiral/layout-maintainers
+/crates/spiral-layout/       @spiral/layout-maintainers
+/crates/spiral-paint/        @spiral/render-maintainers
+/crates/spiral-render/       @spiral/render-maintainers
+/crates/spiral-gpu/          @spiral/render-maintainers
+/crates/spiral-js/           @spiral/js-maintainers
+/crates/spiral-network/      @spiral/net-maintainers
+/crates/spiral-net/          @spiral/net-maintainers
+/crates/spiral-crypto/       @spiral/net-maintainers
+/crates/spiral-imagedecoder/ @spiral/render-maintainers
+/crates/spiral-sandbox/      @spiral/security-maintainers
+/crates/spiral-ui/           @spiral/ui-maintainers
+/crates/spiral-theme/        @spiral/ui-maintainers
+/crates/spiral-browser/      @spiral/browser-maintainers
+
+# Documentation
+/docs/                      @spiral/docs-maintainers
+/AGENTS.md                  @spiral/docs-maintainers
+/CODEX.md                   @spiral/docs-maintainers
+/ARCHITECTURE.md            @spiral/docs-maintainers
+/PLAN.md                    @spiral/docs-maintainers
+/ROADMAP.md                 @spiral/docs-maintainers
+/README.md                  @spiral/docs-maintainers
+/CHANGELOG.md               @spiral/docs-maintainers
+/SECURITY.md                @spiral/security-maintainers
+
+# CI and tooling
+/.github/                   @spiral/devx-maintainers
+/Cargo.toml                 @spiral/devx-maintainers

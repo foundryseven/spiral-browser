@@ -2,8 +2,7 @@
 //!
 //! CSS parser and cascade engine for the Spiral Browser.
 
-use spiral_core::{Error, Result};
-use std::collections::HashMap;
+use spiral_core::Result;
 
 /// CSS property value.
 #[derive(Debug, Clone)]
@@ -204,9 +203,9 @@ impl CssParser {
     /// Parse a CSS value.
     fn parse_value(&self, text: &str) -> CssValue {
         if text == "auto" {
-            CssValue::Auto
+            return CssValue::Auto;
         } else if text == "none" {
-            CssValue::None
+            return CssValue::None;
         } else if let Some(pct) = text.strip_suffix('%') {
             if let Ok(val) = pct.parse::<f32>() {
                 return CssValue::Percentage(val);

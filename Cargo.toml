@@ -30,6 +30,26 @@ description = "A fully independent web browser built from scratch in Rust"
 authors = ["Spiral Contributors"]
 
 [workspace.dependencies]
+# Internal crates
+spiral-core = { path = "crates/spiral-core" }
+spiral-browser = { path = "crates/spiral-browser" }
+spiral-html = { path = "crates/spiral-html" }
+spiral-css = { path = "crates/spiral-css" }
+spiral-layout = { path = "crates/spiral-layout" }
+spiral-render = { path = "crates/spiral-render" }
+spiral-js = { path = "crates/spiral-js" }
+spiral-dom = { path = "crates/spiral-dom" }
+spiral-paint = { path = "crates/spiral-paint" }
+spiral-network = { path = "crates/spiral-network" }
+spiral-ipc = { path = "crates/spiral-ipc" }
+spiral-sandbox = { path = "crates/spiral-sandbox" }
+spiral-ui = { path = "crates/spiral-ui" }
+spiral-theme = { path = "crates/spiral-theme" }
+spiral-net = { path = "crates/spiral-net" }
+spiral-crypto = { path = "crates/spiral-crypto" }
+spiral-gpu = { path = "crates/spiral-gpu" }
+spiral-imagedecoder = { path = "crates/spiral-imagedecoder" }
+
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
@@ -38,21 +58,21 @@ serde = { version = "1", features = ["derive"] }
 bincode = "1"
 
 # HTML parsing
-html5ever = "0.29"
+html5ever = "0.39"
 
 # CSS parsing
-cssparser = "0.33"
-selectors = "0.25"
+cssparser = "0.37"
+selectors = "0.38"
 
 # Layout
-taffy = "0.5"
+taffy = "0.11"
 
 # Rendering
-vello = "0.3"
-wgpu = "23"
+vello = "0.9"
+wgpu = "29"
 
 # JavaScript
-boa_engine = "0.20"
+boa_engine = "0.21"
 
 # Networking
 hyper = { version = "1", features = ["full"] }
@@ -69,19 +89,19 @@ rustls-pemfile = "2"
 webpki-roots = "0.26"
 
 # Text
-harfrust = "0.1"
+harfrust = "0.8"
 swash = "0.2"
-cosmic-text = "0.12"
+cosmic-text = "0.19"
 
 # Image decoding
-png = "0.17"
+png = "0.18"
 zune-jpeg = "0.5"
-webp = "0.4"
-ravif = "0.11"
+webp = "0.3"
+ravif = "0.13"
 
 # Sandbox
 rustix = { version = "0.38", features = ["process", "thread", "time"] }
-caps = "0.3"
+caps = "0.5"
 
 # Utilities
 log = "0.4"
@@ -89,9 +109,3 @@ env_logger = "0.11"
 thiserror = "2"
 anyhow = "1"
 
-# Platform-specific
-[target.'cfg(unix)'.dependencies]
-tokio = { version = "1", features = ["net"] }
-
-[target.'cfg(windows)'.dependencies]
-tokio = { version = "1", features = ["net", "winapi"] }

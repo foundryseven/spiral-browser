@@ -2,8 +2,7 @@
 //!
 //! Browser chrome UI for the Spiral Browser.
 
-use spiral_core::{BrowserConfig, TabId};
-use spiral_theme::ThemeEngine;
+use spiral_core::TabId;
 
 /// Tab information.
 pub struct Tab {
@@ -26,6 +25,7 @@ pub struct BrowserUi {
     /// URL bar text.
     url_bar: String,
     /// URL bar is focused.
+    #[allow(dead_code)]
     url_bar_focused: bool,
 }
 

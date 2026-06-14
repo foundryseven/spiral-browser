@@ -17,7 +17,7 @@
 **Goal:** Cargo workspace, IPC shell, renders "Hello World"
 
 ### Month 1
-- [ ] Create Cargo workspace with all 17 crate stubs
+- [x] Create Cargo workspace with all 18 crate stubs
 - [ ] Define core types in spiral-core (`BrowserConfig`, `TabId`, `IPCMessage`)
 - [ ] Implement basic error types
 - [ ] Set up CI/CD (GitHub Actions, Linux/macOS/Windows matrix)

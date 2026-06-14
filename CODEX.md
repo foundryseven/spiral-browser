@@ -19,7 +19,7 @@
 ├── ERRORS.md               # Common errors
 ├── CODEX.md                # This file
 ├── CONTRIBUTING.md         # Contribution guide
-├── crates/                 # 17 Rust crates
+├── crates/                 # 18 Rust crates
 │   ├── spiral-core/        # Shared types
 │   ├── spiral-browser/     # Main process
 │   ├── spiral-html/        # HTML parser

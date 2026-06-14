@@ -2,8 +2,7 @@
 //!
 //! Main browser process for the Spiral Browser.
 
-use spiral_core::{BrowserConfig, IPCMessage, TabId};
-use spiral_ipc::IpcServer;
+use spiral_core::{BrowserConfig, TabId};
 use spiral_theme::ThemeEngine;
 
 /// Browser process.

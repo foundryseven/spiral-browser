@@ -2,7 +2,7 @@
 //!
 //! Process sandboxing for the Spiral Browser.
 
-use spiral_core::{Error, Result};
+use spiral_core::Result;
 
 /// Sandbox configuration.
 pub struct SandboxConfig {
@@ -37,7 +37,7 @@ impl Sandbox {
     }
 
     /// Initialize the sandbox.
-    pub fn init(&mut self, config: &SandboxConfig) -> Result<()> {
+    pub fn init(&mut self, _config: &SandboxConfig) -> Result<()> {
         // Phase 1: Basic setup
         // Phase 2: Platform-specific sandboxing
         #[cfg(target_os = "linux")]

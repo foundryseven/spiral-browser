@@ -2,8 +2,6 @@
 //!
 //! GPU abstraction layer for the Spiral Browser.
 
-use spiral_core::{Error, Result};
-
 /// GPU device wrapper.
 pub struct GpuDevice {
     /// Device name.

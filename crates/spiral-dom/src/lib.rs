@@ -2,8 +2,6 @@
 //!
 //! DOM tree representation for the Spiral Browser.
 
-use std::collections::HashMap;
-
 /// Unique identifier for a DOM node.
 pub type NodeId = usize;
 

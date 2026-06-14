@@ -2,8 +2,6 @@
 //!
 //! Cryptographic primitives for the Spiral Browser.
 
-use spiral_core::{Error, Result};
-
 /// Cryptographic operations.
 pub struct Crypto;
 
@@ -21,7 +19,7 @@ impl Crypto {
     }
 
     /// Hash data with SHA-256.
-    pub fn sha256(&self, data: &[u8]) -> Vec<u8> {
+    pub fn sha256(&self, _data: &[u8]) -> Vec<u8> {
         // Phase 1: Placeholder hash
         // Phase 2: Ring crate SHA-256
         vec![0u8; 32]

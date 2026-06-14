@@ -148,7 +148,7 @@ enum RendererToBrowser {
 
 | Week | Task | Crate | Deliverable |
 |------|------|-------|-------------|
-| 1-2 | Workspace setup | Cargo.toml | 17 crate stubs |
+| 1-2 | Workspace setup | Cargo.toml | 18 crate stubs |
 | 3-4 | Core types | spiral-core | `BrowserConfig`, `TabId`, `IPCMessage` |
 | 5-6 | IPC transport | spiral-ipc | `IpcServer`, `IpcClient` |
 | 7-8 | Browser shell | spiral-browser | Process spawning, tab management |
