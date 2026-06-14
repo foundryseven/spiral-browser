@@ -13,8 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Standardised `/docs` SSOT: `system_architecture.md`, `active_context.md`, `progress_ledger.md`, `phase1-tasks.md`.
 - Multi-model agent definitions under `~/.config/opencode/agents/`: architect, implementer, reviewer, test-writer.
 - GitHub issue and pull request templates.
+- CI/CD: 4-job pipeline (`fmt`, `clippy`, `test`, `build`) across Linux/macOS/Windows.
 - `spiral-core` comprehensive test suite (18 tests): `BrowserConfig` bincode round-trip, `TabId` Display/equality/hash, `IPCMessage` all 13 variants, `Error` From/Display/propagation.
 - `TabId` `Display` impl (previously missing).
+- `spiral-ipc`: `IpcTransport` trait (`send`/`recv`/`close`) with `Pin<Box<dyn Future>>`.
+- `spiral-ipc`: `unix::UnixListener` + `unix::UnixTransport` — Unix domain socket transport (Linux/macOS).
+- `spiral-ipc`: `pipe::PipeListener` + `pipe::PipeTransport` — Windows named pipe transport (`#[cfg(windows)]`).
+- `spiral-ipc`: `MockTransport::pair()` — in-memory MPSC-backed transport for testing.
+- `spiral-ipc`: public `encode_message`/`decode_message` — u32-LE length-prefixed bincode framing.
+- `spiral-ipc`: fuzz smoke test — 11 structured malformed patterns + 256 single-byte header permutations.
 
 ### Changed
 - `AGENTS.md` updated with current phase pointer, model routing, and SSOT references.

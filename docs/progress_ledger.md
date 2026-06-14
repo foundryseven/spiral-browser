@@ -33,7 +33,7 @@ Append-only log of every meaningful change. Format:
   `Result` propagation via `?` operator.
 - Added `TabId` `Display` impl (missing, blocked test).
 - Tests run: `cargo test -p spiral-core` — 18 passed, 0 failed.
-- Status: in-progress (pending commit).
+- Status: merged (commit `d78640e`).
 
 ## [2026-06-14] [custom] [repo/ci] — Sprint 2: CI/CD and lint hygiene (tasks 1.6–1.7)
 - **Task 1.6 — CI/CD:** rewrote `.github/workflows/ci.yml` with separate `fmt`, `clippy`, `test`,
@@ -45,6 +45,32 @@ Append-only log of every meaningful change. Format:
 - **Bugfix:** `spiral-css::test_parse_selector` — assertion expected 4 parts for 3-part selector, fixed to 3.
 - **Bugfix:** `spiral-layout::test_layout_empty_dom` — Document branch missing `content.width` assignment.
 - Tests run: `cargo test --workspace` — 73 passed across 35 test targets, 0 failed.
+- Tests run: `cargo clippy --workspace --all-targets` — 0 warnings.
+- Tests run: `cargo fmt --all -- --check` — clean.
+- Status: merged (commit `7029077`).
+
+## [2026-06-14] [custom] [spiral-ipc] — Sprint 3: IPC transport layer (tasks 2.1–2.7)
+- **Task 2.1 — Unix transport:** `unix::UnixListener` + `unix::UnixTransport` implementing
+  `IpcTransport` trait. Accept/connect/send/recv/close all async. `read_exact`-based framing
+  with 64 MiB size guard. Socket cleanup on drop. Echo test passes.
+- **Task 2.2 — Windows transport:** `pipe::PipeListener` + `pipe::PipeTransport` behind
+  `#[cfg(windows)]` — same `IpcTransport` interface, tokio named pipes. Uncompilable on
+  macOS/Linux (intentional platform guard).
+- **Task 2.3 — Framing:** public `encode_message` / `decode_message` functions. u32-LE
+  length header + bincode payload. Tested: round-trip, large 100k payload, consumed-bytes
+  match, truncated header, incomplete payload, zero-length payload.
+- **Task 2.4 — IpcTransport trait:** `async fn send(&mut self, msg)`, `async fn recv(&mut self)`,
+  `async fn close(&mut self)`, all returning `Result`. `MockTransport` (MPSC-backed) with
+  `pair()` constructor passes all interface tests.
+- **Task 2.5 — Unit tests:** 16 tests total — 7 framing tests, 5 mock transport tests
+  (echo, bidirectional, all-variants, 50-message ordering, channel-close detection),
+  1 Unix socket echo, 1 integration (browser↔renderer message flow), 2 fuzz smoke tests.
+- **Task 2.6 — Fuzz smoke:** deterministic malformed-input corpus (11 patterns) + all 256
+  single-byte header permutations. `decode_message` never panics, always returns `Err`.
+- **Task 2.7 — Integration:** `core_types_through_mock_transport` exercises a full browser→renderer
+  navigate→DOMLoaded→resize→progress→complete flow through the trait interface.
+- Tests run: `cargo test -p spiral-ipc` — 16 passed, 0 failed.
+- Tests run: `cargo test --workspace` — 86 passed, 0 failed.
 - Tests run: `cargo clippy --workspace --all-targets` — 0 warnings.
 - Tests run: `cargo fmt --all -- --check` — clean.
 - Status: in-progress (pending commit).

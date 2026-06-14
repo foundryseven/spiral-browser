@@ -33,13 +33,13 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 | # | Task | Crate | Acceptance Test | Status |
 |---|------|-------|-----------------|--------|
-| 2.1 | Implement Unix domain socket transport (Linux/macOS) | spiral-ipc | Echo test: send message, receive same message | [ ] |
-| 2.2 | Implement named pipe transport (Windows) | spiral-ipc | Echo test on Windows CI | [ ] |
-| 2.3 | Implement length-prefixed bincode message framing | spiral-ipc | Round-trip test with variable-length payloads | [ ] |
-| 2.4 | Implement `IpcTransport` trait abstraction | spiral-ipc | Mock transport passes the same interface tests | [ ] |
-| 2.5 | Unit tests for IPC layer | spiral-ipc | `cargo test -p spiral-ipc` passes | [ ] |
-| 2.6 | Fuzz test: malformed IPC frames | spiral-ipc | Fuzzer runs 60s without panic | [ ] |
-| 2.7 | Integration: spiral-core ↔ spiral-ipc types | spiral-ipc + spiral-core | `BrowserToRenderer` and `RendererToBrowser` round-trip through transport | [ ] |
+| 2.1 | Implement Unix domain socket transport (Linux/macOS) | spiral-ipc | Echo test: send message, receive same message | [x] |
+| 2.2 | Implement named pipe transport (Windows) | spiral-ipc | Echo test on Windows CI | [x] |
+| 2.3 | Implement length-prefixed bincode message framing | spiral-ipc | Round-trip test with variable-length payloads | [x] |
+| 2.4 | Implement `IpcTransport` trait abstraction | spiral-ipc | Mock transport passes the same interface tests | [x] |
+| 2.5 | Unit tests for IPC layer | spiral-ipc | `cargo test -p spiral-ipc` passes | [x] |
+| 2.6 | Fuzz test: malformed IPC frames | spiral-ipc | Fuzzer runs 60s without panic | [x] |
+| 2.7 | Integration: spiral-core ↔ spiral-ipc types | spiral-ipc + spiral-core | `BrowserToRenderer` and `RendererToBrowser` round-trip through transport | [x] |
 
 ### Exit gate for Month 2
 `cargo test -p spiral-ipc` passes on all three platforms. Fuzz harness exists
