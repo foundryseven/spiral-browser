@@ -3,7 +3,7 @@
 //! Inter-process communication via Unix domain sockets (Linux/macOS)
 //! or named pipes (Windows).
 
-use spiral_core::{IPCMessage, Error, Result};
+use spiral_core::{Error, IPCMessage, Result};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{UnixListener, UnixStream};
 
@@ -21,8 +21,7 @@ pub struct IpcClient {
 
 /// Message framing: length-prefixed bincode.
 fn encode_message(msg: &IPCMessage) -> Result<Vec<u8>> {
-    let encoded = bincode::serialize(msg)
-        .map_err(|e| Error::Serialization(e.to_string()))?;
+    let encoded = bincode::serialize(msg).map_err(|e| Error::Serialization(e.to_string()))?;
     let len = encoded.len() as u32;
     let mut buffer = Vec::with_capacity(4 + encoded.len());
     buffer.extend_from_slice(&len.to_le_bytes());
@@ -38,8 +37,8 @@ fn decode_message(data: &[u8]) -> Result<(IPCMessage, usize)> {
     if data.len() < 4 + len {
         return Err(Error::Ipc("Incomplete message".to_string()));
     }
-    let msg: IPCMessage = bincode::deserialize(&data[4..4 + len])
-        .map_err(|e| Error::Serialization(e.to_string()))?;
+    let msg: IPCMessage =
+        bincode::deserialize(&data[4..4 + len]).map_err(|e| Error::Serialization(e.to_string()))?;
     Ok((msg, 4 + len))
 }
 
@@ -49,14 +48,16 @@ impl IpcServer {
     pub async fn new(path: &str) -> Result<Self> {
         // Remove old socket if it exists
         let _ = std::fs::remove_file(path);
-        let listener = UnixListener::bind(path)
-            .map_err(|e| Error::Ipc(format!("Failed to bind: {}", e)))?;
+        let listener =
+            UnixListener::bind(path).map_err(|e| Error::Ipc(format!("Failed to bind: {}", e)))?;
         Ok(Self { listener })
     }
 
     /// Accept a new connection.
     pub async fn accept(&self) -> Result<IpcClient> {
-        let (stream, _addr) = self.listener.accept()
+        let (stream, _addr) = self
+            .listener
+            .accept()
             .await
             .map_err(|e| Error::Ipc(format!("Failed to accept: {}", e)))?;
         Ok(IpcClient { stream })
@@ -76,7 +77,8 @@ impl IpcClient {
     /// Send a message.
     pub async fn send(&mut self, msg: &IPCMessage) -> Result<()> {
         let data = encode_message(msg)?;
-        self.stream.write_all(&data)
+        self.stream
+            .write_all(&data)
             .await
             .map_err(|e| Error::Ipc(format!("Failed to send: {}", e)))?;
         Ok(())
@@ -85,7 +87,9 @@ impl IpcClient {
     /// Receive a message.
     pub async fn recv(&mut self) -> Result<IPCMessage> {
         let mut buffer = vec![0u8; 65536];
-        let n = self.stream.read(&mut buffer)
+        let n = self
+            .stream
+            .read(&mut buffer)
             .await
             .map_err(|e| Error::Ipc(format!("Failed to receive: {}", e)))?;
         if n == 0 {
@@ -99,7 +103,7 @@ impl IpcClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spiral_core::{BrowserToRenderer, RendererToBrowser};
+    use spiral_core::BrowserToRenderer;
 
     #[test]
     fn test_encode_decode_message() {

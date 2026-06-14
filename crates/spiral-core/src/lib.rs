@@ -453,19 +453,23 @@ mod tests {
             let decoded = round_trip(&original);
             let original_bytes = bincode::serialize(&original).unwrap();
             let decoded_bytes = bincode::serialize(&decoded).unwrap();
-            assert_eq!(original_bytes, decoded_bytes, "bytes diverged for {original:?}");
+            assert_eq!(
+                original_bytes, decoded_bytes,
+                "bytes diverged for {original:?}"
+            );
         }
     }
 
     #[test]
     fn ipc_message_corrupt_payload_errors() {
-        let bytes = bincode::serialize(&IPCMessage::BrowserToRenderer(
-            BrowserToRenderer::Reload,
-        ))
-        .unwrap();
+        let bytes =
+            bincode::serialize(&IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload)).unwrap();
         let truncated = &bytes[..bytes.len() - 1];
         let result: std::result::Result<IPCMessage, _> = bincode::deserialize(truncated);
-        assert!(result.is_err(), "truncated payload must fail to deserialise");
+        assert!(
+            result.is_err(),
+            "truncated payload must fail to deserialise"
+        );
     }
 
     // ---------- Task 1.5: Error ----------

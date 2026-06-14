@@ -25,9 +25,7 @@ pub struct DnsResolver {
 impl DnsResolver {
     /// Create a new DNS resolver.
     pub fn new() -> Self {
-        Self {
-            initialized: false,
-        }
+        Self { initialized: false }
     }
 
     /// Initialize the resolver.

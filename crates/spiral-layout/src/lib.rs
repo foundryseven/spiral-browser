@@ -72,7 +72,8 @@ impl LayoutEngine {
         y: f32,
         available_width: f32,
     ) -> Result<LayoutNode> {
-        let node = dom.get_node(node_id)
+        let node = dom
+            .get_node(node_id)
             .ok_or_else(|| Error::Layout(format!("Node {} not found", node_id)))?;
 
         let mut box_model = BoxModel::default();
@@ -129,6 +130,7 @@ impl LayoutEngine {
             }
             spiral_dom::Node::Document(doc) => {
                 // Document node - layout children
+                box_model.content.width = available_width;
                 let mut children = Vec::new();
                 let mut current_y = y;
 

@@ -70,12 +70,8 @@ impl Dom {
             children: Vec::new(),
             quirks_mode: false,
         };
-        let mut nodes = Vec::new();
-        nodes.push(Some(Node::Document(doc)));
-        Self {
-            nodes,
-            root: 0,
-        }
+        let nodes = vec![Some(Node::Document(doc))];
+        Self { nodes, root: 0 }
     }
 
     /// Create a new element node.

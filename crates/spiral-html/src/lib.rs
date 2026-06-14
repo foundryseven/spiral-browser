@@ -13,9 +13,7 @@ pub struct HtmlParser {
 impl HtmlParser {
     /// Create a new HTML parser.
     pub fn new() -> Self {
-        Self {
-            dom: Dom::new(),
-        }
+        Self { dom: Dom::new() }
     }
 
     /// Parse HTML string into a DOM tree.
@@ -101,7 +99,9 @@ mod tests {
     #[test]
     fn test_parse_simple_html() {
         let mut parser = HtmlParser::new();
-        let root = parser.parse("<html><body><div>Hello</div></body></html>").unwrap();
+        let root = parser
+            .parse("<html><body><div>Hello</div></body></html>")
+            .unwrap();
         assert!(parser.dom().get_tag(root).is_some());
     }
 

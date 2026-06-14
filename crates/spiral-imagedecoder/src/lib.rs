@@ -65,7 +65,8 @@ impl ImageDecoder {
 
     /// Decode image data.
     pub fn decode(&self, data: &[u8]) -> Result<DecodedImage> {
-        let format = self.detect_format(data)
+        let format = self
+            .detect_format(data)
             .ok_or_else(|| Error::Parse("Unsupported image format".to_string()))?;
 
         // Phase 1: Placeholder decoding

@@ -13,9 +13,7 @@ pub struct JsEngine {
 impl JsEngine {
     /// Create a new JavaScript engine.
     pub fn new() -> Self {
-        Self {
-            initialized: false,
-        }
+        Self { initialized: false }
     }
 
     /// Initialize the engine.

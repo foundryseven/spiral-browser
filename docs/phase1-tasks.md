@@ -21,8 +21,8 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 | 1.3 | Define `TabId` newtype | spiral-core | Unit test equality, hash, display | [x] |
 | 1.4 | Define `IPCMessage` enum | spiral-core | Round-trip bincode test for each variant | [x] |
 | 1.5 | Define `Error` types via thiserror | spiral-core | Unit tests for each error variant | [x] |
-| 1.6 | Set up CI/CD (GitHub Actions, Linux/macOS/Windows matrix) | root | Green CI on all three platforms | [ ] |
-| 1.7 | Pin workspace dependency versions | root | `cargo check --workspace` clean | [ ] |
+| 1.6 | Set up CI/CD (GitHub Actions, Linux/macOS/Windows matrix) | root | Green CI on all three platforms | [x] |
+| 1.7 | Pin workspace dependency versions | root | `cargo check --workspace` clean | [x] |
 
 ### Exit gate for Month 1
 `cargo test --workspace` passes on CI. All core types compile and are documented.

@@ -24,9 +24,7 @@ pub struct HttpClient {
 impl HttpClient {
     /// Create a new HTTP client.
     pub fn new() -> Self {
-        Self {
-            initialized: false,
-        }
+        Self { initialized: false }
     }
 
     /// Initialize the client.

@@ -64,7 +64,8 @@ impl BrowserUi {
 
     /// Get the active tab.
     pub fn active_tab(&self) -> Option<&Tab> {
-        self.active_tab.and_then(|id| self.tabs.iter().find(|t| t.id == id))
+        self.active_tab
+            .and_then(|id| self.tabs.iter().find(|t| t.id == id))
     }
 
     /// Get all tabs.
@@ -102,7 +103,7 @@ mod tests {
     #[test]
     fn test_add_tab() {
         let mut ui = BrowserUi::new();
-        let id = ui.add_tab("https://example.com");
+        let _id = ui.add_tab("https://example.com");
         assert_eq!(ui.tabs().len(), 1);
         assert_eq!(ui.active_tab().unwrap().url, "https://example.com");
     }

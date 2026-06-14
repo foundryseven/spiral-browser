@@ -2,23 +2,22 @@
 
 **Last updated:** 2026-06-14
 **Current phase:** Phase 1 — Foundation (Months 1–3)
-**Current sprint:** Sprint 1 — Core types and shared types definitions
+**Current sprint:** Sprint 2 — CI/CD and lint hygiene
 
 ---
 
 ## Sprint Goal
 
-Complete Phase 1 Month 1 tasks 1.2–1.5 in `spiral-core`: establish a tested
-type foundation (`BrowserConfig`, `TabId`, `IPCMessage`, `Error`) that every
-other crate depends on.
+Tasks 1.6–1.7 complete Month 1 of Phase 1. All core types compile, pass tests,
+and are lint-clean across Linux, macOS, and Windows CI.
 
 ## In Progress
 
-- [x] **1.2** `BrowserConfig` — bincode round-trip, default, clone equality
-- [x] **1.3** `TabId` + `RenderNodeId` — equality, hash, `Display`
-- [x] **1.4** `IPCMessage` — all 13 enum variants round-trip tested
-- [x] **1.5** `Error` — `From<io::Error>`, `Display` per variant, `?` propagation
-- [ ] Commit Sprint 1 changes
+- [x] **1.6** CI/CD — GitHub Actions 4-job pipeline: `fmt`, `clippy`, `test`, `build`
+  across 3 platforms. Triggers on `master` push/PR.
+- [x] **1.7** Dependency versions pinned in workspace `Cargo.toml`. `cargo check --workspace`
+  clean. All clippy warnings resolved.
+- [ ] Commit Sprint 2 changes
 
 ## Blocked
 
@@ -39,13 +38,12 @@ None.
 | Decision | Value | Rationale |
 |----------|-------|-----------|
 | Default model | `ozore/custom` | User confirmed; single model for all agents |
-| Active context write policy | Agents update autonomously per task loop | Implementer appends; reviewer flags stale state |
-| Progress ledger format | Markdown bullets with ISO date | Human- and agent-readable |
-| `phase1-tasks.md` | Separate file, not inline here | Keeps active_context small |
+| CI branch | `master` | Matches current repo default |
+| Clippy policy | `-D warnings` (deny all) | Catch regressions early |
+| CI platform matrix | ubuntu-latest, macos-latest, windows-latest | Phase 1 exit criterion |
 
 ## Next Sprint
 
-Sprint 2 — Month 1 remaining tasks 1.6–1.8: extract types into dedicated
-modules (`config.rs`, `ipc.rs`, `error.rs`, `tab.rs`), integrate `clippy`
-and `cargo fmt` checks into CI, prepare shared `Result` re-export for
-downstream crates. See `docs/phase1-tasks.md` §Month 1.
+Sprint 3 — Month 2 IPC transport layer. Tasks 2.1–2.4 in `spiral-ipc`:
+Unix domain sockets, named pipes, length-prefixed framing, `IpcTransport` trait.
+See `docs/phase1-tasks.md` §Month 2.

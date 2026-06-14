@@ -2,8 +2,8 @@
 //!
 //! Theme engine for the Spiral Browser.
 
-use spiral_core::{AccentColor, BrowserConfig};
 use serde::{Deserialize, Serialize};
+use spiral_core::{AccentColor, BrowserConfig};
 
 /// Theme mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

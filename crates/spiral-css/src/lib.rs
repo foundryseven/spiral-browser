@@ -71,9 +71,7 @@ impl CssParser {
     /// Create a new CSS parser.
     pub fn new() -> Self {
         Self {
-            stylesheet: Stylesheet {
-                rules: Vec::new(),
-            },
+            stylesheet: Stylesheet { rules: Vec::new() },
         }
     }
 
@@ -152,10 +150,10 @@ impl CssParser {
         let parts: Vec<SelectorPart> = text
             .split_whitespace()
             .map(|part| {
-                if part.starts_with('.') {
-                    SelectorPart::Class(part[1..].to_string())
-                } else if part.starts_with('#') {
-                    SelectorPart::Id(part[1..].to_string())
+                if let Some(stripped) = part.strip_prefix('.') {
+                    SelectorPart::Class(stripped.to_string())
+                } else if let Some(stripped) = part.strip_prefix('#') {
+                    SelectorPart::Id(stripped.to_string())
                 } else if part == "*" {
                     SelectorPart::Universal
                 } else {
@@ -268,7 +266,7 @@ mod tests {
     fn test_parse_selector() {
         let parser = CssParser::new();
         let selector = parser.parse_selector(".container #main div");
-        assert_eq!(selector.parts.len(), 4);
+        assert_eq!(selector.parts.len(), 3);
     }
 
     #[test]

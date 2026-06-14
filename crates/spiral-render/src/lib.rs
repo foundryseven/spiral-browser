@@ -32,20 +32,67 @@ impl Renderer {
     /// Execute a single render operation.
     fn execute_op(&self, op: &RenderOp) -> Result<()> {
         match op {
-            RenderOp::FillRect { x, y, width, height, color } => {
+            RenderOp::FillRect {
+                x,
+                y,
+                width,
+                height,
+                color,
+            } => {
                 // Software fill rect (placeholder)
-                log::trace!("FillRect: ({}, {}) {}x{} rgba({},{},{},{})",
-                    x, y, width, height, color.r, color.g, color.b, color.a);
+                log::trace!(
+                    "FillRect: ({}, {}) {}x{} rgba({},{},{},{})",
+                    x,
+                    y,
+                    width,
+                    height,
+                    color.r,
+                    color.g,
+                    color.b,
+                    color.a
+                );
                 Ok(())
             }
-            RenderOp::StrokeRect { x, y, width, height, color, stroke_width } => {
-                log::trace!("StrokeRect: ({}, {}) {}x{} width={} rgba({},{},{},{})",
-                    x, y, width, height, stroke_width, color.r, color.g, color.b, color.a);
+            RenderOp::StrokeRect {
+                x,
+                y,
+                width,
+                height,
+                color,
+                stroke_width,
+            } => {
+                log::trace!(
+                    "StrokeRect: ({}, {}) {}x{} width={} rgba({},{},{},{})",
+                    x,
+                    y,
+                    width,
+                    height,
+                    stroke_width,
+                    color.r,
+                    color.g,
+                    color.b,
+                    color.a
+                );
                 Ok(())
             }
-            RenderOp::DrawText { x, y, text, font_size, color } => {
-                log::trace!("DrawText: ({}, {}) '{}' size={} rgba({},{},{},{})",
-                    x, y, text, font_size, color.r, color.g, color.b, color.a);
+            RenderOp::DrawText {
+                x,
+                y,
+                text,
+                font_size,
+                color,
+            } => {
+                log::trace!(
+                    "DrawText: ({}, {}) '{}' size={} rgba({},{},{},{})",
+                    x,
+                    y,
+                    text,
+                    font_size,
+                    color.r,
+                    color.g,
+                    color.b,
+                    color.a
+                );
                 Ok(())
             }
             RenderOp::Clip { ops, .. } => {
@@ -99,7 +146,12 @@ mod tests {
                 y: 0.0,
                 width: 100.0,
                 height: 100.0,
-                color: Color { r: 255, g: 0, b: 0, a: 1.0 },
+                color: Color {
+                    r: 255,
+                    g: 0,
+                    b: 0,
+                    a: 1.0,
+                },
             }],
         };
         renderer.render(&display_list).unwrap();

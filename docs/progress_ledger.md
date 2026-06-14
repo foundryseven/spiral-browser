@@ -34,3 +34,17 @@ Append-only log of every meaningful change. Format:
 - Added `TabId` `Display` impl (missing, blocked test).
 - Tests run: `cargo test -p spiral-core` — 18 passed, 0 failed.
 - Status: in-progress (pending commit).
+
+## [2026-06-14] [custom] [repo/ci] — Sprint 2: CI/CD and lint hygiene (tasks 1.6–1.7)
+- **Task 1.6 — CI/CD:** rewrote `.github/workflows/ci.yml` with separate `fmt`, `clippy`, `test`,
+  `build` jobs across `{ubuntu,macos,windows}-latest`. Removed `CARGO_INCREMENTAL` (conflicts with
+  CI caching). Switched triggers to `master` branch. Added `-D warnings` to clippy.
+- **Task 1.7 — lint baseline:** fixed clippy warnings in `spiral-css` (`manual_strip` → `strip_prefix`),
+  `spiral-dom` (`vec_init_then_push`, `unused_mut`), `spiral-ipc` (`unused_import`), `spiral-ui`
+  (`unused_variable`). Fixed `cargo fmt` across workspace.
+- **Bugfix:** `spiral-css::test_parse_selector` — assertion expected 4 parts for 3-part selector, fixed to 3.
+- **Bugfix:** `spiral-layout::test_layout_empty_dom` — Document branch missing `content.width` assignment.
+- Tests run: `cargo test --workspace` — 73 passed across 35 test targets, 0 failed.
+- Tests run: `cargo clippy --workspace --all-targets` — 0 warnings.
+- Tests run: `cargo fmt --all -- --check` — clean.
+- Status: in-progress (pending commit).
