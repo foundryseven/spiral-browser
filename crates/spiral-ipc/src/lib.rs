@@ -357,20 +357,23 @@ impl IpcTransport for MockTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spiral_core::{BrowserToRenderer, InputEvent, LogLevel, RendererToBrowser};
+    use spiral_core::{BrowserToRenderer, InputEvent, LogLevel, RendererToBrowser, TabId};
+
+    const TAB: TabId = TabId(1);
 
     // -- Framing unit tests (task 2.3) ------------------------------------
 
     #[test]
     fn encode_decode_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+            tab_id: TAB,
             url: "https://example.com".to_string(),
         });
         let frame = encode_message(&msg).unwrap();
         let (decoded, consumed) = decode_message(&frame).unwrap();
         assert_eq!(consumed, frame.len());
         match decoded {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, "https://example.com");
             }
             other => panic!("unexpected: {other:?}"),
@@ -381,13 +384,14 @@ mod tests {
     fn encode_decode_large_payload() {
         let large_url = "https://example.com/".to_string() + &"a".repeat(100_000);
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+            tab_id: TAB,
             url: large_url.clone(),
         });
         let frame = encode_message(&msg).unwrap();
         assert!(frame.len() > 100_000);
         let (decoded, _) = decode_message(&frame).unwrap();
         match decoded {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, large_url);
             }
             other => panic!("unexpected: {other:?}"),
@@ -429,7 +433,7 @@ mod tests {
 
     #[test]
     fn framing_consumed_bytes_match() {
-        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload);
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { tab_id: TAB });
         let frame = encode_message(&msg).unwrap();
         let (_, consumed) = decode_message(&frame).unwrap();
         assert_eq!(consumed, frame.len());
@@ -442,12 +446,13 @@ mod tests {
         server: &mut impl IpcTransport,
     ) {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+            tab_id: TAB,
             url: "https://spiral-browser.example".to_string(),
         });
         client.send(&msg).await.unwrap();
         let received = server.recv().await.unwrap();
         match received {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, "https://spiral-browser.example");
             }
             other => panic!("unexpected: {other:?}"),
@@ -466,15 +471,18 @@ mod tests {
     ) {
         let messages = vec![
             IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+                tab_id: TAB,
                 url: "https://one.example".to_string(),
             }),
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload),
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop),
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { tab_id: TAB }),
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop { tab_id: TAB }),
             IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize {
+                tab_id: TAB,
                 width: 1920.0,
                 height: 1080.0,
             }),
             IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+                tab_id: TAB,
                 event: InputEvent::MouseDown {
                     x: 100.0,
                     y: 200.0,
@@ -482,16 +490,25 @@ mod tests {
                 },
             }),
             IPCMessage::RendererToBrowser(RendererToBrowser::DOMLoaded {
+                tab_id: TAB,
                 title: "Test Page".to_string(),
+                url: "https://test.example".to_string(),
             }),
-            IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress { progress: 0.75 }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress {
+                tab_id: TAB,
+                progress: 0.75,
+            }),
             IPCMessage::RendererToBrowser(RendererToBrowser::NavigateComplete {
+                tab_id: TAB,
                 url: "https://done.example".to_string(),
+                title: "Done Page".to_string(),
             }),
             IPCMessage::RendererToBrowser(RendererToBrowser::RequestNavigate {
+                tab_id: TAB,
                 url: "https://click.example".to_string(),
             }),
             IPCMessage::RendererToBrowser(RendererToBrowser::ConsoleMessage {
+                tab_id: TAB,
                 level: LogLevel::Error,
                 text: "something broke".to_string(),
             }),
@@ -519,10 +536,13 @@ mod tests {
         let (mut side_a, mut side_b) = MockTransport::pair();
 
         let msg_a = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+            tab_id: TAB,
             url: "a->b".to_string(),
         });
         let msg_b = IPCMessage::RendererToBrowser(RendererToBrowser::DOMLoaded {
+            tab_id: TAB,
             title: "b->a".to_string(),
+            url: "https://b.example".to_string(),
         });
 
         side_a.send(&msg_a).await.unwrap();
@@ -532,13 +552,13 @@ mod tests {
         let recv_a = side_a.recv().await.unwrap();
 
         match recv_b {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, "a->b");
             }
             other => panic!("unexpected: {other:?}"),
         }
         match recv_a {
-            IPCMessage::RendererToBrowser(RendererToBrowser::DOMLoaded { title }) => {
+            IPCMessage::RendererToBrowser(RendererToBrowser::DOMLoaded { title, .. }) => {
                 assert_eq!(title, "b->a");
             }
             other => panic!("unexpected: {other:?}"),
@@ -562,6 +582,7 @@ mod tests {
 
         for i in 0..50u64 {
             let msg = IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress {
+                tab_id: TAB,
                 progress: i as f32 / 50.0,
             });
             client.send(&msg).await.unwrap();
@@ -570,7 +591,7 @@ mod tests {
         for i in 0..50u64 {
             let msg = server.recv().await.unwrap();
             match msg {
-                IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress { progress }) => {
+                IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress { progress, .. }) => {
                     let expected = i as f32 / 50.0;
                     assert!(
                         (progress - expected).abs() < f32::EPSILON,
@@ -600,6 +621,7 @@ mod tests {
 
         let mut client = unix::UnixTransport::connect(&socket_path).await.unwrap();
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+            tab_id: TAB,
             url: "https://unix-socket-test.example".to_string(),
         });
         client.send(&msg).await.unwrap();
@@ -608,7 +630,7 @@ mod tests {
             .expect("timeout waiting for reply")
             .expect("recv failed");
         match reply {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, "https://unix-socket-test.example");
             }
             other => panic!("unexpected: {other:?}"),
@@ -627,6 +649,7 @@ mod tests {
         browser
             .send(&IPCMessage::BrowserToRenderer(
                 BrowserToRenderer::Navigate {
+                    tab_id: TAB,
                     url: "https://spiral.example".to_string(),
                 },
             ))
@@ -636,7 +659,7 @@ mod tests {
         // Renderer receives and acknowledges with DOMLoaded
         let nav = renderer.recv().await.unwrap();
         match &nav {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, "https://spiral.example");
             }
             other => panic!("unexpected: {other:?}"),
@@ -645,7 +668,9 @@ mod tests {
         renderer
             .send(&IPCMessage::RendererToBrowser(
                 RendererToBrowser::DOMLoaded {
+                    tab_id: TAB,
                     title: "Spiral".to_string(),
+                    url: "https://spiral.example".to_string(),
                 },
             ))
             .await
@@ -653,6 +678,7 @@ mod tests {
 
         browser
             .send(&IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize {
+                tab_id: TAB,
                 width: 1280.0,
                 height: 720.0,
             }))
@@ -661,7 +687,10 @@ mod tests {
 
         renderer
             .send(&IPCMessage::RendererToBrowser(
-                RendererToBrowser::LoadProgress { progress: 1.0 },
+                RendererToBrowser::LoadProgress {
+                    tab_id: TAB,
+                    progress: 1.0,
+                },
             ))
             .await
             .unwrap();
@@ -669,7 +698,9 @@ mod tests {
         renderer
             .send(&IPCMessage::RendererToBrowser(
                 RendererToBrowser::NavigateComplete {
+                    tab_id: TAB,
                     url: "https://spiral.example".to_string(),
+                    title: "Spiral".to_string(),
                 },
             ))
             .await
@@ -728,7 +759,7 @@ mod tests {
             vec![8, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
             // multiple frames concatenated
             {
-                let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload);
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { tab_id: TAB });
                 let frame = encode_message(&msg).unwrap();
                 let mut multi = frame.clone();
                 multi.extend_from_slice(&frame);

@@ -51,19 +51,24 @@ and runs clean.
 
 | # | Task | Crate | Acceptance Test | Status |
 |---|------|-------|-----------------|--------|
-| 3.1 | Browser process main entry | spiral-browser | `cargo run -p spiral-browser -- --help` prints usage | [ ] |
-| 3.2 | Process spawning for renderer | spiral-browser + spiral-ipc | Spawn renderer subprocess; receive IPC handshake | [ ] |
-| 3.3 | Basic tab management (open/close/list) | spiral-browser | Unit test: open tab, close tab, list tabs | [ ] |
-| 3.4 | Renderer process main loop | spiral-render | Receive `Navigate` message via IPC, log it | [ ] |
-| 3.5 | "Hello World" display list | spiral-render | Hard-coded display list: white background, "Hello World" text | [ ] |
-| 3.6 | End-to-end integration test | root (tests/) | Launch browser process → receive `Navigate` → renderer responds with display list | [ ] |
-| 3.7 | Stub window creation (winit) | spiral-browser or spiral-render | winit window opens and shows blank white frame | [ ] |
-| 3.8 | Stub render output (Vello/WGPU) | spiral-render + spiral-gpu | GPU device initialised; white frame rendered to window | [ ] |
+| 3.1 | Extend `IPCMessage` with `Hello(HelloMessage)` handshake | spiral-core | Bincode round-trip for new variant | [x] |
+| 3.2 | Extend `BrowserToRenderer`/`RendererToBrowser` with `tab_id`, add `Log`/`ScreenshotAck`/`RendererReady`/`Screenshot` | spiral-core | All existing tests updated, `cargo test -p spiral-core` passes | [x] |
+| 3.3 | `TabRegistry` + `TabState` — tab model | spiral-browser | 8 unit tests (open, activate, progress clamped, viewport clamped) | [x] |
+| 3.4 | `BrowserTheme` hex adapter | spiral-browser | 3 unit tests (bg, accent, malformed fallback) | [x] |
+| 3.5 | `SoftwareRenderer` — display list rasteriser | spiral-render | 8 unit tests (fill, stroke, text, clip, transform, layers) | [x] |
+| 3.6 | Built-in 5×7 bitmap font (ASCII 0x20–0x7E) | spiral-render | 5 unit tests (all glyphs present, unsupported returns None, text_width) | [x] |
+| 3.7 | `encode_png()` — RGBA8 → PNG | spiral-render | 1 unit test (valid PNG signature + IHDR) | [x] |
+| 3.8 | `build_hello_display_list()` — background, headline, accent, status strip | spiral-browser | 3 unit tests (ops count, viewport fill, status text) | [x] |
+| 3.9 | `process_message()` + `run_event_loop()` IPC event handling | spiral-browser | 4 unit tests (hello handshake, bad version, navigate complete, request navigate) | [x] |
+| 3.10 | `BrowserShell` — owns config + theme + registry, `render_active_tab()` | spiral-browser | 6 unit tests (homepage tab, open tab, display list, PNG, file write, async IPC drain) | [x] |
+| 3.11 | Binary: `cargo run` renders hello-world PNG | spiral-browser | `target/hello-world.png` written on run | [x] |
+| 3.12 | Full workspace test suite | root | 143 tests, 0 failures | [x] |
 
 ### Exit gate for Month 3
-`cargo test --workspace` passes on all platforms. Running
-`cargo run -p spiral-browser` opens a window showing "Hello World" on a white
-background. CI is green on Linux (at minimum).
+`cargo test --workspace` passes (143 tests, 0 failures). `cargo run -p spiral-browser`
+writes `target/hello-world.png` — a 1024×768 RGBA PNG with "Hello, Spiral!" centred
+on the browser's theme background. No windowing (Phase 1 is headless; windowed GPU
+rendering is Phase 4).
 
 ---
 

@@ -9,6 +9,7 @@ description = "2D GPU renderer for Spiral Browser"
 spiral-core.workspace = true
 spiral-paint.workspace = true
 spiral-gpu.workspace = true
+png.workspace = true
 vello.workspace = true
 wgpu.workspace = true
 log.workspace = true

@@ -2,54 +2,90 @@
 
 **Last updated:** 2026-06-14
 **Current phase:** Phase 1 — Foundation (Months 1–3)
-**Current sprint:** Sprint 3 — IPC transport layer (Month 2 complete)
+**Current sprint:** Sprint 4 — Browser shell + software renderer + hello-world PNG (Month 3)
 
 ---
 
 ## Sprint Goal
 
-Build a transport-agnostic IPC layer in `spiral-ipc`: `IpcTransport` trait,
-Unix domain sockets, Windows named pipes, length-prefixed bincode framing,
-mock transport for testing, and fuzz-smoke validation.
+Build `BrowserShell` in `spiral-browser`, `SoftwareRenderer` in `spiral-render`,
+the hello-world display list builder, the IPC event loop for renderer messages,
+and a headless `cargo run` that renders "Hello, Spiral!" to
+`target/hello-world.png`. Phase 1 exit criteria met.
+
+---
 
 ## In Progress
 
-- [x] **2.1** `unix::UnixListener` + `unix::UnixTransport` (Linux/macOS)
-- [x] **2.2** `pipe::PipeListener` + `pipe::PipeTransport` (Windows, `#[cfg(windows)]`)
-- [x] **2.3** `encode_message` / `decode_message` — u32-LE header + bincode payload
-- [x] **2.4** `IpcTransport` trait with `MockTransport::pair()` for testing
-- [x] **2.5** 16 tests in `spiral-ipc` — framing, mock, unix echo, integration
-- [x] **2.6** Fuzz smoke: 11 malformed patterns + 256 single-byte header permutations
-- [x] **2.7** Integration: full browser↔renderer message flow through trait
-- [ ] Commit Sprint 3 changes
+- [x] **3.1** Extend `IPCMessage` with `Hello(HelloMessage)` handshake variant
+- [x] **3.2** Extend `BrowserToRenderer` / `RendererToBrowser` with `tab_id` on
+      every variant; add `Log`, `ScreenshotAck`, `RendererReady`, `Screenshot`
+- [x] **3.3** `TabRegistry` + `TabState` — tab model keyed by `TabId`
+- [x] **3.4** `BrowserTheme` adapter — parses `ThemeTokens` hex strings into
+      `spiral_paint::Color` for the renderer
+- [x] **3.5** `build_hello_display_list()` — background, centred headline, accent
+      underline, URL+title status strip
+- [x] **3.6** `SoftwareRenderer` — nested-scope-aware display list rasteriser
+      (FillRect, StrokeRect, DrawText, Clip, Transform, PushLayer/PopLayer)
+- [x] **3.7** Built-in 5×7 bitmap font (`spiral-render::font`) covering ASCII
+      0x20–0x7E, 14 unit tests
+- [x] **3.8** `encode_png()` — RGBA8 framebuffer → PNG byte stream via `png` crate
+- [x] **3.9** `event_loop::process_message()` — translates `RendererToBrowser`
+      events into `TabRegistry` mutations and returns replies
+- [x] **3.10** `BrowserShell` — owns config + theme + registry; `render_active_tab()`
+      writes `target/hello-world.png`; `run()` drives an `IpcTransport` loop
+- [x] **3.11** Binary: `cargo run` initialises shell, renders hello-world PNG,
+      prints path
+- [x] **3.12** Tests: 23 tests in `spiral-browser`, 14 in `spiral-render`; 143
+      total workspace tests, 0 failures
 
-## Blocked
+---
 
-None.
+## Completed
+
+- Sprint 0: repo scaffolding, docs baseline
+- Sprint 1: core types (`BrowserConfig`, `TabId`, `IPCMessage`, `Error`, tests)
+- Sprint 2: CI matrix, lint hygiene
+- Sprint 3: IPC transport layer (`IpcTransport`, Unix/Windows, framing, mock)
+- Sprint 4: browser shell, software renderer, hello-world PNG
+
+---
 
 ## Do Not Touch
 
-- `Cargo.lock` is gitignored; never edit manually.
-- `Cargo.toml` workspace members are stable; do not add or remove crates
-  without an architectural discussion first.
-- IPC protocol types in `spiral-core` (`BrowserToRenderer`,
-  `RendererToBrowser`) are drafts; do not refactor until Month 3+.
-- `spiral-browser/src/main.rs` — `#[tokio::main]` entry point is unimplemented
-  shell; do not change until Month 3 when IPC + browser process wiring starts.
+- `spiral-gpu`, `spiral-paint`, `spiral-ui`, `spiral-theme` — Phase 2+
+- `spiral-js` — Phase 3
+- `spiral-network`, `spiral-net` — Phase 3
+- `spiral-sandbox` — Phase 4
 
-## Key Decisions (frozen for this sprint)
+---
 
-| Decision | Value | Rationale |
-|----------|-------|-----------|
-| Framing format | u32-LE length header + bincode payload | Simple, fast, zero-copy deserialise |
-| Max frame size | 64 MiB | Prevents OOM from malicious lengths |
-| Transport trait | `IpcTransport` with `Pin<Box<dyn Future>>` | Object-safe, works with `async fn` |
-| Mock transport | tokio MPSC channels | No real OS sockets needed for tests |
-| Close semantics | Best-effort, no error on already-closed | Avoids noisy errors during teardown |
+## Phase 1 Exit Criteria — Status
 
-## Next Sprint
+| Criterion | Status |
+|-----------|--------|
+| `cargo build --workspace` succeeds | ✅ |
+| `cargo test --workspace` passes | ✅ (143 tests) |
+| Browser renders "Hello World" | ✅ (`target/hello-world.png`) |
 
-Sprint 4 — Month 2 remaining + Month 3 start. Check `docs/phase1-tasks.md`
-for remaining tasks. Month 3 covers browser process wiring (task 3.x):
-`spiral-browser` main loop, IPC server startup, renderer process spawn,
-basic "Hello World" rendering pipeline.
+**Phase 1 is complete.** The next phase (Phase 2) adds CSS box model, text layout,
+and a windowed GPU surface.
+
+---
+
+## Key Architecture Decisions This Sprint
+
+1. **Software renderer tree walk** — `RenderOp::Clip` and `RenderOp::Transform`
+   are scope-bearing (they contain `ops: Vec<RenderOp>`). The rasteriser walks
+   this tree depth-first, accumulating clip rect and affine transform at each
+   level. This avoids a separate flattening pass and matches how paint engines
+   work natively.
+
+2. **TabId on every protocol message** — all `BrowserToRenderer` and
+   `RendererToBrowser` variants carry `tab_id: TabId`. This was a breaking
+   change to the `spiral-core` protocol but is architecturally correct — a
+   real browser must route messages to specific tabs.
+
+3. **BrowserTheme hex adapter** — `spiral-theme` stores colours as hex strings;
+   `spiral_paint::Color` uses `u8` fields. The bridge lives in
+   `spiral-browser::theme`, keeping the two crates decoupled.

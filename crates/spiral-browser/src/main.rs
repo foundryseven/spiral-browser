@@ -1,105 +1,36 @@
 //! Spiral Browser — Main Process
 //!
-//! Main browser process for the Spiral Browser.
+//! Binary entry point. Initialises logging, builds a default `BrowserConfig`,
+//! constructs the `BrowserShell`, renders the Phase 1 hello-world frame, and
+//! prints the output path.
+//!
+//! Phase 1 has no real IPC transport and no windowing; the binary is
+//! intentionally headless so it can run in CI. Phase 2 will add a
+//! `winit`/`softbuffer` window loop and a `unix::UnixListener` IPC server.
 
-use spiral_core::{BrowserConfig, TabId};
-use spiral_theme::ThemeEngine;
+use std::path::PathBuf;
 
-/// Browser process.
-pub struct BrowserProcess {
-    /// Browser configuration.
-    config: BrowserConfig,
-    /// Theme engine.
-    theme: ThemeEngine,
-    /// Active tabs.
-    tabs: Vec<TabId>,
-}
+use spiral_browser::{BrowserShell, DEFAULT_RENDER_PATH, HELLO_HEADLINE};
+use spiral_core::BrowserConfig;
 
-impl BrowserProcess {
-    /// Create a new browser process.
-    pub fn new(config: BrowserConfig) -> Self {
-        let theme = ThemeEngine::new(&config);
-        Self {
-            config,
-            theme,
-            tabs: Vec::new(),
-        }
-    }
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    /// Initialize the browser process.
-    pub async fn init(&mut self) -> spiral_core::Result<()> {
-        log::info!("Initializing Spiral Browser");
-
-        // Initialize theme
-        log::info!("Theme mode: {:?}", self.theme.tokens());
-
-        // Phase 2: Initialize IPC server
-        // Phase 3: Spawn renderer processes
-
-        Ok(())
-    }
-
-    /// Create a new tab.
-    pub fn create_tab(&mut self, url: &str) -> TabId {
-        let id = TabId(self.tabs.len() as u64);
-        self.tabs.push(id);
-        log::info!("Created tab {} for {}", id.0, url);
-        id
-    }
-
-    /// Run the browser.
-    pub async fn run(&self) -> spiral_core::Result<()> {
-        log::info!("Spiral Browser running");
-        log::info!("Configuration: {:?}", self.config);
-
-        // Phase 2: Start IPC server
-        // Phase 3: Spawn renderer processes
-        // Phase 4: Render UI
-
-        Ok(())
-    }
-}
-
-#[tokio::main]
-async fn main() -> spiral_core::Result<()> {
-    // Initialize logger
-    env_logger::init();
-
-    // Load configuration
     let config = BrowserConfig::default();
+    let mut shell = BrowserShell::new(config);
+    shell.init();
 
-    // Create browser process
-    let mut browser = BrowserProcess::new(config);
+    let out_path = PathBuf::from(DEFAULT_RENDER_PATH);
+    shell.render_active_tab_to(&out_path)?;
 
-    // Initialize
-    browser.init().await?;
-
-    // Create initial tab
-    browser.create_tab("about:blank");
-
-    // Run
-    browser.run().await?;
+    let tab = shell.registry().active().expect("homepage tab always open");
+    println!(
+        "Spiral Browser Phase 1 — rendered \"{HELLO_HEADLINE}\" for tab {} ({}) at {}",
+        tab.id,
+        tab.url,
+        out_path.display()
+    );
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_create_browser() {
-        let config = BrowserConfig::default();
-        let browser = BrowserProcess::new(config);
-        assert!(browser.tabs.is_empty());
-    }
-
-    #[test]
-    fn test_create_tab() {
-        let config = BrowserConfig::default();
-        let mut browser = BrowserProcess::new(config);
-        let id = browser.create_tab("https://example.com");
-        assert_eq!(browser.tabs.len(), 1);
-        assert_eq!(id.0, 0);
-    }
 }

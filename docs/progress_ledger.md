@@ -74,3 +74,46 @@ Append-only log of every meaningful change. Format:
 - Tests run: `cargo clippy --workspace --all-targets` — 0 warnings.
 - Tests run: `cargo fmt --all -- --check` — clean.
 - Status: merged (commit `5a0d0ee`).
+
+## [2026-06-14] [custom] [spiral-browser, spiral-render, spiral-core] — Sprint 4: Browser shell + software renderer + hello-world PNG
+
+- **Protocol change — IPCMessage:** added `Hello(HelloMessage)` handshake variant with
+  `tab_id`, `protocol_version`, `viewport_width`, `viewport_height`. `HelloMessage::PROTOCOL_VERSION`
+  constant set to 1.
+- **Protocol change — BrowserToRenderer:** every variant now carries `tab_id: TabId`. Added
+  `Log { level, message }` and `ScreenshotAck { request_id }` variants. `Reload` and `Stop`
+  changed from tuple variants to struct variants with `tab_id`.
+- **Protocol change — RendererToBrowser:** every variant now carries `tab_id: TabId`. Added
+  `RendererReady { tab_id }`, `Input { tab_id, event }`, `Screenshot { tab_id, request_id }`.
+  `DOMLoaded` gained `url: String`; `NavigateComplete` gained `title: String`.
+- **Task 3.3 — TabRegistry + TabState:** tab model with `id`, `url`, `title`, `loading`,
+  `progress`, `loaded_at`, viewport dimensions. `TabRegistry` supports `open()`, `activate()`,
+  `get()`/`get_mut()`, `active()`/`active_mut()`, `allocate_id()`. 8 unit tests.
+- **Task 3.4 — BrowserTheme:** parses `ThemeTokens` hex strings into `spiral_paint::Color`.
+  `from_engine()` / `from_tokens()` / `From<&ThemeEngine>`. Malformed hex falls back to black.
+  3 unit tests.
+- **Task 3.5 — SoftwareRenderer:** full display list rasteriser that walks nested `Clip`/`Transform`
+  scopes depth-first. Supports `FillRect`, `StrokeRect`, `DrawText`, `Clip`, `Transform` (2D affine),
+  `PushLayer`/`PopLayer` (alpha compositing). Exports `Rgba`, `Transform`. 8 unit tests.
+- **Task 3.6 — Built-in 5×7 bitmap font:** ASCII 0x20–0x7E (95 glyphs), `glyph()`, `space_glyph()`,
+  `text_width()`. 5 unit tests.
+- **Task 3.7 — PNG output:** `encode_png()` encodes `SoftwareRenderer` framebuffer as RGBA8 PNG.
+  `PngError` type. 1 unit test (validates PNG signature + IHDR chunk).
+- **Task 3.8 — hello-world display list:** `build_hello_display_list()` produces 5 ops:
+  background fill, centred "Hello, Spiral!" headline, accent underline, status-strip background,
+  URL+title status text. 3 unit tests.
+- **Task 3.9 — IPC event loop:** `process_message()` translates `Hello`/`RendererToBrowser` events
+  into `TabRegistry` mutations and returns `ProcessOutcome::Reply(...)`. `run_event_loop()` drives
+  an `IpcTransport` until channel close. 4 unit tests.
+- **Task 3.10 — BrowserShell:** owns config + `ThemeEngine` + `TabRegistry`. `new()` opens homepage tab.
+  `render_active_tab()` returns `(width, height, png_bytes)`. `render_active_tab_to()` writes to disk.
+  `display_list()` builds the display list. `run()` drives the IPC loop. 6 unit tests (including
+  async `run_drains_mock_transport` integration).
+- **Task 3.11 — Binary:** `cargo run` initialises shell, renders hello-world PNG to
+  `target/hello-world.png`, prints path and tab info.
+- **Task 3.12 — Tests:** 143 total workspace tests, 0 failures.
+- Tests run: `cargo test -p spiral-render` — 14 passed, 0 failed.
+- Tests run: `cargo test -p spiral-browser` — 23 passed, 0 failed.
+- Tests run: `cargo test --workspace` — 143 passed, 0 failed.
+- Tests run: `cargo clippy --workspace` — 4 warnings (expected: too-many-arguments in rasteriser).
+- Status: in-progress (not yet committed).

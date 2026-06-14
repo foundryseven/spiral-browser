@@ -80,41 +80,155 @@ pub enum IPCMessage {
     BrowserToRenderer(BrowserToRenderer),
     /// Renderer to browser message.
     RendererToBrowser(RendererToBrowser),
+    /// Process-to-process handshake (used by renderer on connect).
+    Hello(HelloMessage),
+}
+
+/// Handshake payload exchanged when a renderer process connects.
+///
+/// Sent as `IPCMessage::Hello(HelloMessage)` immediately after the transport
+/// is established. The renderer identifies itself and announces its initial
+/// viewport; the browser replies with a `BrowserToRenderer::Resize` and a
+/// `BrowserToRenderer::Navigate` for the tab's current URL.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HelloMessage {
+    /// Tab this renderer is bound to.
+    pub tab_id: TabId,
+    /// Protocol version the renderer speaks.
+    pub protocol_version: u32,
+    /// Initial viewport width in logical pixels.
+    pub viewport_width: f32,
+    /// Initial viewport height in logical pixels.
+    pub viewport_height: f32,
+}
+
+impl HelloMessage {
+    /// Current protocol version. Bump on breaking changes to `IPCMessage`.
+    pub const PROTOCOL_VERSION: u32 = 1;
 }
 
 /// Messages from browser process to renderer process.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BrowserToRenderer {
     /// Navigate to a URL.
-    Navigate { url: String },
+    Navigate {
+        /// Tab to navigate.
+        tab_id: TabId,
+        /// Destination URL.
+        url: String,
+    },
     /// Update DOM operations.
     UpdateDOM {
+        /// Target tab.
+        tab_id: TabId,
+        /// Root node of the diff.
         node_id: u64,
+        /// Operations to apply.
         operations: Vec<DomOp>,
     },
     /// Resize the viewport.
-    Resize { width: f32, height: f32 },
+    Resize {
+        /// Tab to resize.
+        tab_id: TabId,
+        /// New width in logical pixels.
+        width: f32,
+        /// New height in logical pixels.
+        height: f32,
+    },
     /// Input event.
-    InputEvent { event: InputEvent },
+    InputEvent {
+        /// Tab receiving the input.
+        tab_id: TabId,
+        /// Event payload.
+        event: InputEvent,
+    },
     /// Reload the page.
-    Reload,
+    Reload {
+        /// Tab to reload.
+        tab_id: TabId,
+    },
     /// Stop loading.
-    Stop,
+    Stop {
+        /// Tab to stop.
+        tab_id: TabId,
+    },
+    /// Log a message to the renderer's logger.
+    Log {
+        /// Severity.
+        level: LogLevel,
+        /// Message body.
+        message: String,
+    },
+    /// Acknowledge a previously-issued screenshot request.
+    ScreenshotAck {
+        /// Request id being acknowledged.
+        request_id: u64,
+    },
 }
 
 /// Messages from renderer process to browser process.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RendererToBrowser {
+    /// Renderer is ready to accept commands for `tab_id`.
+    RendererReady {
+        /// Tab the renderer is bound to.
+        tab_id: TabId,
+    },
     /// DOM has finished loading.
-    DOMLoaded { title: String },
+    DOMLoaded {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Document title once parsed.
+        title: String,
+        /// Final URL after redirects.
+        url: String,
+    },
     /// Load progress update.
-    LoadProgress { progress: f32 },
+    LoadProgress {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Progress in `[0.0, 1.0]`.
+        progress: f32,
+    },
     /// Navigation completed.
-    NavigateComplete { url: String },
+    NavigateComplete {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Final URL.
+        url: String,
+        /// Document title.
+        title: String,
+    },
     /// Request navigation (link click, form submission).
-    RequestNavigate { url: String },
+    RequestNavigate {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Destination URL.
+        url: String,
+    },
     /// Console message from JavaScript.
-    ConsoleMessage { level: LogLevel, text: String },
+    ConsoleMessage {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Severity.
+        level: LogLevel,
+        /// Message text.
+        text: String,
+    },
+    /// Input event (mouse, keyboard, scroll) the renderer wants to forward.
+    Input {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Event payload.
+        event: InputEvent,
+    },
+    /// Renderer-side screenshot request, e.g. for a thumbnail.
+    Screenshot {
+        /// Tab the event refers to.
+        tab_id: TabId,
+        /// Opaque request id to correlate the eventual ack / response.
+        request_id: u64,
+    },
 }
 
 /// DOM manipulation operations.
@@ -294,10 +408,11 @@ mod tests {
     #[test]
     fn ipc_navigate_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
+            tab_id: TabId(1),
             url: "https://example.com".to_string(),
         });
         match round_trip(&msg) {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url, .. }) => {
                 assert_eq!(url, "https://example.com");
             }
             other => panic!("unexpected variant: {other:?}"),
@@ -307,6 +422,7 @@ mod tests {
     #[test]
     fn ipc_update_dom_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::UpdateDOM {
+            tab_id: TabId(1),
             node_id: 99,
             operations: vec![
                 DomOp::AppendChild,
@@ -328,6 +444,7 @@ mod tests {
             IPCMessage::BrowserToRenderer(BrowserToRenderer::UpdateDOM {
                 node_id,
                 operations,
+                ..
             }) => {
                 assert_eq!(node_id, 99);
                 assert_eq!(operations.len(), 6);
@@ -345,11 +462,12 @@ mod tests {
     #[test]
     fn ipc_resize_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize {
+            tab_id: TabId(1),
             width: 1024.0,
             height: 768.5,
         });
         match round_trip(&msg) {
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize { width, height }) => {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize { width, height, .. }) => {
                 assert_eq!(width, 1024.0);
                 assert_eq!(height, 768.5);
             }
@@ -360,6 +478,7 @@ mod tests {
     #[test]
     fn ipc_input_event_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+            tab_id: TabId(1),
             event: InputEvent::MouseDown {
                 x: 10.0,
                 y: 20.0,
@@ -369,6 +488,7 @@ mod tests {
         match round_trip(&msg) {
             IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
                 event: InputEvent::MouseDown { x, y, button },
+                ..
             }) => {
                 assert_eq!(x, 10.0);
                 assert_eq!(y, 20.0);
@@ -381,6 +501,7 @@ mod tests {
     #[test]
     fn ipc_keyboard_input_event_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+            tab_id: TabId(1),
             event: InputEvent::KeyDown {
                 key: "Enter".to_string(),
                 modifiers: 0b1010,
@@ -389,6 +510,7 @@ mod tests {
         match round_trip(&msg) {
             IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
                 event: InputEvent::KeyDown { key, modifiers },
+                ..
             }) => {
                 assert_eq!(key, "Enter");
                 assert_eq!(modifiers, 0b1010);
@@ -400,6 +522,7 @@ mod tests {
     #[test]
     fn ipc_scroll_input_event_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+            tab_id: TabId(1),
             event: InputEvent::Scroll {
                 delta_x: -5.0,
                 delta_y: 12.5,
@@ -408,6 +531,7 @@ mod tests {
         match round_trip(&msg) {
             IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
                 event: InputEvent::Scroll { delta_x, delta_y },
+                ..
             }) => {
                 assert_eq!(delta_x, -5.0);
                 assert_eq!(delta_y, 12.5);
@@ -419,12 +543,12 @@ mod tests {
     #[test]
     fn ipc_reload_and_stop_round_trip() {
         for msg in [
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload),
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop),
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { tab_id: TabId(1) }),
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop { tab_id: TabId(1) }),
         ] {
             match round_trip(&msg) {
-                IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload) => {}
-                IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop) => {}
+                IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { .. }) => {}
+                IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop { .. }) => {}
                 other => panic!("unexpected variant: {other:?}"),
             }
         }
@@ -434,16 +558,25 @@ mod tests {
     fn ipc_renderer_to_browser_round_trip() {
         let messages = vec![
             IPCMessage::RendererToBrowser(RendererToBrowser::DOMLoaded {
+                tab_id: TabId(1),
                 title: "Example Domain".to_string(),
-            }),
-            IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress { progress: 0.42 }),
-            IPCMessage::RendererToBrowser(RendererToBrowser::NavigateComplete {
                 url: "https://example.com".to_string(),
             }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress {
+                tab_id: TabId(1),
+                progress: 0.42,
+            }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::NavigateComplete {
+                tab_id: TabId(1),
+                url: "https://example.com".to_string(),
+                title: "Example Domain".to_string(),
+            }),
             IPCMessage::RendererToBrowser(RendererToBrowser::RequestNavigate {
+                tab_id: TabId(1),
                 url: "https://rust-lang.org".to_string(),
             }),
             IPCMessage::RendererToBrowser(RendererToBrowser::ConsoleMessage {
+                tab_id: TabId(1),
                 level: LogLevel::Warn,
                 text: "deprecated API".to_string(),
             }),
@@ -462,8 +595,10 @@ mod tests {
 
     #[test]
     fn ipc_message_corrupt_payload_errors() {
-        let bytes =
-            bincode::serialize(&IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload)).unwrap();
+        let bytes = bincode::serialize(&IPCMessage::BrowserToRenderer(
+            BrowserToRenderer::Reload { tab_id: TabId(1) },
+        ))
+        .unwrap();
         let truncated = &bytes[..bytes.len() - 1];
         let result: std::result::Result<IPCMessage, _> = bincode::deserialize(truncated);
         assert!(
