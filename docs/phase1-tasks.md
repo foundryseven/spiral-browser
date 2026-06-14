@@ -17,10 +17,10 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 | # | Task | Crate | Acceptance Test | Status |
 |---|------|-------|-----------------|--------|
 | 1.1 | Create Cargo workspace with all 18 crate stubs | root | `cargo build --workspace` succeeds | [x] |
-| 1.2 | Define `BrowserConfig` struct | spiral-core | Unit test serialises/deserialises via bincode | [ ] |
-| 1.3 | Define `TabId` newtype | spiral-core | Unit test equality, hash, display | [ ] |
-| 1.4 | Define `IPCMessage` enum | spiral-core | Round-trip bincode test for each variant | [ ] |
-| 1.5 | Define `Error` types via thiserror | spiral-core | Unit tests for each error variant | [ ] |
+| 1.2 | Define `BrowserConfig` struct | spiral-core | Unit test serialises/deserialises via bincode | [x] |
+| 1.3 | Define `TabId` newtype | spiral-core | Unit test equality, hash, display | [x] |
+| 1.4 | Define `IPCMessage` enum | spiral-core | Round-trip bincode test for each variant | [x] |
+| 1.5 | Define `Error` types via thiserror | spiral-core | Unit tests for each error variant | [x] |
 | 1.6 | Set up CI/CD (GitHub Actions, Linux/macOS/Windows matrix) | root | Green CI on all three platforms | [ ] |
 | 1.7 | Pin workspace dependency versions | root | `cargo check --workspace` clean | [ ] |
 

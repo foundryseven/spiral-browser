@@ -8,6 +8,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct TabId(pub u64);
 
+impl std::fmt::Display for TabId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Unique identifier for a render node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RenderNodeId(pub u64);
@@ -190,33 +196,326 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
+
+    // ---------- Task 1.2: BrowserConfig ----------
 
     #[test]
-    fn test_browser_config_default() {
+    fn browser_config_default_matches_spec() {
         let config = BrowserConfig::default();
         assert_eq!(config.homepage, "about:blank");
+        assert_eq!(config.proxy, None);
         assert_eq!(config.font_size, 16.0);
+        assert_eq!(config.accent_color, AccentColor::Indigo);
         assert!(config.dark_mode);
+        assert_eq!(config.tab_position, TabPosition::Left);
+        assert!(config.auto_hide_chrome);
+        assert!(config.sandbox_renderer);
     }
 
     #[test]
-    fn test_tab_id() {
-        let id = TabId(1);
-        assert_eq!(id.0, 1);
+    fn browser_config_bincode_round_trip() {
+        let config = BrowserConfig {
+            homepage: "https://spiral-browser.example".to_string(),
+            proxy: Some("socks5://127.0.0.1:9050".to_string()),
+            font_size: 18.5,
+            accent_color: AccentColor::Emerald,
+            dark_mode: false,
+            tab_position: TabPosition::Top,
+            auto_hide_chrome: false,
+            sandbox_renderer: false,
+        };
+
+        let bytes = bincode::serialize(&config).expect("serialise");
+        let decoded: BrowserConfig = bincode::deserialize(&bytes).expect("deserialise");
+
+        assert_eq!(decoded.homepage, config.homepage);
+        assert_eq!(decoded.proxy, config.proxy);
+        assert_eq!(decoded.font_size, config.font_size);
+        assert_eq!(decoded.accent_color, config.accent_color);
+        assert_eq!(decoded.dark_mode, config.dark_mode);
+        assert_eq!(decoded.tab_position, config.tab_position);
+        assert_eq!(decoded.auto_hide_chrome, config.auto_hide_chrome);
+        assert_eq!(decoded.sandbox_renderer, config.sandbox_renderer);
     }
 
     #[test]
-    fn test_ipc_message_serialization() {
+    fn browser_config_clone_preserves_equality() {
+        let original = BrowserConfig::default();
+        let cloned = original.clone();
+        let lhs = bincode::serialize(&original).unwrap();
+        let rhs = bincode::serialize(&cloned).unwrap();
+        assert_eq!(lhs, rhs);
+    }
+
+    // ---------- Task 1.3: TabId ----------
+
+    #[test]
+    fn tab_id_equality_and_hash() {
+        let a = TabId(42);
+        let b = TabId(42);
+        let c = TabId(43);
+        assert_eq!(a, b);
+        assert_ne!(a, c);
+
+        let mut set: HashSet<TabId> = HashSet::new();
+        set.insert(a);
+        set.insert(b);
+        set.insert(c);
+        assert_eq!(set.len(), 2);
+        assert!(set.contains(&a));
+    }
+
+    #[test]
+    fn tab_id_display_and_debug() {
+        let id = TabId(7);
+        assert_eq!(format!("{id}"), "7");
+        assert_eq!(format!("{id:?}"), "TabId(7)");
+    }
+
+    #[test]
+    fn render_node_id_equality_and_hash() {
+        let a = RenderNodeId(1);
+        let b = RenderNodeId(1);
+        assert_eq!(a, b);
+        let mut set: HashSet<RenderNodeId> = HashSet::new();
+        set.insert(a);
+        set.insert(b);
+        assert_eq!(set.len(), 1);
+    }
+
+    // ---------- Task 1.4: IPCMessage ----------
+
+    fn round_trip(msg: &IPCMessage) -> IPCMessage {
+        let bytes = bincode::serialize(msg).expect("serialise");
+        bincode::deserialize(&bytes).expect("deserialise")
+    }
+
+    #[test]
+    fn ipc_navigate_round_trip() {
         let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate {
             url: "https://example.com".to_string(),
         });
-        let serialized = bincode::serialize(&msg).unwrap();
-        let deserialized: IPCMessage = bincode::deserialize(&serialized).unwrap();
-        match deserialized {
+        match round_trip(&msg) {
             IPCMessage::BrowserToRenderer(BrowserToRenderer::Navigate { url }) => {
                 assert_eq!(url, "https://example.com");
             }
-            _ => panic!("Wrong message type"),
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ipc_update_dom_round_trip() {
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::UpdateDOM {
+            node_id: 99,
+            operations: vec![
+                DomOp::AppendChild,
+                DomOp::SetAttribute {
+                    name: "class".to_string(),
+                    value: "container".to_string(),
+                },
+                DomOp::SetTextContent {
+                    text: "hello".to_string(),
+                },
+                DomOp::RemoveAttribute {
+                    name: "id".to_string(),
+                },
+                DomOp::RemoveChild,
+                DomOp::InsertBefore,
+            ],
+        });
+        match round_trip(&msg) {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::UpdateDOM {
+                node_id,
+                operations,
+            }) => {
+                assert_eq!(node_id, 99);
+                assert_eq!(operations.len(), 6);
+                assert!(matches!(operations[0], DomOp::AppendChild));
+                assert!(matches!(operations[1], DomOp::SetAttribute { .. }));
+                assert!(matches!(operations[2], DomOp::SetTextContent { .. }));
+                assert!(matches!(operations[3], DomOp::RemoveAttribute { .. }));
+                assert!(matches!(operations[4], DomOp::RemoveChild));
+                assert!(matches!(operations[5], DomOp::InsertBefore));
+            }
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ipc_resize_round_trip() {
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize {
+            width: 1024.0,
+            height: 768.5,
+        });
+        match round_trip(&msg) {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize { width, height }) => {
+                assert_eq!(width, 1024.0);
+                assert_eq!(height, 768.5);
+            }
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ipc_input_event_round_trip() {
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+            event: InputEvent::MouseDown {
+                x: 10.0,
+                y: 20.0,
+                button: MouseButton::Left,
+            },
+        });
+        match round_trip(&msg) {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+                event: InputEvent::MouseDown { x, y, button },
+            }) => {
+                assert_eq!(x, 10.0);
+                assert_eq!(y, 20.0);
+                assert_eq!(button, MouseButton::Left);
+            }
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ipc_keyboard_input_event_round_trip() {
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+            event: InputEvent::KeyDown {
+                key: "Enter".to_string(),
+                modifiers: 0b1010,
+            },
+        });
+        match round_trip(&msg) {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+                event: InputEvent::KeyDown { key, modifiers },
+            }) => {
+                assert_eq!(key, "Enter");
+                assert_eq!(modifiers, 0b1010);
+            }
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ipc_scroll_input_event_round_trip() {
+        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+            event: InputEvent::Scroll {
+                delta_x: -5.0,
+                delta_y: 12.5,
+            },
+        });
+        match round_trip(&msg) {
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::InputEvent {
+                event: InputEvent::Scroll { delta_x, delta_y },
+            }) => {
+                assert_eq!(delta_x, -5.0);
+                assert_eq!(delta_y, 12.5);
+            }
+            other => panic!("unexpected variant: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn ipc_reload_and_stop_round_trip() {
+        for msg in [
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload),
+            IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop),
+        ] {
+            match round_trip(&msg) {
+                IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload) => {}
+                IPCMessage::BrowserToRenderer(BrowserToRenderer::Stop) => {}
+                other => panic!("unexpected variant: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn ipc_renderer_to_browser_round_trip() {
+        let messages = vec![
+            IPCMessage::RendererToBrowser(RendererToBrowser::DOMLoaded {
+                title: "Example Domain".to_string(),
+            }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress { progress: 0.42 }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::NavigateComplete {
+                url: "https://example.com".to_string(),
+            }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::RequestNavigate {
+                url: "https://rust-lang.org".to_string(),
+            }),
+            IPCMessage::RendererToBrowser(RendererToBrowser::ConsoleMessage {
+                level: LogLevel::Warn,
+                text: "deprecated API".to_string(),
+            }),
+        ];
+
+        for original in messages {
+            let decoded = round_trip(&original);
+            let original_bytes = bincode::serialize(&original).unwrap();
+            let decoded_bytes = bincode::serialize(&decoded).unwrap();
+            assert_eq!(original_bytes, decoded_bytes, "bytes diverged for {original:?}");
+        }
+    }
+
+    #[test]
+    fn ipc_message_corrupt_payload_errors() {
+        let bytes = bincode::serialize(&IPCMessage::BrowserToRenderer(
+            BrowserToRenderer::Reload,
+        ))
+        .unwrap();
+        let truncated = &bytes[..bytes.len() - 1];
+        let result: std::result::Result<IPCMessage, _> = bincode::deserialize(truncated);
+        assert!(result.is_err(), "truncated payload must fail to deserialise");
+    }
+
+    // ---------- Task 1.5: Error ----------
+
+    #[test]
+    fn error_io_from_conversion() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "missing file");
+        let err: Error = io_err.into();
+        match err {
+            Error::Io(_) => {}
+            other => panic!("expected Error::Io, got {other:?}"),
+        }
+        assert!(err.to_string().contains("missing file"));
+    }
+
+    #[test]
+    fn error_variants_display_distinct_messages() {
+        let variants = [
+            Error::Ipc("ipc boom".to_string()),
+            Error::Parse("parse boom".to_string()),
+            Error::Layout("layout boom".to_string()),
+            Error::Render("render boom".to_string()),
+            Error::Network("network boom".to_string()),
+            Error::JavaScript("js boom".to_string()),
+            Error::Sandbox("sandbox boom".to_string()),
+            Error::Config("config boom".to_string()),
+            Error::Serialization("ser boom".to_string()),
+        ];
+
+        let mut seen = HashSet::new();
+        for variant in &variants {
+            let msg = variant.to_string();
+            assert!(msg.contains("boom"), "missing payload in {msg}");
+            assert!(seen.insert(msg.clone()), "duplicate message {msg}");
+        }
+        assert_eq!(seen.len(), variants.len());
+    }
+
+    #[test]
+    fn error_propagates_through_result() {
+        fn producer() -> Result<u32> {
+            Err(Error::Config("bad field".to_string()))
+        }
+        fn consumer() -> Result<u32> {
+            let _v = producer()?;
+            Ok(1)
+        }
+        match consumer() {
+            Err(Error::Config(msg)) => assert_eq!(msg, "bad field"),
+            other => panic!("expected Error::Config, got {other:?}"),
         }
     }
 }

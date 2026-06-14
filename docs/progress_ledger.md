@@ -21,4 +21,16 @@ Append-only log of every meaningful change. Format:
 - Updated `opencode.jsonc` default model to `ozore/custom`.
 - Corrected `CODEX.md` crate count from 17 to 18.
 - Tests run: `cargo check --workspace` baseline captured in `docs/baseline-warnings.md`.
-- Status: merged (pending commit).
+- Status: merged (commit `5a432f1`).
+
+## [2026-06-14] [custom] [spiral-core] — Sprint 1: core type test coverage (tasks 1.2–1.5)
+- **Task 1.2 — BrowserConfig:** bincode round-trip, default field assertions, clone equality.
+- **Task 1.3 — TabId:** equality, hash dedup, `Display` impl added + verified. RenderNodeId hash test.
+- **Task 1.4 — IPCMessage:** round-trip tests for all 13 variants (Navigate, UpdateDOM 6 ops,
+  Resize, 3 InputEvent variants, Reload, Stop, DOMLoaded, LoadProgress, NavigateComplete,
+  RequestNavigate, ConsoleMessage). Added corrupt-payload error test.
+- **Task 1.5 — Error:** `From<io::Error>` conversion, `Display` message uniqueness across 9 variants,
+  `Result` propagation via `?` operator.
+- Added `TabId` `Display` impl (missing, blocked test).
+- Tests run: `cargo test -p spiral-core` — 18 passed, 0 failed.
+- Status: in-progress (pending commit).
