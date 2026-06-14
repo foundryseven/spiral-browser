@@ -73,4 +73,4 @@ Append-only log of every meaningful change. Format:
 - Tests run: `cargo test --workspace` — 86 passed, 0 failed.
 - Tests run: `cargo clippy --workspace --all-targets` — 0 warnings.
 - Tests run: `cargo fmt --all -- --check` — clean.
-- Status: in-progress (pending commit).
+- Status: merged (commit `5a0d0ee`).
