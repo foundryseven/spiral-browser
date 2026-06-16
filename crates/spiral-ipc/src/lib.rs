@@ -591,7 +591,9 @@ mod tests {
         for i in 0..50u64 {
             let msg = server.recv().await.unwrap();
             match msg {
-                IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress { progress, .. }) => {
+                IPCMessage::RendererToBrowser(RendererToBrowser::LoadProgress {
+                    progress, ..
+                }) => {
                     let expected = i as f32 / 50.0;
                     assert!(
                         (progress - expected).abs() < f32::EPSILON,
@@ -759,7 +761,7 @@ mod tests {
             vec![8, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8],
             // multiple frames concatenated
             {
-        let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { tab_id: TAB });
+                let msg = IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload { tab_id: TAB });
                 let frame = encode_message(&msg).unwrap();
                 let mut multi = frame.clone();
                 multi.extend_from_slice(&frame);

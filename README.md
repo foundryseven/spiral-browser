@@ -25,8 +25,8 @@ Multi-process design: browser process, per-tab renderer processes, dedicated net
 ```
 spiral-core  →  spiral-ipc  →  spiral-dom  →  spiral-html
                      │            │              spiral-css
-                     │            │              spiral-layout
-                     │            │              spiral-js
+                      │            │              spiral-gyre
+                      │            │              spiral-vortex
                      │            │
                      └─→  spiral-browser  ←  spiral-ui  ←  spiral-theme
                                     spiral-network, spiral-net, spiral-crypto

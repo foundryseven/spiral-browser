@@ -57,11 +57,13 @@ fn handle_hello(registry: &mut TabRegistry, hello: HelloMessage) -> ProcessOutco
         "renderer handshake for tab {} ({}x{})",
         hello.tab_id, hello.viewport_width, hello.viewport_height
     );
-    ProcessOutcome::Reply(vec![IPCMessage::BrowserToRenderer(BrowserToRenderer::Resize {
-        tab_id: hello.tab_id,
-        width: hello.viewport_width,
-        height: hello.viewport_height,
-    })])
+    ProcessOutcome::Reply(vec![IPCMessage::BrowserToRenderer(
+        BrowserToRenderer::Resize {
+            tab_id: hello.tab_id,
+            width: hello.viewport_width,
+            height: hello.viewport_height,
+        },
+    )])
 }
 
 fn handle_event(registry: &mut TabRegistry, ev: RendererToBrowser) -> ProcessOutcome {
@@ -112,7 +114,11 @@ fn handle_event(registry: &mut TabRegistry, ev: RendererToBrowser) -> ProcessOut
             }
             ProcessOutcome::Idle
         }
-        RendererToBrowser::ConsoleMessage { tab_id: _, level, text } => {
+        RendererToBrowser::ConsoleMessage {
+            tab_id: _,
+            level,
+            text,
+        } => {
             match level {
                 LogLevel::Error => log::error!("[console] {text}"),
                 LogLevel::Warn => log::warn!("[console] {text}"),
@@ -122,10 +128,16 @@ fn handle_event(registry: &mut TabRegistry, ev: RendererToBrowser) -> ProcessOut
             }
             ProcessOutcome::Idle
         }
-        RendererToBrowser::Input { tab_id: _, event: _ } => ProcessOutcome::Idle,
-        RendererToBrowser::Screenshot { tab_id: _, request_id } => ProcessOutcome::Reply(vec![
-            IPCMessage::BrowserToRenderer(BrowserToRenderer::ScreenshotAck { request_id }),
-        ]),
+        RendererToBrowser::Input {
+            tab_id: _,
+            event: _,
+        } => ProcessOutcome::Idle,
+        RendererToBrowser::Screenshot {
+            tab_id: _,
+            request_id,
+        } => ProcessOutcome::Reply(vec![IPCMessage::BrowserToRenderer(
+            BrowserToRenderer::ScreenshotAck { request_id },
+        )]),
     }
 }
 
@@ -197,7 +209,10 @@ mod tests {
             ProcessOutcome::Reply(replies) => {
                 assert!(matches!(
                     &replies[0],
-                    IPCMessage::BrowserToRenderer(BrowserToRenderer::Log { level: LogLevel::Warn, .. })
+                    IPCMessage::BrowserToRenderer(BrowserToRenderer::Log {
+                        level: LogLevel::Warn,
+                        ..
+                    })
                 ));
             }
             other => panic!("expected Reply, got {other:?}"),

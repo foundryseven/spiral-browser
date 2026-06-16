@@ -8,12 +8,12 @@
 /crates/spiral-ipc/          @spiral/core-maintainers
 /crates/spiral-dom/          @spiral/dom-maintainers
 /crates/spiral-html/         @spiral/dom-maintainers
-/crates/spiral-css/          @spiral/layout-maintainers
-/crates/spiral-layout/       @spiral/layout-maintainers
+/crates/spiral-css/          @spiral/gyre-maintainers
+/crates/spiral-gyre/         @spiral/gyre-maintainers
 /crates/spiral-paint/        @spiral/render-maintainers
 /crates/spiral-render/       @spiral/render-maintainers
 /crates/spiral-gpu/          @spiral/render-maintainers
-/crates/spiral-js/           @spiral/js-maintainers
+/crates/spiral-vortex/       @spiral/vortex-maintainers
 /crates/spiral-network/      @spiral/net-maintainers
 /crates/spiral-net/          @spiral/net-maintainers
 /crates/spiral-crypto/       @spiral/net-maintainers

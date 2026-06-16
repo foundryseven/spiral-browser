@@ -18,6 +18,64 @@ impl std::fmt::Display for TabId {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RenderNodeId(pub u64);
 
+/// RGBA colour with 8-bit sRGB channels and a linear `[0.0, 1.0]` alpha.
+///
+/// This is the canonical colour type used across all Spiral crates.
+/// `spiral-css`, `spiral-paint`, and `spiral-render` re-export it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Color {
+    /// Red channel.
+    pub r: u8,
+    /// Green channel.
+    pub g: u8,
+    /// Blue channel.
+    pub b: u8,
+    /// Alpha channel in `[0.0, 1.0]`.
+    pub a: f32,
+}
+
+impl Color {
+    /// Fully opaque black.
+    pub const BLACK: Self = Self {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 1.0,
+    };
+    /// Fully opaque white.
+    pub const WHITE: Self = Self {
+        r: 255,
+        g: 255,
+        b: 255,
+        a: 1.0,
+    };
+    /// Fully transparent black.
+    pub const TRANSPARENT: Self = Self {
+        r: 0,
+        g: 0,
+        b: 0,
+        a: 0.0,
+    };
+
+    /// Parse a `#RRGGBB` hex string. Returns `None` on malformed input.
+    #[must_use]
+    pub fn from_hex(s: &str) -> Option<Self> {
+        let b = s.as_bytes();
+        if b.len() < 7 || b[0] != b'#' {
+            return None;
+        }
+        let r = u8::from_str_radix(core::str::from_utf8(&b[1..3]).ok()?, 16).ok()?;
+        let g = u8::from_str_radix(core::str::from_utf8(&b[3..5]).ok()?, 16).ok()?;
+        let b_ch = u8::from_str_radix(core::str::from_utf8(&b[5..7]).ok()?, 16).ok()?;
+        Some(Self {
+            r,
+            g,
+            b: b_ch,
+            a: 1.0,
+        })
+    }
+}
+
 /// Browser configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BrowserConfig {
@@ -286,6 +344,9 @@ pub enum Error {
     #[error("Render error: {0}")]
     Render(String),
 
+    #[error("DOM error: {0}")]
+    Dom(String),
+
     #[error("Network error: {0}")]
     Network(String),
 
@@ -297,6 +358,9 @@ pub enum Error {
 
     #[error("Configuration error: {0}")]
     Config(String),
+
+    #[error("Cryptographic error: {0}")]
+    Crypto(String),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -595,9 +659,9 @@ mod tests {
 
     #[test]
     fn ipc_message_corrupt_payload_errors() {
-        let bytes = bincode::serialize(&IPCMessage::BrowserToRenderer(
-            BrowserToRenderer::Reload { tab_id: TabId(1) },
-        ))
+        let bytes = bincode::serialize(&IPCMessage::BrowserToRenderer(BrowserToRenderer::Reload {
+            tab_id: TabId(1),
+        }))
         .unwrap();
         let truncated = &bytes[..bytes.len() - 1];
         let result: std::result::Result<IPCMessage, _> = bincode::deserialize(truncated);
@@ -631,6 +695,7 @@ mod tests {
             Error::JavaScript("js boom".to_string()),
             Error::Sandbox("sandbox boom".to_string()),
             Error::Config("config boom".to_string()),
+            Error::Crypto("crypto boom".to_string()),
             Error::Serialization("ser boom".to_string()),
         ];
 

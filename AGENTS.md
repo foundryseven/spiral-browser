@@ -10,12 +10,13 @@ do not override).
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1 — Foundation (Months 1–3) |
-| **Sprint** | Sprint 0 — Repo scaffolding and documentation baseline |
+| **Phase** | Phase 2 — Core Engine (Months 4–9) |
+| **Sprint** | M4 window — Chunks 1–3 complete; M4.4–M4.6 remain |
 | **Active sprint state** | [`docs/active_context.md`](docs/active_context.md) |
 | **Task breakdown** | [`docs/phase1-tasks.md`](docs/phase1-tasks.md) |
 | **Architecture deltas** | [`docs/system_architecture.md`](docs/system_architecture.md) |
 | **Change log** | [`docs/progress_ledger.md`](docs/progress_ledger.md) |
+| **Iteration plans** | [`docs/plans/iteration-options.md`](docs/plans/iteration-options.md) |
 | **Full roadmap** | [`ROADMAP.md`](ROADMAP.md) |
 
 Read `docs/active_context.md` **before starting any task**. It is the single
@@ -99,6 +100,20 @@ Works for both horizontal and vertical axes.
 - Run `cargo test` before committing
 - Run `cargo clippy` for lint checks
 
+### Novelty Claims
+- Any claim of "novel", "first", "unique", "no prior art", or "no shipped
+  browser does this" **must** be verified by a research agent before committing.
+- The verification must check: V8, SpiderMonkey, JSC, Servo, Ladybird, Flow,
+  Brave, and relevant academic literature. Wikipedia is a starting point, not a
+  conclusion.
+- If verification finds prior art, downgrade the claim honestly. "Partially
+  novel (combination is new)" or "configuration choice" are valid categories.
+- The M4 audit methodology (`docs/audit-sprint-m4.md`) is the canonical
+  standard. Four rounds of retrospective correction taught us that overclaiming
+  is the default failure mode — gate it proactively.
+- Design docs, progress ledger entries, and active_context updates are all
+  in scope. Commit messages are not (too noisy).
+
 ---
 
 ## Working on Specific Crates
@@ -115,24 +130,28 @@ Works for both horizontal and vertical axes.
 - Ensure message framing is correct
 - Check for buffer overflow in deserialization
 
-### spiral-html
-- Wraps html5ever — read html5ever docs first
-- Output is spiral-dom Document
-- Handle encoding detection carefully
-- Test with malformed HTML (html5ever is lenient)
+### spiral-fmt
+- Spiral's from-spec HTML5 tokeniser and tree builder — no html5ever, no
+  markup5ever, no tendril. Pure Spiral-native Rust.
+- Output is `spiral-dom::Dom`
+- `spiral-html` is **retired** (removed from workspace 2026-06-15). All
+  references to html5ever-based parsing are historical.
+- CSS parser is a stub (M5+); HTML parser covers 8 insertion modes
+- Handle encoding detection carefully (UTF-8 only for now)
+- Test with malformed HTML (the tree builder is lenient by design)
 
 ### spiral-css
-- Wraps cssparser + selectors — read Servo docs
+- Uses spiral-fmt (vendored cssparser + selectors) — read spiral-fmt docs
 - Cascade order: user agent < user < author < author!important
 - Specificity: inline > ID > class > element
 - Test with complex selector chains
 
-### spiral-layout
+### spiral-gyre (Gyre)
+- Gyre is Spiral's in-house layout engine — fully custom, no Taffy
 - Box model is foundation — get this right first
 - Block layout: vertical stacking, margin collapse
-- Flexbox: main axis, cross axis, wrap, gap
-- Grid: template columns/rows, area placement
-- Use Taffy for flex/grid, custom code for block
+- Flexbox: custom implementation (Month 10–11)
+- Grid: custom implementation (Month 13–14)
 
 ### spiral-render
 - Vello for GPU rendering
@@ -146,8 +165,14 @@ Works for both horizontal and vertical axes.
 - Parent/child relationships via indices
 - Attribute storage: `Vec<(String, String)>`
 
-### spiral-js
-- Boa engine integration
+### spiral-vortex (Vortex)
+- Vortex is Spiral's from-scratch JavaScript engine, written entirely in safe Rust
+- Implements ECMAScript from the ground up: lexer, parser, AST, bytecode compiler, interpreter, mark-sweep GC
+- Phase 1: tree-walking interpreter (lex → parse → AST → walk)
+- Phase 2: bytecode VM (AST → bytecode → stack-based interpreter, ~5-10× faster)
+- Phase 3: baseline JIT (Cranelift for hot functions)
+- `rusty_v8` available behind `v8` feature flag for CI compliance testing only — NOT the production engine
+- `trait JSRuntime` abstraction enables future engine swapping via feature flag
 - Start with console.log only
 - DOM manipulation comes later
 - Test with simple scripts first
@@ -277,6 +302,6 @@ When working in a multi-model environment:
 - Note platform-specific behavior
 
 Example:
-> I modified `crates/spiral-layout/src/block.rs:45` to fix margin collapse.
+> I modified `crates/spiral-gyre/src/block.rs:45` to fix margin collapse.
 > The change affects `BlockLayout::compute()` which is called from `LayoutTree::layout()`.
 > This only affects Linux builds due to `#[cfg(target_os = "linux")]` in the test.

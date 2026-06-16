@@ -19,23 +19,24 @@
 ├── ERRORS.md               # Common errors
 ├── CODEX.md                # This file
 ├── CONTRIBUTING.md         # Contribution guide
-├── crates/                 # 18 Rust crates
+├── crates/                 # 19 Rust crates
 │   ├── spiral-core/        # Shared types
 │   ├── spiral-browser/     # Main process
-│   ├── spiral-html/        # HTML parser
-│   ├── spiral-css/         # CSS parser
-│   ├── spiral-layout/      # Layout engine
+│   ├── spiral-fmt/         # Vendored Servo parsers (html5ever, cssparser, selectors)
+│   ├── spiral-html/        # HTML pipeline (uses spiral-fmt)
+│   ├── spiral-css/         # CSS cascade (uses spiral-fmt)
+│   ├── spiral-gyre/        # Gyre — custom layout engine (block, flex, grid)
 │   ├── spiral-render/      # GPU renderer
-│   ├── spiral-js/          # JavaScript engine
+│   ├── spiral-vortex/      # Vortex — JavaScript engine (rusty_v8 / V8)
 │   ├── spiral-dom/         # DOM tree
 │   ├── spiral-paint/       # Display list
-│   ├── spiral-network/     # HTTP client
+│   ├── spiral-network/     # HTTP client (hyper, wrapped)
 │   ├── spiral-ipc/         # IPC transport
 │   ├── spiral-sandbox/     # Sandboxing
 │   ├── spiral-ui/          # Browser chrome
 │   ├── spiral-theme/       # Theme engine
-│   ├── spiral-net/         # TLS/DNS
-│   ├── spiral-crypto/      # Crypto primitives
+│   ├── spiral-net/         # TLS/DNS wrappers
+│   ├── spiral-crypto/      # Crypto wrapper
 │   ├── spiral-gpu/         # GPU abstraction
 │   └── spiral-imagedecoder/# Image formats
 ├── tests/wpt/              # Web Platform Tests
@@ -56,16 +57,17 @@ cargo bench                  # Run benchmarks
 spiral-core (foundation)
 ├── spiral-ipc
 ├── spiral-dom
-│   ├── spiral-html
-│   ├── spiral-css
-│   │   └── spiral-layout
-│   │       └── spiral-paint
-│   │           └── spiral-render
-│   └── spiral-js
+│   ├── spiral-fmt (vendored html5ever, cssparser, selectors)
+│   │   ├── spiral-html
+│   │   └── spiral-css
+│   │       └── spiral-gyre
+│   │           └── spiral-paint
+│   │               └── spiral-render
+│   └── spiral-vortex (rusty_v8)
 ├── spiral-gpu
 │   └── spiral-render
-├── spiral-network
-│   └── spiral-net
+├── spiral-network (hyper, wrapped)
+│   └── spiral-net (rustls, hickory-dns, wrapped)
 ├── spiral-crypto
 ├── spiral-imagedecoder
 ├── spiral-sandbox
@@ -89,7 +91,7 @@ pub struct IpcClient { /* ... */ }
 pub enum Node { Element(Element), Text(Text), Comment(Comment), Document(Document) }
 pub struct Element { tag: String, attributes: Vec<(String, String)>, children: Vec<NodeId> }
 
-// spiral-layout/src/lib.rs
+// spiral-gyre/src/lib.rs
 pub struct BoxModel { margin: EdgeSizes, border: EdgeSizes, padding: EdgeSizes, content: Rect }
 
 // spiral-render/src/lib.rs
@@ -156,25 +158,24 @@ cargo bench
 ```
 
 ## Current Phase
-**Phase 1: Foundation** (Months 1-3)
-- [ ] Workspace setup
-- [ ] Core types
-- [ ] IPC transport
-- [ ] Browser shell
-- [ ] Renderer shell
-- [ ] End-to-end test
+**Phase 2: Core Engine** (Months 4-12)
+- [ ] Vendor html5ever + cssparser + selectors into spiral-fmt
+- [ ] Block layout (custom)
+- [ ] Flex layout (custom, no Taffy)
+- [ ] Text rendering (harfrust + swash + cosmic-text)
+- [ ] Vortex JS engine integration (from-scratch: lexer, parser, interpreter, bytecode VM)
 
 ## Key Technologies
 | Component | Crate | Purpose |
 |-----------|-------|---------|
-| HTML | html5ever | Parse HTML5 |
-| CSS | cssparser, selectors | Parse CSS |
-| Layout | taffy | Flexbox/Grid |
+| HTML | spiral-fmt (vendored html5ever) | Parse HTML5 (owned) |
+| CSS | spiral-fmt (vendored cssparser + selectors) | Parse CSS (owned) |
+| Layout | spiral-gyre / Gyre (custom) | Block/Flex/Grid (in-house, no Taffy) |
 | Render | vello, wgpu | GPU 2D rendering |
-| JS | boa_engine | JavaScript |
-| HTTP | hyper | HTTP client |
-| TLS | rustls | TLS 1.3 |
-| DNS | hickory-dns | DNS resolution |
+| JS | spiral-vortex (from-scratch) | JavaScript — lexer, parser, AST, bytecode VM, GC, future JIT |
+| HTTP | hyper | HTTP client (wrapped in spiral-network) |
+| TLS | rustls | TLS 1.3 (wrapped in spiral-net) |
+| DNS | hickory-dns | DNS resolution (wrapped in spiral-net) |
 | IPC | tokio, bincode | Process communication |
 
 ## License

@@ -3,12 +3,11 @@ name = "spiral-css"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "CSS parser and cascade engine for Spiral Browser"
+description = "Deprecated CSS shim; forwards to spiral_fmt::css (Fork 1-B)"
 
 [dependencies]
 spiral-core.workspace = true
 spiral-dom.workspace = true
-cssparser.workspace = true
-selectors.workspace = true
+spiral-fmt.workspace = true
 log.workspace = true
 thiserror.workspace = true

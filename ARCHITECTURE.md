@@ -44,13 +44,13 @@ Network Response (HTML bytes)
         │
         ▼
 ┌───────────────┐
-│  HTML Parser  │  html5ever → DOM Tree
+│  HTML Parser  │  spiral-fmt (vendored html5ever) → DOM Tree
 │  (spiral-html)│
 └───────┬───────┘
         │
         ▼
 ┌───────────────┐
-│  CSS Parser   │  cssparser + selectors → Style Rules
+│  CSS Parser   │  spiral-fmt (vendored cssparser + selectors) → Style Rules
 │  (spiral-css) │
 └───────┬───────┘
         │
@@ -62,8 +62,8 @@ Network Response (HTML bytes)
         │
         ▼
 ┌───────────────┐
-│  Layout       │  Box Model + Taffy → Layout Tree
-│(spiral-layout)│  (block, flex, grid)
+│  Layout       │  Box Model + custom flex/grid → Layout Tree
+│(spiral-gyre) │  (Gyre — custom block, flex, grid)
 └───────┬───────┘
         │
         ▼
@@ -100,24 +100,27 @@ Transport layer for inter-process communication.
 
 ### spiral-html
 HTML5 parser.
-- Wraps `html5ever` (Servo crate)
+- Uses `spiral-fmt` (vendored html5ever, maintained by Spiral)
 - Produces `spiral_dom::Document` tree
 - Handles encoding detection (UTF-8, Latin-1, etc.)
 - Supports `<!DOCTYPE html>`, fragments
 
 ### spiral-css
 CSS parser and cascade engine.
-- Wraps `cssparser` + `selectors` (Servo crates)
+- Uses `spiral-fmt` (vendored cssparser + selectors, maintained by Spiral)
 - Parses stylesheets, media queries, selectors
 - Computes cascade order (origin, specificity)
 - Resolves `!important`, inheritance
 
-### spiral-layout
-Layout computation engine.
-- Box model: margin, border, padding, content
+### spiral-gyre (Gyre)
+Gyre is Spiral's custom, in-house layout engine. Box model, block flow,
+floats, BFC/IFC, flex, and grid are all implemented in Rust by us; no
+Taffy, no Servo layout code.
+
+- Box model: `margin`, `border`, `padding`, `content`
 - Block layout: normal flow, floats, BFC/IFC
-- Flexbox via Taffy crate
-- Grid via Taffy crate
+- Flexbox: custom implementation (Phase 2, Month 10-11)
+- Grid: custom implementation (Phase 3, Month 13-14)
 - CSS values: `Length`, `Percentage`, `Auto`
 
 ### spiral-dom
@@ -140,11 +143,20 @@ Display list construction.
 - Z-ordering and layer composition
 - Dirty rect tracking
 
-### spiral-js
-JavaScript engine integration.
-- Boa engine wrapper (pure Rust)
-- Initial: `console.log`, `setTimeout`, DOM manipulation
-- Upgrade path: V8 bindings
+### spiral-vortex (Vortex)
+Vortex is Spiral's **from-scratch** JavaScript engine, written entirely in
+safe Rust. It implements ECMAScript from the ground up: lexer, parser, AST,
+bytecode compiler, interpreter, mark-sweep GC, and (future) a baseline JIT.
+
+- Phase 1 (tree-walking interpreter): lex → parse → AST → walk
+- Phase 2 (bytecode VM): AST → bytecode → stack-based interpreter
+- Phase 3 (baseline JIT): Cranelift for hot functions
+- `trait JSRuntime` abstraction for future engine swapping
+- `rusty_v8` available behind `v8` feature flag for CI compliance testing
+- DOM bindings: `createElement`, `appendChild`, `setAttribute`, etc.
+- Event system: `addEventListener`, `dispatchEvent`
+- Console: `console.log`/`info`/`warn`/`error`
+- Timers: `setTimeout`, `setInterval`, `queueMicrotask`
 
 ### spiral-network
 HTTP client and networking.
@@ -215,7 +227,7 @@ Main browser process.
 6. spiral-html parses bytes → spiral-dom Document
 7. spiral-css parses `<style>` + linked stylesheets → Style Rules
 8. Style Resolution computes Computed Styles on DOM nodes
-9. spiral-layout computes Layout Tree (box positions + sizes)
+9. spiral-gyre (Gyre) computes the Layout Tree (box positions + sizes)
 10. spiral-paint builds Display List from Layout Tree
 11. spiral-render executes Display List via Vello → GPU texture
 12. Texture displayed in wgpu surface → screen

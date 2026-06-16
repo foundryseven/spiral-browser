@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `spiral-ipc`: `MockTransport::pair()` — in-memory MPSC-backed transport for testing.
 - `spiral-ipc`: public `encode_message`/`decode_message` — u32-LE length-prefixed bincode framing.
 - `spiral-ipc`: fuzz smoke test — 11 structured malformed patterns + 256 single-byte header permutations.
+- **Gyre** (codename) and **Vortex** (codename) introduced as the brand identities of Spiral's two custom engines: `spiral-gyre` (layout) and `spiral-vortex` (JavaScript).
+- Vortex: full from-scratch JS engine skeleton — lexer, parser (Pratt parsing), AST, tree-walking interpreter, JsValue, object model, mark-sweep GC heap, builtins (console, math, object, array), event loop, DOM binding stubs, V8 oracle (`v8` feature).
+- `rusty_v8` available behind `v8` feature flag for CI compliance testing only.
 
 ### Changed
 - `AGENTS.md` updated with current phase pointer, model routing, and SSOT references.
@@ -30,7 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ROADMAP.md` and `PLAN.md` crate count corrected from 17 to 18.
 - Workspace `Cargo.toml`: removed invalid `[target]` section (not allowed in virtual workspace manifests).
 - Workspace `Cargo.toml`: added all 18 internal crate path-dependencies to `[workspace.dependencies]`.
-- Workspace dependency versions updated to latest compatible: `html5ever` 0.29→0.39, `cssparser` 0.33→0.37, `selectors` 0.25→0.38, `taffy` 0.5→0.11, `vello` 0.3→0.9, `wgpu` 23→29, `boa_engine` 0.20→0.21, `harfrust` 0.1→0.8, `cosmic-text` 0.12→0.19, `png` 0.17→0.18, `webp` 0.4→0.3, `ravif` 0.11→0.13, `caps` 0.3→0.5.
+- Workspace dependency versions updated to latest compatible: `html5ever` 0.29→0.39, `cssparser` 0.33→0.37, `selectors` 0.25→0.38, `vello` 0.3→0.9, `wgpu` 23→29, `rusty_v8` (new), `harfrust` 0.1→0.8, `cosmic-text` 0.12→0.19, `png` 0.17→0.18, `webp` 0.4→0.3, `ravif` 0.11→0.13, `caps` 0.3→0.5.
+- **Crate rename:** `crates/spiral-js/` → `crates/spiral-vortex/`. Package name: `spiral-js` → `spiral-vortex`. Backing engine strategy shifted from `rquickjs` → `rusty_v8` to `rusty_v8` directly (no QuickJS intermediate).
+- **Crate rename:** `crates/spiral-layout/` → `crates/spiral-gyre/`. Package name: `spiral-layout` → `spiral-gyre`. `taffy` removed from workspace dependencies; Gyre is in-house from day one.
 - CI/CD: rewrote `.github/workflows/ci.yml` with separate `fmt`, `clippy`, `test`, `build` jobs across Linux/macOS/Windows. Clippy runs with `-D warnings`.
 - `cargo fmt` applied across entire workspace.
 

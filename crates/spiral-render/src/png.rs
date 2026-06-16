@@ -27,7 +27,9 @@ pub fn encode_png(renderer: &SoftwareRenderer) -> Result<Vec<u8>, PngError> {
         let mut encoder = png::Encoder::new(&mut sink, w, h);
         encoder.set_color(ColorType::Rgba);
         encoder.set_depth(png::BitDepth::Eight);
-        let mut writer = encoder.write_header().map_err(|e| PngError::Png(e.to_string()))?;
+        let mut writer = encoder
+            .write_header()
+            .map_err(|e| PngError::Png(e.to_string()))?;
         writer
             .write_image_data(&out)
             .map_err(|e| PngError::Png(e.to_string()))?;
@@ -51,13 +53,21 @@ mod tests {
                 y: 0.0,
                 width: 2.0,
                 height: 2.0,
-                color: Color { r: 200, g: 100, b: 50, a: 1.0 },
+                color: Color {
+                    r: 200,
+                    g: 100,
+                    b: 50,
+                    a: 1.0,
+                },
             }],
         };
         r.draw(&list).unwrap();
         let bytes = encode_png(&r).unwrap();
         // PNG signature: 89 50 4E 47 0D 0A 1A 0A (8 bytes).
-        assert_eq!(&bytes[0..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &bytes[0..8],
+            &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]
+        );
         // First chunk type is IHDR.
         assert_eq!(&bytes[12..16], b"IHDR");
     }

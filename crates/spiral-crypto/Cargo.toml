@@ -7,6 +7,7 @@ description = "Cryptographic primitives for Spiral Browser"
 
 [dependencies]
 spiral-core.workspace = true
-rustls.workspace = true
+sha2.workspace = true
+getrandom.workspace = true
 log.workspace = true
 thiserror.workspace = true

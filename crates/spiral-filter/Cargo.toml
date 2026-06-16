@@ -1,0 +1,14 @@
+[package]
+name = "spiral-filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Spiral — compile-time ad filter and policy engine"
+
+[dependencies]
+spiral-core.workspace = true
+spiral-dom.workspace = true
+thiserror.workspace = true
+seahash = "4"
+
+[dev-dependencies]

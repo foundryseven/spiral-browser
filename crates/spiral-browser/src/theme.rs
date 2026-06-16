@@ -1,7 +1,7 @@
 //! Theme bridge between `spiral-theme` (hex strings) and the renderer
 //! (`spiral_paint::Color`).
 
-use spiral_paint::Color;
+use spiral_core::Color;
 use spiral_theme::{ThemeEngine, ThemeTokens};
 
 /// Parsed theme tokens ready to feed the renderer.
@@ -41,7 +41,12 @@ impl From<&ThemeEngine> for BrowserTheme {
 fn parse_hex(s: &str) -> Color {
     let bytes = s.as_bytes();
     if bytes.len() < 7 || bytes[0] != b'#' {
-        return Color { r: 0, g: 0, b: 0, a: 1.0 };
+        return Color {
+            r: 0,
+            g: 0,
+            b: 0,
+            a: 1.0,
+        };
     }
     let r = u8::from_str_radix(&s[1..3], 16).unwrap_or(0);
     let g = u8::from_str_radix(&s[3..5], 16).unwrap_or(0);

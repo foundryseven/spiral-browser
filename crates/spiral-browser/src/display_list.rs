@@ -98,7 +98,13 @@ mod tests {
         let tab = TabState::new(TabId(0), "https://example.com/");
         let list = build_hello_display_list(&tab, &theme());
         match &list.ops[0] {
-            RenderOp::FillRect { x, y, width, height, .. } => {
+            RenderOp::FillRect {
+                x,
+                y,
+                width,
+                height,
+                ..
+            } => {
                 assert_eq!(*x, 0.0);
                 assert_eq!(*y, 0.0);
                 assert_eq!(*width, tab.viewport_width);
@@ -120,6 +126,9 @@ mod tests {
                 }
             }
         }
-        assert!(found_status, "expected status text containing both title and URL");
+        assert!(
+            found_status,
+            "expected status text containing both title and URL"
+        );
     }
 }

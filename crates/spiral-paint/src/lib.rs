@@ -2,8 +2,9 @@
 //!
 //! Display list construction for the Spiral Browser.
 
+pub use spiral_core::Color;
 use spiral_core::Result;
-use spiral_layout::LayoutNode;
+use spiral_gyre::LayoutNode;
 
 /// Render operations for the display list.
 #[derive(Debug, Clone)]
@@ -50,15 +51,6 @@ pub enum RenderOp {
     PushLayer { opacity: f32 },
     /// Pop the current layer.
     PopLayer,
-}
-
-/// RGBA color.
-#[derive(Debug, Clone, Copy)]
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: f32,
 }
 
 /// Display list.
@@ -121,7 +113,7 @@ impl Default for PaintEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use spiral_layout::BoxModel;
+    use spiral_gyre::BoxModel;
 
     #[test]
     fn test_paint_empty_layout() {
@@ -141,7 +133,7 @@ mod tests {
         let layout = LayoutNode {
             node_id: 0,
             box_model: BoxModel {
-                content: spiral_layout::LayoutDimensions {
+                content: spiral_gyre::LayoutDimensions {
                     x: 0.0,
                     y: 0.0,
                     width: 100.0,

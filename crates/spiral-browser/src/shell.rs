@@ -43,7 +43,11 @@ impl BrowserShell {
         let theme_engine = ThemeEngine::new(&config);
         let mut registry = TabRegistry::new();
         registry.open(config.homepage.clone());
-        Self { config, theme_engine, registry }
+        Self {
+            config,
+            theme_engine,
+            registry,
+        }
     }
 
     #[must_use]
@@ -100,12 +104,7 @@ impl BrowserShell {
         let w = tab.viewport_width.max(1.0) as u32;
         let h = tab.viewport_height.max(1.0) as u32;
         let bg = self.theme().bg_primary;
-        let bg_rgba = [
-            bg.r,
-            bg.g,
-            bg.b,
-            (bg.a.clamp(0.0, 1.0) * 255.0) as u8,
-        ];
+        let bg_rgba = [bg.r, bg.g, bg.b, (bg.a.clamp(0.0, 1.0) * 255.0) as u8];
         let mut renderer = SoftwareRenderer::new(w, h, bg_rgba)?;
         renderer.draw(&list)?;
         let png = encode_png(&renderer)?;
@@ -176,7 +175,10 @@ mod tests {
         let (vw, vh) = TabState::DEFAULT_VIEWPORT;
         assert_eq!(w, vw as u32);
         assert_eq!(h, vh as u32);
-        assert_eq!(&png[0..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &png[0..8],
+            &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]
+        );
     }
 
     #[test]
@@ -188,7 +190,10 @@ mod tests {
         assert_eq!(returned, path);
         let bytes = std::fs::read(&path).unwrap();
         assert!(!bytes.is_empty());
-        assert_eq!(&bytes[0..8], &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &bytes[0..8],
+            &[0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A]
+        );
     }
 
     #[tokio::test]

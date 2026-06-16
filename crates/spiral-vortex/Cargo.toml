@@ -1,0 +1,17 @@
+[package]
+name = "spiral-vortex"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Vortex — Spiral's from-scratch JavaScript engine"
+
+[features]
+default = []
+v8 = ["dep:rusty_v8"]
+
+[dependencies]
+spiral-core.workspace = true
+spiral-dom.workspace = true
+rusty_v8 = { workspace = true, optional = true }
+log.workspace = true
+thiserror.workspace = true

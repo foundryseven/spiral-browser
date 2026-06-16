@@ -2,6 +2,8 @@
 //!
 //! DOM tree representation for the Spiral Browser.
 
+use spiral_core::{Error, Result};
+
 /// Unique identifier for a DOM node.
 pub type NodeId = usize;
 
@@ -104,9 +106,9 @@ impl Dom {
     }
 
     /// Append a child node to a parent.
-    pub fn append_child(&mut self, parent: NodeId, child: NodeId) -> Result<(), String> {
+    pub fn append_child(&mut self, parent: NodeId, child: NodeId) -> Result<()> {
         if parent >= self.nodes.len() || child >= self.nodes.len() {
-            return Err("Invalid node ID".to_string());
+            return Err(Error::Dom("Invalid node ID".to_string()));
         }
         match &mut self.nodes[parent] {
             Some(Node::Element(el)) => {
@@ -116,7 +118,7 @@ impl Dom {
                 doc.children.push(child);
             }
             _ => {
-                return Err("Parent cannot have children".to_string());
+                return Err(Error::Dom("Parent cannot have children".to_string()));
             }
         }
         if let Some(node) = &mut self.nodes[child] {
@@ -135,6 +137,21 @@ impl Dom {
         self.nodes.get(id).and_then(|n| n.as_ref())
     }
 
+    /// Get a mutable reference to a node by ID.
+    pub fn get_node_mut(&mut self, id: NodeId) -> Option<&mut Node> {
+        self.nodes.get_mut(id).and_then(|n| n.as_mut())
+    }
+
+    /// Set the document's quirks mode.
+    ///
+    /// Quirks mode affects CSS rendering, not the DOM shape.
+    /// Set by the HTML parser from the DOCTYPE token.
+    pub fn set_quirks_mode(&mut self, quirks: bool) {
+        if let Some(Node::Document(doc)) = self.get_node_mut(self.root) {
+            doc.quirks_mode = quirks;
+        }
+    }
+
     /// Get element tag name.
     pub fn get_tag(&self, id: NodeId) -> Option<&str> {
         match self.get_node(id)? {
@@ -147,6 +164,22 @@ impl Dom {
     pub fn get_attributes(&self, id: NodeId) -> Option<&[(String, String)]> {
         match self.get_node(id)? {
             Node::Element(el) => Some(&el.attributes),
+            _ => None,
+        }
+    }
+
+    /// Get a reference to a text node, if the node is a text node.
+    pub fn get_text(&self, id: NodeId) -> Option<&Text> {
+        match self.get_node(id)? {
+            Node::Text(t) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// Get a mutable reference to a text node, if the node is a text node.
+    pub fn get_text_mut(&mut self, id: NodeId) -> Option<&mut Text> {
+        match self.nodes.get_mut(id).and_then(|n| n.as_mut()) {
+            Some(Node::Text(t)) => Some(t),
             _ => None,
         }
     }
@@ -175,6 +208,119 @@ impl Dom {
         let id = self.nodes.len();
         self.nodes.push(Some(node));
         id
+    }
+
+    /// Set or overwrite an attribute on an element node.
+    pub fn set_attribute(&mut self, id: NodeId, name: &str, value: &str) -> Result<()> {
+        match self.nodes.get_mut(id).and_then(|n| n.as_mut()) {
+            Some(Node::Element(el)) => {
+                if let Some(attr) = el.attributes.iter_mut().find(|(k, _)| k == name) {
+                    attr.1 = value.to_string();
+                } else {
+                    el.attributes.push((name.to_string(), value.to_string()));
+                }
+                Ok(())
+            }
+            _ => Err(Error::Dom("Node is not an element".to_string())),
+        }
+    }
+
+    /// Remove a child from its parent and return it.
+    pub fn remove_child(&mut self, parent: NodeId, child: NodeId) -> Result<()> {
+        if parent >= self.nodes.len() || child >= self.nodes.len() {
+            return Err(Error::Dom("Invalid node ID".to_string()));
+        }
+        let removed = match &mut self.nodes[parent] {
+            Some(Node::Element(el)) => {
+                let pos = el
+                    .children
+                    .iter()
+                    .position(|&c| c == child)
+                    .ok_or_else(|| Error::Dom("Child not found in parent".to_string()))?;
+                el.children.remove(pos)
+            }
+            Some(Node::Document(doc)) => {
+                let pos = doc
+                    .children
+                    .iter()
+                    .position(|&c| c == child)
+                    .ok_or_else(|| Error::Dom("Child not found in parent".to_string()))?;
+                doc.children.remove(pos)
+            }
+            _ => return Err(Error::Dom("Parent cannot have children".to_string())),
+        };
+        debug_assert_eq!(removed, child);
+        if let Some(node) = &mut self.nodes[child] {
+            match node {
+                Node::Element(el) => el.parent = None,
+                Node::Text(t) => t.parent = None,
+                Node::Comment(c) => c.parent = None,
+                Node::Document(_) => {}
+            }
+        }
+        Ok(())
+    }
+
+    /// Returns an iterator over all descendants of `id` in document order.
+    #[must_use]
+    pub fn descendants(&self, id: NodeId) -> Descendants<'_> {
+        Descendants {
+            dom: self,
+            stack: vec![(id, 0)],
+        }
+    }
+
+    /// Returns an iterator over the ancestors of `id`, starting with `id`
+    /// itself.
+    #[must_use]
+    pub fn ancestors(&self, id: NodeId) -> Ancestors<'_> {
+        Ancestors {
+            dom: self,
+            current: Some(id),
+        }
+    }
+
+    /// Returns the total number of nodes (including `None` tombstones).
+    #[must_use]
+    pub fn node_count(&self) -> usize {
+        self.nodes.len()
+    }
+}
+
+/// A `(NodeId, depth)` pair used by the tree-walker iterators.
+pub type NodeDepth = (NodeId, usize);
+
+/// Depth-first pre-order iterator over all descendants of a node.
+pub struct Descendants<'a> {
+    dom: &'a Dom,
+    stack: Vec<NodeDepth>,
+}
+
+impl<'a> Iterator for Descendants<'a> {
+    type Item = NodeDepth;
+    fn next(&mut self) -> Option<Self::Item> {
+        let (id, depth) = self.stack.pop()?;
+        if let Some(children) = self.dom.get_children(id) {
+            for child in children.into_iter().rev() {
+                self.stack.push((child, depth + 1));
+            }
+        }
+        Some((id, depth))
+    }
+}
+
+/// Iterator over the ancestors of a node (starting with the node itself).
+pub struct Ancestors<'a> {
+    dom: &'a Dom,
+    current: Option<NodeId>,
+}
+
+impl<'a> Iterator for Ancestors<'a> {
+    type Item = NodeId;
+    fn next(&mut self) -> Option<Self::Item> {
+        let id = self.current?;
+        self.current = self.dom.get_parent(id);
+        Some(id)
     }
 }
 
@@ -220,5 +366,102 @@ mod tests {
         let span = dom.create_element("span");
         dom.append_child(div, span).unwrap();
         assert_eq!(dom.get_parent(span), Some(div));
+    }
+
+    #[test]
+    fn test_set_attribute() {
+        let mut dom = Dom::new();
+        let div = dom.create_element("div");
+        dom.set_attribute(div, "id", "main").unwrap();
+        dom.set_attribute(div, "class", "container").unwrap();
+        let attrs = dom.get_attributes(div).unwrap();
+        assert_eq!(attrs.len(), 2);
+        assert_eq!(attrs[0], ("id".to_string(), "main".to_string()));
+        assert_eq!(attrs[1], ("class".to_string(), "container".to_string()));
+    }
+
+    #[test]
+    fn test_set_attribute_overwrite() {
+        let mut dom = Dom::new();
+        let div = dom.create_element("div");
+        dom.set_attribute(div, "id", "old").unwrap();
+        dom.set_attribute(div, "id", "new").unwrap();
+        let attrs = dom.get_attributes(div).unwrap();
+        assert_eq!(attrs.len(), 1);
+        assert_eq!(attrs[0].1, "new");
+    }
+
+    #[test]
+    fn test_set_attribute_non_element_errors() {
+        let mut dom = Dom::new();
+        let text = dom.create_text("hello");
+        assert!(dom.set_attribute(text, "id", "bad").is_err());
+    }
+
+    #[test]
+    fn test_remove_child() {
+        let mut dom = Dom::new();
+        let div = dom.create_element("div");
+        let span = dom.create_element("span");
+        dom.append_child(div, span).unwrap();
+        assert_eq!(dom.get_children(div).unwrap().len(), 1);
+        dom.remove_child(div, span).unwrap();
+        assert_eq!(dom.get_children(div).unwrap().len(), 0);
+        assert_eq!(dom.get_parent(span), None);
+    }
+
+    #[test]
+    fn test_remove_child_not_found_errors() {
+        let mut dom = Dom::new();
+        let div = dom.create_element("div");
+        let span = dom.create_element("span");
+        assert!(dom.remove_child(div, span).is_err());
+    }
+
+    #[test]
+    fn test_descendants_iterator() {
+        let mut dom = Dom::new();
+        let root = dom.root;
+        let div = dom.create_element("div");
+        let span = dom.create_element("span");
+        let text = dom.create_text("hello");
+        dom.append_child(root, div).unwrap();
+        dom.append_child(div, span).unwrap();
+        dom.append_child(span, text).unwrap();
+        let nodes: Vec<NodeId> = dom.descendants(root).map(|(id, _)| id).collect();
+        assert_eq!(nodes, vec![root, div, span, text]);
+    }
+
+    #[test]
+    fn test_descendants_depths() {
+        let mut dom = Dom::new();
+        let root = dom.root;
+        let div = dom.create_element("div");
+        let span = dom.create_element("span");
+        dom.append_child(root, div).unwrap();
+        dom.append_child(div, span).unwrap();
+        let depths: Vec<usize> = dom.descendants(root).map(|(_, d)| d).collect();
+        assert_eq!(depths, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn test_ancestors_iterator() {
+        let mut dom = Dom::new();
+        let root = dom.root;
+        let div = dom.create_element("div");
+        let span = dom.create_element("span");
+        dom.append_child(root, div).unwrap();
+        dom.append_child(div, span).unwrap();
+        let ancestors: Vec<NodeId> = dom.ancestors(span).collect();
+        assert_eq!(ancestors, vec![span, div, root]);
+    }
+
+    #[test]
+    fn test_node_count() {
+        let mut dom = Dom::new();
+        assert_eq!(dom.node_count(), 1); // document root
+        let div = dom.create_element("div");
+        dom.append_child(dom.root, div).unwrap();
+        assert_eq!(dom.node_count(), 2);
     }
 }

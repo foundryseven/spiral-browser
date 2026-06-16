@@ -8,6 +8,6 @@ description = "Display list and compositing for Spiral Browser"
 [dependencies]
 spiral-core.workspace = true
 spiral-dom.workspace = true
-spiral-layout.workspace = true
+spiral-gyre.workspace = true
 log.workspace = true
 thiserror.workspace = true

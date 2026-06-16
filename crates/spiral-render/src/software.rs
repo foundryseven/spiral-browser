@@ -38,17 +38,34 @@ pub struct Transform {
 }
 
 impl Transform {
-    pub const IDENTITY: Self = Self { a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: 0.0, f: 0.0 };
+    pub const IDENTITY: Self = Self {
+        a: 1.0,
+        b: 0.0,
+        c: 0.0,
+        d: 1.0,
+        e: 0.0,
+        f: 0.0,
+    };
 
     #[inline]
     pub const fn translate(tx: f32, ty: f32) -> Self {
-        Self { a: 1.0, b: 0.0, c: 0.0, d: 1.0, e: tx, f: ty }
+        Self {
+            a: 1.0,
+            b: 0.0,
+            c: 0.0,
+            d: 1.0,
+            e: tx,
+            f: ty,
+        }
     }
 
     /// Map a point through the transform.
     #[inline]
     pub fn apply(&self, x: f32, y: f32) -> (f32, f32) {
-        (self.a * x + self.c * y + self.e, self.b * x + self.d * y + self.f)
+        (
+            self.a * x + self.c * y + self.e,
+            self.b * x + self.d * y + self.f,
+        )
     }
 }
 
@@ -66,7 +83,14 @@ impl From<Transform> for [f32; 6] {
 
 impl From<[f32; 6]> for Transform {
     fn from(m: [f32; 6]) -> Self {
-        Self { a: m[0], b: m[1], c: m[2], d: m[3], e: m[4], f: m[5] }
+        Self {
+            a: m[0],
+            b: m[1],
+            c: m[2],
+            d: m[3],
+            e: m[4],
+            f: m[5],
+        }
     }
 }
 
@@ -83,12 +107,7 @@ fn compose(outer: Transform, inner: Transform) -> Transform {
 
 fn color_to_rgba(c: Color) -> Rgba {
     let a = c.a.clamp(0.0, 1.0);
-    [
-        c.r,
-        c.g,
-        c.b,
-        (a * 255.0).round().clamp(0.0, 255.0) as u8,
-    ]
+    [c.r, c.g, c.b, (a * 255.0).round().clamp(0.0, 255.0) as u8]
 }
 
 fn blend_pixel(dst: Rgba, src: Rgba) -> Rgba {
@@ -119,7 +138,12 @@ impl SoftwareRenderer {
             return Err(RenderError::InvalidSize { width, height });
         }
         let pixels = vec![bg; (width as usize) * (height as usize)];
-        Ok(Self { width, height, pixels, layer_stack: Vec::new() })
+        Ok(Self {
+            width,
+            height,
+            pixels,
+            layer_stack: Vec::new(),
+        })
     }
 
     #[inline]
@@ -169,10 +193,23 @@ impl SoftwareRenderer {
     ) -> Result<(), RenderError> {
         for op in ops {
             match op {
-                RenderOp::FillRect { x, y, width, height, color } => {
+                RenderOp::FillRect {
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                } => {
                     self.draw_fill(*x, *y, *width, *height, *color, parent_xform, parent_clip);
                 }
-                RenderOp::StrokeRect { x, y, width, height, color, stroke_width } => {
+                RenderOp::StrokeRect {
+                    x,
+                    y,
+                    width,
+                    height,
+                    color,
+                    stroke_width,
+                } => {
                     self.draw_stroke(
                         *x,
                         *y,
@@ -184,10 +221,22 @@ impl SoftwareRenderer {
                         parent_clip,
                     );
                 }
-                RenderOp::DrawText { x, y, text, font_size, color } => {
+                RenderOp::DrawText {
+                    x,
+                    y,
+                    text,
+                    font_size,
+                    color,
+                } => {
                     self.draw_text(*x, *y, text, *font_size, *color, parent_xform, parent_clip);
                 }
-                RenderOp::Clip { x, y, width, height, ops: inner } => {
+                RenderOp::Clip {
+                    x,
+                    y,
+                    width,
+                    height,
+                    ops: inner,
+                } => {
                     let (cx0, cy0) = parent_xform.apply(*x, *y);
                     let (cx1, cy1) = parent_xform.apply(x + width, y + height);
                     let lo_x = cx0.min(cx1).max(0.0) as i32;
@@ -219,6 +268,7 @@ impl SoftwareRenderer {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_fill(
         &mut self,
         x: f32,
@@ -235,6 +285,7 @@ impl SoftwareRenderer {
         self.fill_rect(x0, y0, x1, y1, rgba, clip);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_stroke(
         &mut self,
         x: f32,
@@ -252,6 +303,7 @@ impl SoftwareRenderer {
         self.stroke_rect(x0, y0, x1, y1, rgba, stroke_width, clip);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn draw_text(
         &mut self,
         x: f32,
@@ -277,6 +329,7 @@ impl SoftwareRenderer {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn fill_rect(
         &mut self,
         x0: f32,
@@ -303,6 +356,7 @@ impl SoftwareRenderer {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn stroke_rect(
         &mut self,
         x0: f32,
@@ -393,10 +447,7 @@ impl SoftwareRenderer {
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn intersect_clip(
-    a: (i32, i32, i32, i32),
-    b: (i32, i32, i32, i32),
-) -> (i32, i32, i32, i32) {
+fn intersect_clip(a: (i32, i32, i32, i32), b: (i32, i32, i32, i32)) -> (i32, i32, i32, i32) {
     (a.0.max(b.0), a.1.max(b.1), a.2.min(b.2), a.3.min(b.3))
 }
 
@@ -408,9 +459,7 @@ fn apply_clip(
     clip: Option<(i32, i32, i32, i32)>,
 ) -> (i32, i32, i32, i32) {
     match clip {
-        Some((cx0, cy0, cx1, cy1)) => {
-            (lo_x.max(cx0), lo_y.max(cy0), hi_x.min(cx1), hi_y.min(cy1))
-        }
+        Some((cx0, cy0, cx1, cy1)) => (lo_x.max(cx0), lo_y.max(cy0), hi_x.min(cx1), hi_y.min(cy1)),
         None => (lo_x, lo_y, hi_x, hi_y),
     }
 }
@@ -500,7 +549,9 @@ mod tests {
     #[test]
     fn layer_underflow_is_an_error() {
         let mut r = SoftwareRenderer::new(4, 4, [0, 0, 0, 255]).unwrap();
-        let list = DisplayList { ops: vec![RenderOp::PopLayer] };
+        let list = DisplayList {
+            ops: vec![RenderOp::PopLayer],
+        };
         assert!(matches!(r.draw(&list), Err(RenderError::LayerUnderflow)));
     }
 
@@ -529,7 +580,13 @@ mod tests {
         let list = DisplayList {
             ops: vec![
                 RenderOp::PushLayer { opacity: 1.0 },
-                RenderOp::FillRect { x: 0.0, y: 0.0, width: 2.0, height: 2.0, color: opaque(200, 100, 50) },
+                RenderOp::FillRect {
+                    x: 0.0,
+                    y: 0.0,
+                    width: 2.0,
+                    height: 2.0,
+                    color: opaque(200, 100, 50),
+                },
                 RenderOp::PopLayer,
             ],
         };

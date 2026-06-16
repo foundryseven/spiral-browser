@@ -11,7 +11,7 @@ cargo test
 
 # Run unit tests for a specific crate
 cargo test spiral-core
-cargo test spiral-layout
+cargo test spiral-gyre
 ```
 
 ### Integration Tests
@@ -105,7 +105,7 @@ fn test_cross_crate_flow() {
 cargo bench
 
 # Run specific benchmark
-cargo bench --package spiral-layout
+cargo bench --package spiral-gyre
 
 # Run with specific filter
 cargo bench "box model"
