@@ -1875,3 +1875,120 @@ to record the rationale.
   fixed. The 34 remaining orphans are M4.5+
   skeletons, tracked in the active context
   and addressed by the next sprint.
+
+---
+
+## [2026-06-16] [custom] [net, all crates] — M4.5 Item 8: `spiral_net::Resolver` trait
+
+> M4.5 Item 8 introduces the `Resolver` trait, the
+> canonical abstraction for DNS resolution. The
+> trait is not dyn-compatible; consumers take the
+> resolver by generic bound. This is the first
+> real M4.5+ work after the SSOT restructure.
+
+### What was done
+
+- **`spiral_net::Resolver` trait.** Object-safe
+  contract for DNS resolution. Native `async fn`,
+  returns `Vec<IpAddr>` (parsed at the resolver
+  boundary, not `Vec<String>` as in the M4.4
+  stub). See
+  [`docs/decisions/0004-resolver-trait-async-design.md`](../decisions/0004-resolver-trait-async-design.md)
+  for the design rationale (no `async-trait` dep,
+  generic bounds instead of `Box<dyn>`).
+- **`DnsResolver` refactor.** Phase 1 stub now
+  implements the `Resolver` trait. Inherent
+  `DnsResolver::resolve` is kept as a thin wrapper
+  for backward compatibility with M4.4 call sites.
+- **`TlsConfig`** is unchanged (already a simple
+  struct, no work needed).
+- **5 integration tests** in
+  `crates/spiral-net/tests/resolver_surface.rs`
+  exercise the trait through generic bounds:
+  - `resolver_trait_is_importable_from_outside` —
+    the audit's "wired" signal.
+  - `dns_resolver_implements_resolver_trait` —
+    the trait-impl check.
+  - `tls_config_is_constructable` — the
+    `TlsConfig` symbol.
+  - `dns_resolver_resolve_via_trait_bound` —
+    end-to-end resolve through the trait.
+  - `resolver_returns_ip_addr_not_string` — pins
+    the new `Vec<IpAddr>` contract.
+- **2 new lib tests** in
+  `crates/spiral-net/src/lib.rs`:
+  - `test_resolve_via_trait_bound` — mirrors the
+    integration test at the lib level.
+  - `test_resolver_trait_is_documented` —
+    compile-time check that the trait is
+    reachable.
+- **`docs/architecture/net.md`** — per-subsystem
+  architecture stub.
+- **`docs/decisions/0004-resolver-trait-async-design.md`**
+  — ADR for the async-trait / generic-bound
+  design choice.
+
+### What was NOT done (and why)
+
+- **No `async-trait` dep.** Adding it would be
+  the only workspace-level dep that exists
+  solely to support one trait. The
+  generic-bound pattern is the zero-dep
+  solution. See ADR 0004.
+- **No `Box<dyn Resolver>`.** The trait is not
+  dyn-compatible. Consumers use generic
+  bounds.
+- **No real `hickory-dns` integration.** The
+  Phase 1 stub returns `127.0.0.1` for every
+  domain. The Phase 2 `HickoryResolver` is
+  M5+ work; the `hickory-resolver` workspace
+  dep is already declared in `Cargo.toml` for
+  that work.
+- **No `spiral-network` wiring.** The HTTP
+  client (M4.5+ Item 11) will take
+  `R: Resolver` by generic bound. Item 8 is
+  just the trait definition; Item 11 is the
+  consumer.
+
+### Verification (run 2026-06-16)
+
+- `cargo fmt --all -- --check` — clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` — clean.
+- `cargo test --workspace` — **436 tests
+  across 54 binaries, 0 failing.** 7 new tests
+  added (429 → 436); 1 new test binary.
+- `cargo build --workspace` — clean.
+- `./scripts/audit-orphan-exports.sh` —
+  **32 of 48 M4.5+ orphans remain** (was 34;
+  spiral-net flipped from "skeleton" to
+  "OK (3/3 wired)"). The audit will exit 0
+  the moment M4.5+ work wires the remaining
+  9 skeleton crates.
+
+### Wiring & Integration
+
+- **Crates affected:** `spiral-net` (the trait
+  definition + the `DnsResolver` refactor).
+  No other crate's public surface changed.
+- **Call sites:**
+  - Trait definition: `crates/spiral-net/src/lib.rs`
+  - Trait impl: `impl Resolver for DnsResolver`
+    in the same file.
+  - Inherent method: `DnsResolver::resolve`
+    (kept for backward compatibility).
+  - Consumer: `tests/resolver_surface.rs`
+    (5 tests, generic-bound pattern).
+- **Test coverage:** 7 new tests (5 integration
+  + 2 lib). The integration tests reference
+  the trait by name from outside the lib,
+  which is the audit's "wired" signal.
+- **End-to-end surface:** the audit script
+  confirms `spiral-net` is "OK (3 symbols,
+  all wired)" — the trait, the implementer,
+  and the TLS config. The M4.5+ Item 11
+  HTTP client will be the next consumer
+  (it'll take `R: Resolver` by generic
+  bound).
+- **Status:** ✅ WIRED. Item 8 is complete
+  and verified under the Wiring & Integration
+  rule. The next chunk is the user's call.

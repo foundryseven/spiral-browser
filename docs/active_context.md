@@ -1,8 +1,8 @@
 # Active Context
 
 **Last updated:** 2026-06-16
-**Status:** 🟢 M4.4 COMPLETE | off main @ 6a03da7 (work branch: `audit/m4-window`)
-**Current phase:** Phase 2 — Core Engine (Months 4–9) — *M4.4 complete (Chunks 1–3 + Item 4); M4.5 next*
+**Status:** 🟢 M4.5 Item 8 SHIPPED | off main @ 6a03da7 (work branch: `audit/m4-window`)
+**Current phase:** Phase 2 — Core Engine (Months 4–9) — *M4.4 complete; M4.5 Item 8 shipped; Items 9, 11, 12, 13 next*
 **Sprint state:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the live gap tracker. Deltas 1–4 recorded.
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md)
 **SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`
@@ -103,10 +103,8 @@ lands.
 
 ## What needs picking (M4.5+)
 
-- **M4.4 tail** — Items 5, 6, 7 (crypto P0 confirmation, CI excludes for
-  retired crates, `justfile` for the verify protocol). Small, all greenfield
-  in the workspace today.
-- **M4.5 Item 8** — `spiral_net::Resolver` trait wrapping hickory-dns.
+- **M4.5 Item 9** — Vortex first functional slice (lexer → parser → AST → console.log interpreter).
+- **M4.5 Item 11** — `spiral-network` HTTP client (takes `R: Resolver` by generic bound; the consumer for M4.5 Item 8).
 - **M4.5 Item 12** — `spiral-filter` runtime hook (Bet 3).
 - **M4.6 Item 13** — Gyre box model + margins (first Gyre layout work).
 
