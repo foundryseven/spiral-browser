@@ -514,3 +514,80 @@ sprint that picks them up.
 - [`docs/phase1-tasks.md`](phase1-tasks.md) — completed Phase 1 task breakdown
 - [`ROADMAP.md`](../ROADMAP.md) — phase plan
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md) — canonical architecture
+
+---
+
+## 8. Post-Research Amendment (2026-06-16)
+
+The 12-week plan in §3 was authored 2026-06-14, **before** the
+competitive-parity research and **before** the M4.4 / M4.5 work that
+shipped the spiral-fmt / spiral-vortex rewrite. The plan in §3 is now
+stale and should be read for **strategy** only, not for **sprint
+content**. The post-research amendments below supersede §3.
+
+### 8.1 Crate rename map (since 2026-06-14)
+
+| Old name in §3 | Current name | Notes |
+|----------------|--------------|-------|
+| `spiral-html` | **`spiral-fmt`** | Retired 2026-06-15. `spiral-fmt` is the canonical HTML parser. |
+| `spiral-css`  | **`spiral-fmt`** | Now a deprecated shim re-exporting `spiral_fmt::css::*`. |
+| `spiral-layout` | **`spiral-gyre`** | Renamed. Gyre is the in-house layout engine (no Taffy, no Servo). |
+| `spiral-js`   | **`spiral-vortex`** | Renamed. Vortex is the in-house JS engine (from-scratch Rust, no rquickjs, no V8 in production). |
+| `html5ever`   | **(none)** | Not vendored. `spiral-fmt` is from-spec. |
+| `cssparser`   | **(none)** | Not vendored. `spiral-fmt` is from-spec. |
+| `taffy`       | **(none)** | Never in `Cargo.toml`. Gyre is custom from day one. |
+| `boa_engine`  | **(none)** | Gone from plan. Vortex is from-scratch. |
+| `rquickjs`    | **(none)** | Never adopted. Vortex is from-scratch. |
+| V8            | Behind `v8` feature flag (CI compliance testing only) | Not the production engine. |
+
+### 8.2 Post-Research 12-Week Plan (M4.5 → M7.5)
+
+The plan below assumes M4.5 Item 8 is shipped (✅ 2026-06-16) and
+M4.5 Items 9/11/12/13 are in flight. It focuses on the top-20
+critical gaps from the competitive-parity research.
+
+| Week | Sprint | Tracks (parallel) | Goal |
+|------|--------|-------------------|------|
+| 1 | M4.5 wrap-up | Items 9 (Vortex slice), 11 (HTTP/1.1), 12 (filter), 13 (Gyre box model) | M4.5 complete |
+| 2–3 | M5.0 | **M4.5.14** Adoption agency + **M4.5.15** AFE + **M4.5.16** Foster parenting | Top-20 gaps #2–#4 done |
+| 4 | M5.1 | **M5.1** Fragment parsing algorithm (`DOMParser.parseFragment`) | Top-20 gap #6 done |
+| 5 | M5.2 | **M5.2** DOM collection types (NodeList, HTMLCollection, DOMTokenList, Attr, NamedNodeMap, DocumentType) | Top-20 gaps #9–#14 done |
+| 6 | M5.3 | **M5.3** Global attributes IDL + **M5.4** dataset IDL | Top-20 gaps #1, #15 done |
+| 7 | M5.4 | **M5.5** globalThis + **M5.6** structuredClone + **M5.7** URL/URLSearchParams | Top-20 gaps #16, #17, #20 done |
+| 8 | M5.5 | **M5.5.1** Quirk mode + **M5.5.2** `<noscript>` + **M5.5.3** `<template>` content | Top-20 gaps #5, #7, #8 done |
+| 9–10 | M5.6 / M5.7 | **M5.5.4** Proxy + Reflect; basic Vortex bytecode VM pass-through | Top-20 gap #18, #19 done |
+| 11–12 | M5.8 | **M5.8** HTTP/1.1 client in production (Item 11 from M4.5 wraps here) + **M5.9** Cookie jar | P3 items #3, #4 done |
+
+**End of week 12:**
+- All 20 top-20 critical gaps done.
+- HTTP/1.1 client and cookie jar shipped (P3 pull-forward done).
+- `spiral-fmt` HTML tree builder produces correct DOM for real-world
+  HTML.
+- `spiral-dom` has the collection types needed by JS code.
+- Vortex has the JS builtins needed for modern JS patterns.
+
+**End of week 12, additional cumulative state:**
+- P2 backlog: 14 items re-tagged to P3 (Q1). Remaining P2: 126 items.
+- Scoring formula: `spiral_urgency_weight` factor added (Q2). Max
+  score 800.
+- DevTools: full 7 panels planned for P6 (Q5). Nothing to do in
+  weeks 1-12.
+- Engines: 5 engines (Chromium, Firefox, WebKit, Servo, Ladybird)
+  (Q6). Flow column dropped from all matrix files.
+
+### 8.3 Phase pull-forward summary
+
+Per the user decisions on 2026-06-16 (Delta 7 in GAP_ANALYSIS):
+- HTTP/1.1 client: **P4 → P3** (now M5.8)
+- Cookie jar: **P4 → P3** (now M5.9)
+- 14 P2 items: **P2 → P3** (Q1 re-tag)
+
+No other phase changes. Networking depth, storage, media, security
+depth remain correctly in P4. DevTools and WebExtensions remain in
+P6 (now full scope, 7 panels).
+
+### 8.4 Supersedes
+
+This section **supersedes** §3 of `iteration-options.md`. The strategy
+in §1–§2 still applies (vendor/no-vendor/fork decision-making), but
+the concrete 12-week sprint plan in §3 is now §8.2.

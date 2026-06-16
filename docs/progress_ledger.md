@@ -1992,3 +1992,56 @@ to record the rationale.
 - **Status:** ✅ WIRED. Item 8 is complete
   and verified under the Wiring & Integration
   rule. The next chunk is the user's call.
+
+## [2026-06-16] [custom] [docs/research, specs, ROADMAP] — Competitive-parity research subset landed (chunks 0–13)
+
+Research subset of 14 chunks: 1,571 capabilities across 11
+domains, 12 per-engine matrix files, top-20 critical gaps
+identified. Key findings:
+
+- **89.6%** of modern-browser capabilities are not-started in
+  Spiral; 4.2% shipped (concentrated in Forge: HTML/CSS parsing,
+  and Vortex: JS lexer/parser/interpreter).
+- **Top-20 gaps** are all P2: HTML tree-builder depth (adoption
+  agency, active formatting elements, foster parenting, fragment
+  parsing) + DOM IDL surfaces (NodeList, HTMLCollection,
+  DOMTokenList, Attr, dataset, structuredClone, URL).
+- **19 new P2 sprint items** added to GAP_ANALYSIS §6; 1 item
+  re-ranked (#10 → P2 sprint item).
+- **6 user decisions** applied (Delta 7):
+  1. P2 backlog: 14 lowest-urgency items re-tagged to P3 (140→126).
+  2. Scoring: added `spiral_urgency_weight` (1-4) to formula.
+  3. HTTP/1.1 client pulled forward from P4 to P3.
+  4. Cookie jar pulled forward from P4 to P3.
+  5. DevTools scope expanded to full 7 panels (P6).
+  6. Flow engine column dropped (5 engines remain).
+
+### Wiring & Integration
+
+- **SSOT files updated:**
+  - `specs/GAP_ANALYSIS.md` — Delta 5 (19 new gaps G1.3a–h,
+    G1.4a–f, G1.6a–e), Delta 6 (re-rank #10), Delta 7 (6 user
+    decisions), 19 new priority stack rows (#19–#37), 6 resolved
+    open questions.
+  - `docs/active_context.md` — "External parity research landed"
+    section; "What needs picking" updated with M4.5.14–M5.9 sprint
+    picks including the top-20 P2 critical items.
+  - `ROADMAP.md` — competitive-parity additions for P2 (M4.5/M5
+    sprint), P3 (pull-forward from P4), P6 (full DevTools).
+  - `docs/research/00-methodology.md` — §11.3 with all 6 user
+    decisions and the new `spiral_urgency_weight` scoring factor.
+  - `docs/research/12-gap-synthesis.md` — §9 open questions
+    resolved; §9.1 concrete P2→P3 re-tag list.
+
+- **Matrix files updated:** 12 domain files updated; Flow column
+  dropped; 14 P2 items re-tagged to P3.
+
+- **Commits:** 17 commits on `research/competitive-parity`
+  worktree (on top of `audit/m4-window` @ `5f7b6a4`).
+
+- **Verification:** `cargo build`, `cargo clippy`, `cargo test`
+  all clean. 54 test runs passing.
+
+- **Status:** ✅ WIRED. The research subset is complete and the
+  SSOT is synchronised. The next pick is the user's call from
+  the M4.5/M5 list in `active_context.md`.

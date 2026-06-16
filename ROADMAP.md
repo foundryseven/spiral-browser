@@ -171,6 +171,8 @@
 - [ ] PNG, JPEG, WebP, AVIF support; lazy + progressive loading
 - [ ] End-to-end: navigate → fetch HTML → parse → layout → render → Vortex run → event dispatch
 
+> **Note:** The "Competitive parity additions" block below was added by the M4.5 research and was originally placed at the end of Phase 3 by mistake. It is **Phase 2 work** (months 4–9) and must land during the **M4.5/M5 sprint window**, not Phase 3. The block sits at the bottom of Phase 3 for visual continuity with the Phase 3 additions that follow.
+
 **Exit Criteria:**
 - Block + flex + grid layout: common patterns render correctly
 - Text is shaped and rendered correctly (basic Latin, CJK start)
@@ -179,6 +181,16 @@
 - Can navigate to real websites over HTTP/HTTPS
 - Images load and display
 - `taffy` was never in `Cargo.toml` — Gyre is custom from day one
+
+### Competitive parity additions (from M4.5 research, 2026-06-16)
+- [ ] HTTP/1.1 client (basic page fetching)
+- [ ] SOP enforcement (origin checks)
+- [ ] CORS (simple requests + preflight)
+- [ ] Cookie jar (basic session management)
+- [ ] WebAssembly (basic Module/Instance/Memory)
+- [ ] Fetch API (basic `fetch()`)
+- [ ] ARIA reflection (`role`, `aria-*`, `label`, `labelledby`)
+- [ ] Keyboard navigation (tab order, focus management, `focus-visible`)
 
 ---
 
@@ -196,7 +208,7 @@
 - [ ] Floating URL bar
 - [ ] Autocomplete suggestions
 - [ ] Navigation buttons (back/forward/reload/home)
-- [ ] Settings panel; cookie jar; form submission
+- [ ] Settings panel; form submission
 
 ### Month 31-33 — GPU rendering
 - [ ] GPU rendering pipeline via Vello
@@ -273,3 +285,18 @@
 - [ ] Accessibility (screen reader support, ARIA)
 - [ ] Internationalisation (ICU integration)
 - [ ] v1.0 release
+
+### Competitive parity additions (from M4.5 research, 2026-06-16)
+- [ ] DevTools (full: Elements + Console + Network + Performance + Memory + Security + Application panels)
+- [ ] Error pages (HTTP errors, cert errors, network errors)
+- [ ] View-source
+- [ ] Headless mode (for automation/testing)
+- [ ] Installers (Linux .deb + .rpm, macOS .dmg, Windows .exe)
+- [ ] Auto-update (differential, background, signed)
+- [ ] Code signing (EV cert, Apple Developer ID)
+- [ ] Default browser registration
+- [ ] Crash reporting (opt-in)
+- [ ] Enterprise policy (ExtensionSettings, SafeBrowsing, proxy)
+- [ ] WebExtensions MV3 (tabs, storage, content_scripts, action, popup)
+- [ ] Extension store / gallery
+- [ ] Custom themes (background image, accent colour)

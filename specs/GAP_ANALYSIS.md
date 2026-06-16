@@ -40,6 +40,14 @@ deliverable; the entire foundation of HTML/CSS parsing depends on it.
 32 zero bytes (not a placeholder — a security bug; `taffy` was never
 in tree per mandate but `rustls` is imported yet unused).
 
+**Competitive-parity research (2026-06-16):** 20 new P2 sprint items
+were identified by the competitive-parity research (Delta 5), covering
+HTML tree-builder depth (adoption agency, active formatting elements,
+foster parenting, fragment parsing) and DOM IDL surfaces (NodeList,
+HTMLCollection, DOMTokenList, Attr, dataset, structuredClone, URL). 1
+item re-ranked to P2 sprint item (Delta 6: `<template>` content). See
+§6 priority stack entries #19–#37.
+
 ---
 
 ## 1. Domain 1 — Core Engines
@@ -153,7 +161,7 @@ in tree per mandate but `rustls` is imported yet unused).
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `spiral-network` HTTP client via `hyper` | `[~]` | Stub at `crates/spiral-network/src/lib.rs:24-74`. `get`/`post` return 200 with empty body. No actual hyper call. |
+| `spiral-network` HTTP client via `hyper` | `[~]` | Stub at `crates/spiral-network/src/lib.rs:24-74`. `get`/`post` return 200 with empty body. No actual hyper call. **Pulled forward to P3 (2026-06-16, see Delta 7).** |
 | `spiral-net` DNS resolver via `hickory-dns` | `[~]` | Stub at `crates/spiral-net/src/lib.rs:25-56`. `resolve` returns `["127.0.0.1"]`. No `hickory_resolver::TokioResolver` integration. |
 | `spiral-net` TLS via `rustls` | `[ ]` | `TlsConfig` struct exists (`spiral-net/src/lib.rs:8-17`) but unused. No `rustls::ClientConfig` glue. |
 | `spiral_net::Resolver` trait | `[ ]` | M4 deliverable; not done. |
@@ -161,7 +169,6 @@ in tree per mandate but `rustls` is imported yet unused).
 | `spiral_network::Client` trait | `[ ]` | M6 deliverable. |
 | Connection pooling | `[ ]` | |
 | Redirect policy | `[ ]` | |
-| Cookie jar | `[ ]` | |
 | HTTP/2 (h2, h2c) | `[ ]` | |
 | HTTP/3 (quinn) | `[ ]` | |
 | WebSockets | `[ ]` | |
@@ -186,7 +193,7 @@ in tree per mandate but `rustls` is imported yet unused).
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Cookie jar | `[ ]` | Not present. |
+| Cookie jar | `[ ]` | Not present. **Pulled forward to P3 (2026-06-16, see Delta 7).** |
 | LocalStorage | `[ ]` | |
 | SessionStorage | `[ ]` | |
 | IndexedDB | `[ ]` | |
@@ -225,7 +232,7 @@ in tree per mandate but `rustls` is imported yet unused).
 | Floating URL bar / Omnibox | `[ ]` | |
 | Navigation buttons (back/forward/reload/home) | `[ ]` | |
 | Tab context menu | `[ ]` | |
-| DevTools element inspector, console, network | `[ ]` | |
+| DevTools (full: Elements + Console + Network + Performance + Memory + Security + Application panels) | `[ ]` | P6. **Full scope confirmed (2026-06-16, see Delta 7).** Performance, Memory, Security, Application panels are all needed for v1.0. |
 | Tab Provenance Graph (innovations #12) | `[ ]` | M12+ novelty. |
 | Find-in-page | `[ ]` | |
 | Downloads UI / manager | `[ ]` | |
@@ -391,6 +398,25 @@ in tree per mandate but `rustls` is imported yet unused).
 | **16** | **WPT fixtures** | P3 | M5+ | |
 | **17** | **WebGL / WebGPU** | P3 | M49+ | |
 | **18** | **Sandboxing re-evaluated under Bet 1** | P3 | M25+ | |
+| **19** | **Adoption agency algorithm (G1.3a)** | P2 | M4.5/M5 | Blocks correct rendering of real-world HTML with misnested formatting tags. WHATWG HTML §12.2.6.1. |
+| **20** | **Active formatting elements list (G1.3b)** | P2 | M4.5/M5 | Required by adoption agency algorithm. WHATWG HTML §12.2.6.1. |
+| **21** | **Foster parenting (G1.3c)** | P2 | M4.5/M5 | Blocks correct table parsing and in-table/in-body placement. WHATWG HTML §12.2.6.1. |
+| **22** | **Fragment parsing algorithm (G1.3d)** | P2 | M5 | Blocks innerHTML, insertAdjacentHTML. WHATWG HTML §12.4. |
+| **23** | **Quirk mode classifier (G1.3e)** | P2 | M5 | Blocks correct CSS behaviour on legacy sites. WHATWG HTML §12.1. |
+| **24** | **`<noscript>` element (G1.3f)** | P2 | M5 | Blocks correct rendering with JS enabled. WHATWG HTML §4.6.7. |
+| **25** | **Global attributes IDL (G1.3g)** | P2 | M5 | Blocks all DOM IDL and accessibility for `id`, `class`, `style`, `title`, `lang`, `dir`, `hidden`, `tabindex`, `contenteditable`, `inert`, `popover`. WHATWG HTML §3.2.6. |
+| **26** | **`data-*` custom data attributes (G1.3h)** | P2 | M5 | Blocks `element.dataset` from JS. WHATWG HTML §3.2.6.3. |
+| **27** | **`DOMTokenList` (G1.4a)** | P2 | M5 | Blocks `classList`, `relList` and other token-based DOM interfaces. WHATWG DOM §7.1. |
+| **28** | **`NodeList` (G1.4b)** | P2 | M5 | Blocks querySelectorAll result handling. WHATWG DOM §4.4. |
+| **29** | **`HTMLCollection` (G1.4c)** | P2 | M5 | Blocks getElementsByTagName result handling. WHATWG DOM §4.5. |
+| **30** | **`Attr` interface (G1.4d)** | P2 | M5 | Blocks getAttributeNode and attribute iteration. WHATWG DOM §4.9. |
+| **31** | **`NamedNodeMap` (G1.4e)** | P2 | M5 | Blocks `.attributes` on Element. WHATWG DOM §4.8. |
+| **32** | **`DocumentType` (G1.4f)** | P2 | M5 | Blocks `document.doctype`. WHATWG DOM §4.6. |
+| **33** | **`globalThis` (G1.6a)** | P2 | M5 | Blocks universal global reference. ECMA-262 §19.4.1. |
+| **34** | **`structuredClone` (G1.6b)** | P2 | M5 | Blocks postMessage structured data and Workers. WHATWG HTML §8.2.7. |
+| **35** | **`Proxy` + `Reflect` (G1.6c/d)** | P2 | M5/M6 | Blocks transparent object interception and Proxy+Reflect idiom. ECMA-262 §10.5, §28.1. |
+| **36** | **`URL` + `URLSearchParams` (G1.6e)** | P2 | M5 | Blocks URL manipulation everywhere. WHATWG URL §4. |
+| **37** | **`<template>` content fragment (bump to sprint)** | P2 | M4.5/M5 | Priority #10 re-ranked to active sprint item. Blocks Web Components, Shadow DOM, declarative templates. |
 
 ---
 
@@ -443,6 +469,31 @@ one focused sprint. Phase 2 first-sprint exit criteria.
 
 ---
 
+**Updated first fill (post-competitive-parity research, 2026-06-16):**
+
+The competitive-parity research identified 19 new P2 sprint items (Delta 5)
+plus 1 re-ranked item (Delta 6). The synthesis recommends the following
+sprint order that supplements the existing M4.4 work:
+
+**M4.5/M5 immediate (pull forward into current sprint):**
+1. **Adoption agency algorithm + active formatting elements + foster parenting** (#19–#21, L complexity, 2–3 weeks). These are the top-20 competitive gaps #2–#4. Without them, the tree builder produces incorrect DOM for any non-trivial HTML.
+2. **`<template>` content fragment** (#37, M complexity, 1 week). Re-ranked from general P2 to active sprint. Priority #10 now bumped.
+3. **Fragment parsing** (#22, M complexity, 1 week). Priority #6 gap. Blocks innerHTML, insertAdjacentHTML.
+
+**M5 sprint (next sprint):**
+4. **DOM collection types** (#27–#32: NodeList, HTMLCollection, DOMTokenList, Attr, NamedNodeMap, DocumentType). M complexity each, 1–2 weeks total. Blocks DOM manipulation from JS.
+5. **Global attributes IDL + `data-*` attributes** (#25–#26). M complexity each.
+6. **`globalThis`, `structuredClone`, `URL`/`URLSearchParams`** (#33, #34, #36). S–M complexity each, 1 week total.
+7. **Quirk mode classifier + `<noscript>`** (#23–#24). S complexity each.
+
+**M5/M6 sprint:**
+8. **Proxy + Reflect** (#35, L complexity, 1–2 weeks).
+
+This supplements (does not replace) the existing M4.5 Items 9, 11, 12, 13
+listed in `docs/active_context.md`.
+
+---
+
 ## 8. Open Questions for the User
 
 1. Confirm the **`spiral-fmt` from-spec implementation** path is preferred
@@ -456,6 +507,20 @@ one focused sprint. Phase 2 first-sprint exit criteria.
    `spiral_net::TlsConnector`, `spiral_network::Client`,
    `spiral_imagedecoder::Decoder` traits all wanted in M4.5, or just
    the network ones first?
+
+### Questions added 2026-06-16 (competitive-parity research)
+
+5. **~~Phase 2 backlog overflow:~~** **RESOLVED 2026-06-16 (Q1).** Re-tag bottom 30-40 P2 items (lowest complexity/impact) to P3. See Delta 7.
+
+6. **~~Top-20 bias toward HTML/DOM:~~** **RESOLVED 2026-06-16 (Q2).** Added `spiral_urgency_weight` to scoring formula. See Delta 7 and methodology §11.3.
+
+7. **~~HTTP/1.1 pull-forward:~~** **RESOLVED 2026-06-16 (Q3).** Pulled HTTP/1.1 client to P3. See Delta 7.
+
+8. **~~Cookie jar pull-forward:~~** **RESOLVED 2026-06-16 (Q4).** Pulled cookie jar to P3. See Delta 7.
+
+9. **~~DevTools scope:~~** **RESOLVED 2026-06-16 (Q5).** Full DevTools in P6 (7 panels). See Delta 7.
+
+10. **~~Flow engine verification:~~** **RESOLVED 2026-06-16 (Q6).** Flow column dropped entirely. See Delta 7.
 
 ---
 
@@ -543,4 +608,45 @@ state for traceability.
 - `cargo clippy --workspace --all-targets -- -D warnings` — clean.
 - `cargo test --workspace` — 409 passing, 0 failing.
 - `cargo build --workspace` — clean.
+
+### Delta 5 — 2026-06-16 (Competitive parity research: top-20 gaps)
+
+| Gap | Was | Now | Evidence |
+|-----|-----|-----|----------|
+| **G1.3a** Adoption agency algorithm (misnested formatting) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 2. WHATWG HTML §12.2.6.1. Ubiquitous across all engines. |
+| **G1.3b** Active formatting elements list | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 3. WHATWG HTML §12.2.6.1. Required by adoption agency. |
+| **G1.3c** Foster parenting (out-of-table / in-table) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 4. WHATWG HTML §12.2.6.1. Blocks correct table parsing. |
+| **G1.3d** Fragment parsing algorithm | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 6. WHATWG HTML §12.4. Blocks innerHTML, insertAdjacentHTML. |
+| **G1.3e** Quirk mode classifier | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 8. WHATWG HTML §12.1. Blocks correct CSS on legacy sites. |
+| **G1.3f** `<noscript>` element | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 7. WHATWG HTML §4.6.7. Blocks correct rendering with JS enabled. |
+| **G1.3g** Global attributes IDL (`id`, `class`, `style`, `title`, `lang`, `dir`, `hidden`, `tabindex`, `contenteditable`, `inert`, `popover`, etc.) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 1. WHATWG HTML §3.2.6. Blocks all DOM IDL and accessibility. |
+| **G1.3h** `data-*` custom data attributes (`dataset` IDL) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-html-dom-js.md` §A.1, row 15. WHATWG HTML §3.2.6.3. Blocks `element.dataset` from JS. |
+| **G1.4a** `DOMTokenList` (`classList`, `relList`, etc.) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 9. WHATWG DOM §7.1. Blocks class manipulation from JS. |
+| **G1.4b** `NodeList` (static or live) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 10. WHATWG DOM §4.4. Blocks querySelectorAll result handling. |
+| **G1.4c** `HTMLCollection` (live ordered collection) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 11. WHATWG DOM §4.5. Blocks getElementsByTagName result handling. |
+| **G1.4d** `Attr` interface | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 12. WHATWG DOM §4.9. Blocks getAttributeNode and attribute iteration. |
+| **G1.4e** `NamedNodeMap` | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 13. WHATWG DOM §4.8. Blocks `.attributes` on Element. |
+| **G1.4f** `DocumentType` | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 14. WHATWG DOM §4.6. Blocks `document.doctype`. |
+| **G1.6a** `globalThis` | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 16. ECMA-262 §19.4.1. Blocks universal global reference. |
+| **G1.6b** `structuredClone` | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 17. WHATWG HTML §8.2.7. Blocks postMessage structured data. |
+| **G1.6c** `Proxy` (handler traps) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 18. ECMA-262 §10.5. Blocks transparent object interception. |
+| **G1.6d** `Reflect` (static reflection namespace) | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 19. ECMA-262 §28.1. Blocks Proxy + Reflect idiom. |
+| **G1.6e** `URL` and `URLSearchParams` | (not tracked) | `[ ]` P2 sprint item | `01-feature-inventory-dom-css.md` §A.2, row 20. WHATWG URL §4. Blocks URL manipulation everywhere. |
+
+### Delta 6 — 2026-06-16 (Competitive parity research: priority re-ranking)
+
+| Gap | Was | Now | Evidence |
+|-----|-----|-----|----------|
+| **#10** `<template>` content fragment; DOCTYPE; insertBefore | P2 | **P2 sprint item** (bump from general P2 to active sprint) | `02-competitive-matrix-index.md` §6, rank 5. Ubiquitous, not-started, P2. Blocks Web Components, Shadow DOM, declarative templates. |
+
+### Delta 7 — 2026-06-16 (User decisions on synthesis open questions)
+
+| Gap | Was | Now | Evidence |
+|-----|-----|-----|----------|
+| `spiral-network` HTTP client via `hyper` (basic HTTP/1.1) | P4 | **P3** (pulled forward) | User decision on synthesis Q3. Without HTTP/1.1, Spiral cannot load any remote page. Session 2026-06-16. |
+| Cookie jar (basic session management) | P4 | **P3** (pulled forward) | User decision on synthesis Q4. Session management is a prerequisite for most web apps. Session 2026-06-16. |
+| DevTools (full: Elements + Console + Network + Performance + Memory + Security + Application) | P6 minimum-viable (3 panels) | **P6 full scope** (7 panels) | User decision on synthesis Q5. Performance, Memory, Security, Application panels are all needed for v1.0. Session 2026-06-16. |
+| Methodology §11.3 — urgency weight | (not present) | **Added** | User decision on synthesis Q2. New `spiral_urgency_weight` factor in scoring formula. Session 2026-06-16. |
+| Methodology §11.3 — Flow engine column | 6 engines (Chromium, Firefox, WebKit, Servo, Ladybird, Flow) | **5 engines** (Flow dropped) | User decision on synthesis Q6. Flow is no longer a credible independent engine. Dropped from all 12 matrix files. Session 2026-06-16. |
+| Phase 2 backlog re-tag | 140 P2 items | **~100 P2 items, ~40 re-tagged P3** | User decision on synthesis Q1. Bottom 30-40 P2 items (lowest complexity/impact) re-tagged to P3 to fit the ~6-sprint window. Session 2026-06-16. |
 
