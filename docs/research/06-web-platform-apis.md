@@ -1,12 +1,290 @@
-# Chunk 4 — Storage & State
+# Chunk 6 — Web Platform APIs & Runtime (A) / Storage & State (B)
 
-> **§A (Web Platform APIs & Runtime)** will be added by chunk 6 to this
-> file. If the combined file exceeds 600 lines, §B splits into a separate
-> `06-storage-state.md` and the index links accordingly.
+> §A (Web Platform APIs & Runtime) is written by chunk 6. §B (Storage &
+> State) was written by chunk 4. Per-file cap: 600 lines. Both sections
+> live in this file because the combined size is well under 600.
 
 ---
 
-## §B — Storage & State
+## §A — Web Platform APIs & Runtime
+
+## Scope
+
+**In:** Fetch, Streams, Workers (Dedicated / Shared / Service), background
+task scheduling, WebAssembly, WebGPU, WebGL / WebGL2, WebNN, WebAuthn,
+Payment Request, Web Share, Clipboard (async), File System Access, Origin
+Private File System sync access, Notifications, Web Push, WebTransport,
+WebSocket, Gamepad, Speech (synthesis + recognition), Pointer / Touch /
+Mouse / Keyboard event model, Battery, Vibration, Geolocation, Generic
+Sensors, Web MIDI, Web Serial, WebUSB, Web Bluetooth, Web NFC, WebCodecs,
+WebXR, Compression Streams, Encoding, URL, Blob / File / FileReader /
+FileReaderSync, structuredClone, atob / btoa, SubtleCrypto surface,
+Permissions API, Prioritised Task Scheduling.
+
+**Out:** HTML elements, DOM, CSS, networking protocols, security policy
+(CSP, CORS, SRI), storage (cookies / WebStorage / IndexedDB / OPFS /
+CacheStorage), media codecs / EME / MSE / WebRTC media plane, user-facing
+UX, DevTools, accessibility, extension APIs, platform distribution.
+
+**Naming:** WHATWG / W3C / IETF spec names. No product names.
+
+**Grounding:** `crates/spiral-vortex/src/` exposes ES builtins
+(`Array`, `Math`, `Object`, `Console`) only. No browser API surface
+(fetch / Worker / WebAssembly / crypto / URL / Blob / structuredClone /
+TextEncoder) is implemented. `crates/spiral-crypto/src/lib.rs` provides
+`random_bytes` and `sha256` (CSPRNG + SHA-256) but is not yet wired
+into the Vortex global object.
+
+## Rows
+
+| # | Capability | Surface | Status in Spiral | Browser prevalence | Phase impact | Complexity | Engine notes | Sources |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `fetch(input, init?)` global | desktop+mobile+embedded | not-started | ubiquitous | P4 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §fetch](https://fetch.spec.whatwg.org/#fetch-method) |
+| 2 | `Request` constructor | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §request-class](https://fetch.spec.whatwg.org/#request-class) |
+| 3 | `Response` constructor | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §response-class](https://fetch.spec.whatwg.org/#response-class) |
+| 4 | `Headers` constructor | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §headers-class](https://fetch.spec.whatwg.org/#headers-class) |
+| 5 | `Body` mixin (`arrayBuffer` / `blob` / `formData` / `json` / `text`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §body-mixin](https://fetch.spec.whatwg.org/#body-mixin) |
+| 6 | `AbortController` / `AbortSignal` | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [DOM §aborting-ongoing-activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities) |
+| 7 | `AbortSignal.timeout(ms)` | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [DOM §dom-abortsignal-timeout](https://dom.spec.whatwg.org/#dom-abortsignal-timeout) |
+| 8 | `AbortSignal.any(signals)` | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [DOM §dom-abortsignal-any](https://dom.spec.whatwg.org/#dom-abortsignal-any) |
+| 9 | Fetch priority hints (`fetchPriority` / `priority` header) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Fetch Priority](https://w3c.github.io/fetch-priority/) |
+| 10 | Fetch keepalive | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [WHATWG Fetch §keepalive-flag](https://fetch.spec.whatwg.org/#keepalive-flag) |
+| 11 | Fetch redirect modes (`follow` / `error` / `manual`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §request-redirect-mode](https://fetch.spec.whatwg.org/#request-redirect-mode) |
+| 12 | Fetch credentials modes (`omit` / `same-origin` / `include`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §request-credentials-mode](https://fetch.spec.whatwg.org/#request-credentials-mode) |
+| 13 | Fetch `mode` (`cors` / `no-cors` / `same-origin` / `navigate`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §request-mode](https://fetch.spec.whatwg.org/#request-mode) |
+| 14 | Fetch `referrerPolicy` | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Fetch §request-referrer-policy](https://fetch.spec.whatwg.org/#request-referrer-policy) |
+| 15 | Duplex streaming (`request.duplex: "half"`) | desktop+mobile+embedded | not-started | niche | P4 | M | Chromium: yes · Gecko: partial · WebKit: no · Servo: no · Ladybird: no · Flow: no | [Fetch PR #1457](https://github.com/whatwg/fetch/pull/1457) |
+| 16 | `ReadableStream` constructor / default reader | desktop+mobile+embedded | not-started | ubiquitous | P4 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Streams §readable-streams](https://streams.spec.whatwg.org/#readable-streams) |
+| 17 | `WritableStream` constructor / default writer | desktop+mobile+embedded | not-started | ubiquitous | P4 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [WHATWG Streams §writable-streams](https://streams.spec.whatwg.org/#writable-streams) |
+| 18 | `TransformStream` (built-in `ReadableStream` ↔ `WritableStream` pair with transform) | desktop+mobile+embedded | not-started | widespread | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [WHATWG Streams §transform-streams](https://streams.spec.whatwg.org/#transform-streams) |
+| 19 | `ReadableStreamBYOBReader` (bring-your-own-buffer) | desktop+mobile+embedded | not-started | widespread | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [WHATWG Streams §byob-reader](https://streams.spec.whatwg.org/#byob-reader) |
+| 20 | `ReadableStream.pipeTo(writable)` / `pipeThrough(transform)` | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [WHATWG Streams §readable-stream-pipe](https://streams.spec.whatwg.org/#readable-stream-pipe) |
+| 21 | `ReadableStream.tee()` (branch to two readers) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [WHATWG Streams §readable-stream-tee](https://streams.spec.whatwg.org/#readable-stream-tee) |
+| 22 | Stream backpressure (high-water mark, pull, write queuing) | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [WHATWG Streams §backpressure](https://streams.spec.whatwg.org/#backpressure) |
+| 23 | `ByteLengthQueuingStrategy` / `CountQueuingStrategy` | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [WHATWG Streams §queuing-strategies](https://streams.spec.whatwg.org/#queuing-strategies) |
+| 24 | `Worker` constructor (dedicated worker) | desktop+mobile+embedded | not-started | ubiquitous | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [HTML §workers](https://html.spec.whatwg.org/multipage/workers.html) |
+| 25 | `SharedWorker` constructor | desktop+mobile+embedded | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [HTML §sharedworkerglobalscope](https://html.spec.whatwg.org/multipage/workers.html#sharedworkerglobalscope) |
+| 26 | Service Worker registration (`navigator.serviceWorker.register`) | desktop+mobile+embedded | not-started | ubiquitous | P5 | XL | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Service Workers §register](https://w3c.github.io/ServiceWorker/#navigator-service-worker-register) |
+| 27 | `ServiceWorkerContainer` / `ServiceWorkerRegistration` | desktop+mobile+embedded | not-started | ubiquitous | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Service Workers §container](https://w3c.github.io/ServiceWorker/#serviceworkercontainer-interface) |
+| 28 | `importScripts(url, ...)` in workers | desktop+mobile+embedded | not-started | ubiquitous | P5 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [HTML §importscripts](https://html.spec.whatwg.org/multipage/workers.html#importscripts) |
+| 29 | `postMessage` / `onmessage` (worker messaging) | desktop+mobile+embedded | not-started | ubiquitous | P5 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [HTML §dom-worker-postmessage](https://html.spec.whatwg.org/multipage/workers.html#dom-worker-postmessage) |
+| 30 | `structuredClone` algorithm (worker message body) | desktop+mobile+embedded | not-started | ubiquitous | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [HTML §structured-clone](https://html.spec.whatwg.org/multipage/structured-data.html#structured-clone) |
+| 31 | `WorkerGlobalScope` (self, location, navigator, caches) | desktop+mobile+embedded | not-started | ubiquitous | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [HTML §workerglobalscope](https://html.spec.whatwg.org/multipage/workers.html#workerglobalscope) |
+| 32 | `CacheStorage` (`caches.open`) inside service worker | desktop+mobile+embedded | not-started | ubiquitous | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Service Workers §cache](https://w3c.github.io/ServiceWorker/#cache-storage) |
+| 33 | OPFS sync access handle inside worker (`createSyncAccessHandle`) | desktop+mobile+embedded | not-started | niche | P5 | M | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG File System Access §syncaccesshandle](https://wicg.github.io/file-system-access/#syncaccesshandle) |
+| 34 | Worker module scripts (`new Worker(url, {type:"module"})`) | desktop+mobile+embedded | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [HTML §worker-options](https://html.spec.whatwg.org/multipage/workers.html#worker-options) |
+| 35 | Service Worker update flow (`update`, `skipWaiting`, `clients.claim`) | desktop+mobile+embedded | not-started | ubiquitous | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Service Workers §lifetime](https://w3c.github.io/ServiceWorker/#service-worker-lifetime) |
+| 36 | `requestIdleCallback` / `cancelIdleCallback` | desktop+mobile | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [WICG requestIdleCallback](https://w3c.github.io/requestidlecallback/) |
+| 37 | `requestAnimationFrame` / `cancelAnimationFrame` (timing only) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: stub · Flow: no | [HTML §requestanimationframe](https://html.spec.whatwg.org/multipage/imagebitmap-and-animations.html#dom-animationframeprovider-requestanimationframe) |
+| 38 | Prioritised Task Scheduling API (`scheduler.postTask`, `scheduler.yield`) | desktop+mobile+embedded | not-started | niche | P4 | M | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG Prioritised Task Scheduling](https://wicg.github.io/scheduling-apis/) |
+| 39 | Task priorities (`user-blocking` / `user-visible` / `background`) | desktop+mobile+embedded | not-started | niche | P4 | S | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG Scheduling APIs §task-priority](https://wicg.github.io/scheduling-apis/#task-priority) |
+| 40 | `isInputPending()` (input-priority scheduling) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG Scheduling APIs §input](https://wicg.github.io/scheduling-apis/#input-priority) |
+| 41 | WebAssembly `WebAssembly.Module` | desktop+mobile+embedded | not-started | ubiquitous | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §module](https://webassembly.github.io/spec/web-api/js-api.html#module-constructor) |
+| 42 | `WebAssembly.Instance` | desktop+mobile+embedded | not-started | ubiquitous | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §instance](https://webassembly.github.io/spec/web-api/js-api.html#instance-constructor) |
+| 43 | `WebAssembly.Memory` (shared / non-shared) | desktop+mobile+embedded | not-started | ubiquitous | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §memory](https://webassembly.github.io/spec/web-api/js-api.html#memory-constructor) |
+| 44 | `WebAssembly.Table` | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §table](https://webassembly.github.io/spec/web-api/js-api.html#table-constructor) |
+| 45 | `WebAssembly.Global` | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §global](https://webassembly.github.io/spec/web-api/js-api.html#global-constructor) |
+| 46 | `WebAssembly.compile` / `compileStreaming` (off-thread) | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §compile](https://webassembly.github.io/spec/web-api/js-api.html#dom-webassembly-compile) |
+| 47 | `WebAssembly.instantiate` / `instantiateStreaming` | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Wasm Embedding §instantiate](https://webassembly.github.io/spec/web-api/js-api.html#dom-webassembly-instantiate) |
+| 48 | Wasm reference types (externref, funcref) | desktop+mobile+embedded | not-started | widespread | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [Wasm Reference Types](https://webassembly.github.io/reference-types/core/) |
+| 49 | Wasm SIMD (`v128` ops) | desktop+mobile+embedded | not-started | widespread | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: partial | [Wasm SIMD](https://webassembly.github.io/simd/core/) |
+| 50 | Wasm threads (atomic memory ops, `memory.shared`) | desktop+mobile+embedded | not-started | widespread | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [Wasm Threads](https://webassembly.github.io/threads/core/) |
+| 51 | Wasm exception handling (`try` / `catch` / `throw` / `rethrow`) | desktop+mobile+embedded | not-started | widespread | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [Wasm Exception Handling](https://webassembly.github.io/exception-handling/core/) |
+| 52 | Wasm tail calls (`return_call` / `return_call_indirect`) | desktop+mobile+embedded | not-started | niche | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: partial | [Wasm Tail Call](https://webassembly.github.io/tail-call/core/) |
+| 53 | Wasm multi-value returns | desktop+mobile+embedded | not-started | widespread | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [Wasm Multi-Value](https://webassembly.github.io/multi-value/core/) |
+| 54 | Wasm bulk memory ops (`memory.copy` / `memory.fill`) | desktop+mobile+embedded | not-started | widespread | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [Wasm Bulk Memory](https://webassembly.github.io/bulk-memory-operations/core/) |
+| 55 | Wasm relaxed SIMD | desktop+mobile+embedded | not-started | niche | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: partial | [Wasm Relaxed SIMD](https://webassembly.github.io/relaxed-simd/core/) |
+| 56 | Wasm memory64 (>4 GiB address space) | desktop+mobile+embedded | not-started | niche | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: partial | [Wasm Memory64](https://webassembly.github.io/memory64/core/) |
+| 57 | Wasm GC (struct, array, ref types, gc-managed objects) | desktop+mobile+embedded | not-started | niche | P4 | XL | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [Wasm GC proposal](https://github.com/WebAssembly/gc/blob/main/proposals/gc/Overview.md) |
+| 58 | Wasm component model + WASI preview | desktop+mobile+embedded | not-started | niche | P5 | XL | Chromium: yes (WASI preview1) · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WASI Proposals](https://github.com/WebAssembly/WASI/blob/main/Proposals.md) |
+| 59 | WebGPU `GPUAdapter` / `GPUDevice` | desktop+mobile | not-started | widespread | P6 | XL | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebGPU §adapter](https://www.w3.org/TR/webgpu/#adapter-interface) |
+| 60 | `GPUBuffer` / `GPUTexture` / `GPUTextureView` | desktop+mobile | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebGPU §buffer](https://www.w3.org/TR/webgpu/#buffer-interface) |
+| 61 | `GPURenderPipeline` / `GPUComputePipeline` | desktop+mobile | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebGPU §pipeline](https://www.w3.org/TR/webgpu/#pipeline-interface) |
+| 62 | `GPUBindGroup` / `GPUBindGroupLayout` | desktop+mobile | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebGPU §bindgroup](https://www.w3.org/TR/webgpu/#bindgroup-interface) |
+| 63 | WGSL shader language | desktop+mobile | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WGSL](https://www.w3.org/TR/WGSL/) |
+| 64 | `GPUCanvasContext` (compositor hook from `<canvas>`) | desktop+mobile | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebGPU §canvas](https://www.w3.org/TR/webgpu/#canvas-context) |
+| 65 | `GPUCommandEncoder` / pass encoders | desktop+mobile | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes (Nightly) · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebGPU §encoder](https://www.w3.org/TR/webgpu/#command-encoder-interface) |
+| 66 | WebGL 1.0 (`WebGLRenderingContext`) | desktop+mobile+embedded | not-started | ubiquitous | P6 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [Khronos WebGL 1.0](https://registry.khronos.org/webgl/specs/latest/1.0/) |
+| 67 | WebGL 2.0 (`WebGL2RenderingContext`) | desktop+mobile+embedded | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [Khronos WebGL 2.0](https://registry.khronos.org/webgl/specs/latest/2.0/) |
+| 68 | WebGL extensions (compressed textures, instancing, transform feedback) | desktop+mobile+embedded | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [WebGL Extension Registry](https://registry.khronos.org/webgl/extensions/) |
+| 69 | ANGLE as default WebGL backend | desktop+mobile+embedded | not-started | widespread | P6 | M | Chromium: yes (ANGLE) · Gecko: yes (Windows ANGLE) · WebKit: yes (macOS ANGLE) · Servo: no · Ladybird: no · Flow: no | [ANGLE](https://github.com/google/angle) |
+| 70 | WebNN `MLContext` / `MLGraphBuilder` | desktop+mobile | not-started | niche | P6 | XL | Chromium: yes (Origin Trial) · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C WebNN](https://www.w3.org/TR/webnn/) |
+| 71 | WebNN operations (`conv2d`, `matmul`, `softmax`, `relu`, `pooling`) | desktop+mobile | not-started | niche | P6 | L | Chromium: yes (OT) · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C WebNN §ops](https://www.w3.org/TR/webnn/#api) |
+| 72 | WebNN operand types (`float32` / `int32` / `int8` / `uint4`) | desktop+mobile | not-started | niche | P6 | M | Chromium: yes (OT) · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C WebNN §operands](https://www.w3.org/TR/webnn/#operand-types) |
+| 73 | WebNN MLGraph compilation + dispatch | desktop+mobile | not-started | niche | P6 | L | Chromium: yes (OT) · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C WebNN §graph](https://www.w3.org/TR/webnn/#mlgraph) |
+| 74 | WebAuthn `navigator.credentials.create({publicKey})` | desktop+mobile | not-started | widespread | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebAuthn §create](https://w3c.github.io/webauthn/#sctn-createCredential) |
+| 75 | WebAuthn `navigator.credentials.get({publicKey})` | desktop+mobile | not-started | widespread | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebAuthn §get](https://w3c.github.io/webauthn/#sctn-getAssertion) |
+| 76 | WebAuthn resident keys (`requireResidentKey`, `residentKey`) | desktop+mobile | not-started | widespread | P5 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebAuthn §resident](https://w3c.github.io/webauthn/#sctn-resident-credential) |
+| 77 | WebAuthn user verification (`userVerification: "required"`) | desktop+mobile | not-started | widespread | P5 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebAuthn §user-verification](https://w3c.github.io/webauthn/#user-verification) |
+| 78 | WebAuthn attestation (direct / indirect / none) | desktop+mobile | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebAuthn §attestation](https://w3c.github.io/webauthn/#sctn-attestation) |
+| 79 | Payment Request `PaymentRequest` constructor | desktop+mobile | not-started | widespread | P6 | L | Chromium: yes · Gecko: yes · WebKit: yes (Apple Pay) · Servo: no · Ladybird: no · Flow: no | [W3C Payment Request §constructor](https://w3c.github.io/payment-request/#paymentrequest-interface) |
+| 80 | `PaymentResponse` / `PaymentMethodData` | desktop+mobile | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Payment Request §response](https://w3c.github.io/payment-request/#paymentresponse-interface) |
+| 81 | Payment Request shipping address + contact info events | desktop+mobile | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Payment Request §shipping](https://w3c.github.io/payment-request/#shipping-address-changed-algorithm) |
+| 82 | `canMakePayment()` | desktop+mobile | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Payment Request §canmakepayment](https://w3c.github.io/payment-request/#canmakepayment-method) |
+| 83 | `navigator.share()` (Web Share API) | mobile+desktop (Chromium) | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes (mobile) · WebKit: yes (iOS 12.2+) · Servo: no · Ladybird: no · Flow: no | [W3C Web Share API](https://w3c.github.io/web-share/) |
+| 84 | `navigator.canShare()` | mobile+desktop (Chromium) | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes (mobile) · WebKit: yes (iOS 12.2+) · Servo: no · Ladybird: no · Flow: no | [W3C Web Share API §canShare](https://w3c.github.io/web-share/#canshare-method) |
+| 85 | Share target (handler registration in web app manifest) | mobile | not-started | niche | P6 | M | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Manifest §share_target](https://w3c.github.io/manifest/#share_target-member) |
+| 86 | Async Clipboard (`navigator.clipboard.readText` / `writeText`) | desktop+mobile+embedded | not-started | widespread | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Clipboard API](https://www.w3.org/TR/clipboard-apis/) |
+| 87 | Clipboard `read()` / `write()` (arbitrary MIME, images) | desktop+mobile | not-started | niche | P4 | M | Chromium: yes · Gecko: yes (text only) · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Clipboard API §read](https://www.w3.org/TR/clipboard-apis/#dom-clipboard-read) |
+| 88 | Clipboard permission model (transient activation gating) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Clipboard API §permission](https://www.w3.org/TR/clipboard-apis/#permission) |
+| 89 | File System Access `showOpenFilePicker` | desktop | not-started | niche | P6 | L | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG File System Access §showopen](https://wicg.github.io/file-system-access/#dom-window-showopenfilepicker) |
+| 90 | File System Access `showSaveFilePicker` | desktop | not-started | niche | P6 | L | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG File System Access §showsave](https://wicg.github.io/file-system-access/#dom-window-showsavefilepicker) |
+| 91 | File System Access `showDirectoryPicker` | desktop | not-started | niche | P6 | L | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG File System Access §showdir](https://wicg.github.io/file-system-access/#dom-window-showdirectorypicker) |
+| 92 | `FileSystemFileHandle` / `FileSystemDirectoryHandle` | desktop | not-started | niche | P6 | M | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG File System Access §handles](https://wicg.github.io/file-system-access/#handles) |
+| 93 | `createWritable()` (file handle → writable stream) | desktop | not-started | niche | P6 | S | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG File System Access §createwritable](https://wicg.github.io/file-system-access/#dom-filesystemfilehandle-createwritable) |
+| 94 | Notifications `Notification` constructor | desktop+mobile | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes (via polyfill / macOS 16+) · Servo: no · Ladybird: no · Flow: no | [WHATWG Notifications](https://notifications.spec.whatwg.org/) |
+| 95 | Notification permission model (`granted` / `denied` / `default`) | desktop+mobile | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [WHATWG Notifications §permission](https://notifications.spec.whatwg.org/#permission-model) |
+| 96 | Notification `actions` (button array) | desktop+mobile | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WHATWG Notifications §actions](https://notifications.spec.whatwg.org/#actions) |
+| 97 | Notification `badge` / `image` / `vibrate` | desktop+mobile | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: partial · Servo: no · Ladybird: no · Flow: no | [WHATWG Notifications §resources](https://notifications.spec.whatwg.org/#resources) |
+| 98 | Web Push (`PushManager.subscribe`, `PushSubscription`) | desktop+mobile+embedded | not-started | widespread | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes (iOS 16.4+) · Servo: no · Ladybird: no · Flow: no | [W3C Push API](https://www.w3.org/TR/push-api/) |
+| 99 | Push event + VAPID keys | desktop+mobile+embedded | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [RFC 8030 §web-push](https://datatracker.ietf.org/doc/html/rfc8030) |
+| 100 | WebTransport (`new WebTransport(url)`) | desktop+mobile | not-started | niche | P6 | L | Chromium: yes · Gecko: yes · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebTransport](https://www.w3.org/TR/webtransport/) |
+| 101 | WebTransport datagrams (unreliable, low-latency) | desktop+mobile | not-started | niche | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebTransport §datagrams](https://www.w3.org/TR/webtransport/#datagrams) |
+| 102 | WebTransport bidirectional + unidirectional streams | desktop+mobile | not-started | niche | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes (Safari TP) · Servo: no · Ladybird: no · Flow: no | [W3C WebTransport §streams](https://www.w3.org/TR/webtransport/#streams) |
+| 103 | WebSocket (`new WebSocket(url, protocols)`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [RFC 6455 §api](https://datatracker.ietf.org/doc/html/rfc6455#section-4.1) |
+| 104 | WebSocket binary types (`blob` / `arraybuffer`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [RFC 6455 §binary-type](https://datatracker.ietf.org/doc/html/rfc6455#section-4.1) |
+| 105 | WebSocket close codes (1000-4999) | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [RFC 6455 §close-codes](https://datatracker.ietf.org/doc/html/rfc6455#section-7.4) |
+| 106 | WebSocket subprotocol negotiation | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [RFC 6455 §subprotocol](https://datatracker.ietf.org/doc/html/rfc6455#section-1.9) |
+| 107 | Gamepad (`navigator.getGamepads()`, `GamepadEvent`) | desktop+mobile | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Gamepad](https://w3c.github.io/gamepad/) |
+| 108 | Gamepad haptic feedback (vibration actuator) | desktop | not-started | niche | P6 | S | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Gamepad Extensions](https://w3c.github.io/gamepad/extensions.html) |
+| 109 | SpeechSynthesis (`speechSynthesis.speak(new SpeechSynthesisUtterance)`) | desktop+mobile | not-started | widespread | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Speech Synthesis](https://wicg.github.io/speech-api/#speechsynthesis) |
+| 110 | SpeechSynthesis voices + onvoiceschanged | desktop+mobile | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Speech Synthesis §voices](https://wicg.github.io/speech-api/#speechsynthesisvoice) |
+| 111 | SpeechRecognition (`new SpeechRecognition()`) | desktop+mobile | not-started | niche | P6 | L | Chromium: yes (via webkit prefix) · Gecko: no · WebKit: yes (private) · Servo: no · Ladybird: no · Flow: no | [W3C Speech API §recognition](https://wicg.github.io/speech-api/#speechrecognition) |
+| 112 | Pointer Events (unified mouse / touch / pen) | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [W3C Pointer Events 3](https://www.w3.org/TR/pointerevents3/) |
+| 113 | Touch Events (`touchstart` / `touchmove` / `touchend`) | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes (compat) · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [W3C Touch Events](https://www.w3.org/TR/touch-events/) |
+| 114 | Mouse Events (click / mousedown / mousemove / wheel) | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [UI Events §mouseevents](https://www.w3.org/TR/uievents/#events-mouse-types) |
+| 115 | Keyboard Events (keydown / keyup + `code` / `key` / `keyCode`) | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [UI Events §keyboardevents](https://www.w3.org/TR/uievents/#events-keyboard-types) |
+| 116 | Battery Status (`navigator.getBattery()`) | desktop+mobile | not-started | niche | P6 | S | Chromium: yes (limited) · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Battery Status](https://www.w3.org/TR/battery-status/) |
+| 117 | Vibration (`navigator.vibrate(pattern)`) | mobile+desktop (Chromium) | not-started | niche | P6 | S | Chromium: yes · Gecko: yes (mobile) · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Vibration](https://www.w3.org/TR/vibration/) |
+| 118 | Geolocation (`navigator.geolocation.getCurrentPosition`) | desktop+mobile+embedded | not-started | ubiquitous | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [W3C Geolocation](https://www.w3.org/TR/geolocation-API/) |
+| 119 | Geolocation `watchPosition` / `clearWatch` | desktop+mobile+embedded | not-started | ubiquitous | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: no | [W3C Geolocation §watchposition](https://www.w3.org/TR/geolocation-API/#watchposition-method) |
+| 120 | Generic Sensor: Accelerometer | mobile+embedded | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes · WebKit: yes (iOS 14.5+) · Servo: no · Ladybird: no · Flow: no | [W3C Accelerometer](https://www.w3.org/TR/accelerometer/) |
+| 121 | Generic Sensor: Gyroscope | mobile+embedded | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Gyroscope](https://www.w3.org/TR/gyroscope/) |
+| 122 | Generic Sensor: Magnetometer | mobile+embedded | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Magnetometer](https://www.w3.org/TR/magnetometer/) |
+| 123 | Generic Sensor: AmbientLightSensor | mobile+embedded | not-started | widespread | P6 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Ambient Light](https://www.w3.org/TR/ambient-light/) |
+| 124 | Generic Sensor: Barometer (`PressureSensor`) | mobile+embedded | not-started | niche | P6 | S | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Proximity](https://www.w3.org/TR/proximity/) |
+| 125 | Web MIDI (`navigator.requestMIDIAccess()`) | desktop | not-started | niche | P6 | M | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Web MIDI](https://www.w3.org/TR/webmidi/) |
+| 126 | Web Serial (`navigator.serial.requestPort()`) | desktop | not-started | niche | P6 | M | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG Web Serial](https://wicg.github.io/serial/) |
+| 127 | WebUSB (`navigator.usb.requestDevice()`) | desktop | not-started | niche | P6 | M | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C WebUSB](https://wicg.github.io/webusb/) |
+| 128 | Web Bluetooth (`navigator.bluetooth.requestDevice()`) | desktop+mobile+embedded | not-started | niche | P6 | M | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [WICG Web Bluetooth](https://webbluetoothcg.github.io/web-bluetooth/) |
+| 129 | Web NFC (`new NDEFReader()`) | mobile | not-started | niche | P6 | M | Chromium: yes (Android) · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Web NFC](https://w3c.github.io/web-nfc/) |
+| 130 | WebCodecs `VideoEncoder` / `VideoDecoder` | desktop+mobile | not-started | widespread | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes (Safari 16.4+) · Servo: no · Ladybird: no · Flow: no | [W3C WebCodecs §video-encoder](https://www.w3.org/TR/webcodecs/#videoencoder-interface) |
+| 131 | WebCodecs `AudioEncoder` / `AudioDecoder` | desktop+mobile | not-started | widespread | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes (Safari 16.4+) · Servo: no · Ladybird: no · Flow: no | [W3C WebCodecs §audio-encoder](https://www.w3.org/TR/webcodecs/#audioencoder-interface) |
+| 132 | WebCodecs `VideoFrame` / `AudioData` (chunks 5 cross-ref) | desktop+mobile | not-started | widespread | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebCodecs §videoframe](https://www.w3.org/TR/webcodecs/#videoframe-interface) |
+| 133 | WebCodecs `ImageDecoder` (animated images) | desktop+mobile | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebCodecs §image-decoder](https://www.w3.org/TR/webcodecs/#imagedecoder-interface) |
+| 134 | WebXR `XRSystem` / `XRSession` | desktop+mobile | not-started | niche | P6 | XL | Chromium: yes · Gecko: yes · WebKit: yes (visionOS, iOS 17.4+) · Servo: no · Ladybird: no · Flow: no | [W3C WebXR §session](https://www.w3.org/TR/webxr/#xrsession-interface) |
+| 135 | WebXR `immersive-vr` mode | desktop+mobile | not-started | niche | P6 | L | Chromium: yes · Gecko: yes · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C WebXR §immersive-vr](https://www.w3.org/TR/webxr/#immersive-vr-mode) |
+| 136 | WebXR `immersive-ar` mode (camera passthrough) | mobile | not-started | niche | P6 | L | Chromium: yes · Gecko: no · WebKit: yes (visionOS, iOS 17.4+) · Servo: no · Ladybird: no · Flow: no | [W3C WebXR AR Module](https://www.w3.org/TR/webxr-ar-module/) |
+| 137 | WebXR `inline` mode (2D viewport) | desktop+mobile | not-started | niche | P6 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebXR §inline](https://www.w3.org/TR/webxr/#inline-xr-session-mode) |
+| 138 | WebXR hand input + hit test + anchors | mobile | not-started | niche | P6 | L | Chromium: yes · Gecko: no · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebXR Hand Input](https://www.w3.org/TR/webxr-hand-input/) |
+| 139 | WebXR plane + mesh detection | mobile | not-started | niche | P6 | L | Chromium: yes · Gecko: no · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebXR Plane Detection](https://www.w3.org/TR/webxr-plane-detection/) |
+| 140 | WebXR depth sensing + layers + DOM overlay | mobile | not-started | niche | P6 | M | Chromium: yes · Gecko: no · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C WebXR Depth](https://www.w3.org/TR/webxr-depth-sensing/) |
+| 141 | Compression Streams (`new CompressionStream("gzip")`) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes (Safari 16.4+) · Servo: no · Ladybird: no · Flow: no | [W3C Compression Streams](https://www.w3.org/TR/compression/) |
+| 142 | Decompression Streams (`new DecompressionStream("gzip")`) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Compression Streams §decompression](https://www.w3.org/TR/compression/#decompression-stream) |
+| 143 | Compression formats (`gzip` / `deflate` / `deflate-raw` / `br` / `zstd`) | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes (gzip+deflate+deflate-raw) · Gecko: yes (gzip+deflate+br+zstd) · WebKit: yes (gzip+deflate+deflate-raw) · Servo: no · Ladybird: no · Flow: no | [W3C Compression Streams §formats](https://www.w3.org/TR/compression/#supported-formats) |
+| 144 | `TextEncoder` / `TextDecoder` (UTF-8 default) | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [WHATWG Encoding §interface](https://encoding.spec.whatwg.org/#interface-textencoder) |
+| 145 | `TextEncoderStream` / `TextDecoderStream` | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [WHATWG Encoding §stream](https://encoding.spec.whatwg.org/#interface-textencoderstream) |
+| 146 | `URL` constructor + `URL.parse` / `URL.canParse` | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [WHATWG URL §url-class](https://url.spec.whatwg.org/#url-class) |
+| 147 | `URLSearchParams` | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [WHATWG URL §searchparams](https://url.spec.whatwg.org/#interface-urlsearchparams) |
+| 148 | `Blob` constructor + `slice` | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [W3C File API §blob](https://www.w3.org/TR/FileAPI/#blob-section) |
+| 149 | `File` constructor + name, type, lastModified | desktop+mobile+embedded | not-started | ubiquitous | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [W3C File API §file](https://www.w3.org/TR/FileAPI/#file-section) |
+| 150 | `FileReader` / `FileList` / blob URL | desktop+mobile+embedded | not-started | ubiquitous | P4 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: partial · Flow: yes | [W3C File API §filereader](https://www.w3.org/TR/FileAPI/#filereader-interface) |
+| 151 | `FileReaderSync` (worker-only) | desktop+mobile+embedded | not-started | widespread | P5 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C File API §filereadersync](https://www.w3.org/TR/FileAPI/#FileReaderSync) |
+| 152 | `structuredClone(value)` (global) | desktop+mobile+embedded | not-started | ubiquitous | P3 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: yes | [HTML §dom-structuredclone](https://html.spec.whatwg.org/multipage/structured-data.html#dom-structuredclone) |
+| 153 | `atob` / `btoa` (base64 helpers) | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [HTML §dom-btoa](https://html.spec.whatwg.org/multipage/webappapis.html#dom-btoa) |
+| 154 | `crypto.getRandomValues(buffer)` | desktop+mobile+embedded | not-started | ubiquitous | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: yes · Ladybird: partial · Flow: yes | [W3C Web Crypto §getrandomvalues](https://www.w3.org/TR/WebCrypto2/#Crypto-method-getRandomValues) |
+| 155 | `crypto.randomUUID()` | desktop+mobile+embedded | not-started | widespread | P3 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: yes | [W3C Web Crypto §randomuuid](https://www.w3.org/TR/WebCrypto2/#Crypto-method-randomUUID) |
+| 156 | `crypto.subtle` (SubtleCrypto: digest, encrypt, sign, deriveKey) | desktop+mobile+embedded | not-started | ubiquitous | P5 | L | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: yes | [W3C Web Crypto §subtlecrypto](https://www.w3.org/TR/WebCrypto2/#subtlecrypto-interface) |
+| 157 | SubtleCrypto ECDSA + Ed25519 + RSA-PSS | desktop+mobile+embedded | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: yes | [W3C Web Crypto §ecdsa](https://www.w3.org/TR/WebCrypto2/#ecdsa-operations) |
+| 158 | SubtleCrypto AES-GCM + AES-CTR + ChaCha20-Poly1305 | desktop+mobile+embedded | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: yes | [W3C Web Crypto §aes](https://www.w3.org/TR/WebCrypto2/#aes-crypto-operations) |
+| 159 | SubtleCrypto ECDH + HKDF + PBKDF2 (key derivation) | desktop+mobile+embedded | not-started | widespread | P5 | M | Chromium: yes · Gecko: yes · WebKit: yes · Servo: partial · Ladybird: no · Flow: yes | [W3C Web Crypto §dh](https://www.w3.org/TR/WebCrypto2/#diffie-hellman-operations) |
+| 160 | `navigator.permissions.query({name})` | desktop+mobile+embedded | not-started | widespread | P4 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Permissions §query](https://www.w3.org/TR/permissions/#dom-permissions-query) |
+| 161 | `navigator.permissions.revoke` | desktop+mobile+embedded | not-started | niche | P4 | S | Chromium: yes · Gecko: no · WebKit: no · Servo: no · Ladybird: no · Flow: no | [W3C Permissions §revoke](https://www.w3.org/TR/permissions/#dom-permissions-revoke) |
+| 162 | Push permission (`name: "push"`, with userVisibleOnly) | desktop+mobile+embedded | not-started | widespread | P5 | S | Chromium: yes · Gecko: yes · WebKit: yes · Servo: no · Ladybird: no · Flow: no | [W3C Push API §permissions](https://www.w3.org/TR/push-api/#permissions) |
+
+---
+
+## Cross-refs to `specs/GAP_ANALYSIS.md`
+
+| GAP_ANALYSIS row | Section | Line |
+|---|---|---|
+| WebSockets (placeholder) | §2.2 Network | 167 |
+| WebGL binding (wgpu backend) | §5.3 Plumbing | 293 |
+| WebGPU binding | §5.3 Plumbing | 294 |
+| 17. WebGL / WebGPU (P3) | §5.3 Plumbing | 392 |
+| Same-Origin File System (cross-ref §B OPFS) | §2.3 Storage | 193 |
+
+---
+
+## Open questions for the user
+
+1. **Worker threading model.** Spiral's `AGENTS.md` flags Bet 1 as
+   "Shared-Everything Multi-Process" but the worker API contract (one
+   thread per DedicatedWorker, one OS thread for ServiceWorker per
+   origin) is separate from the process model. Should `spiral-vortex`
+   workers (Phase 5) run on `tokio::runtime` blocking tasks, a dedicated
+   `wasmtime`-style isolate pool, or piggyback on Bet 1's shared
+   heap? This affects memory caps and `Atomics.wait` semantics.
+
+2. **Wasm engine choice.** The `spiral-vortex` README forbids V8, QuickJS,
+   and Boa. It does not forbid `wasmtime` or `wasmer`. Should WASM
+   execution be embedded in Vortex via `wasmtime` (which is Rust, audited,
+   and already a transitive dep of `rustls` for some platforms), or built
+   from scratch in Vortex like the JS engine? Building from scratch is
+   12-24 months of work minimum.
+
+3. **WebGPU timing.** WebGPU landed in Chromium 113 (2023) and is
+   ubiquitous by 2026. Spiral's `spiral-render` uses Vello, which is a
+   2D renderer over wgpu. WebGPU and Vello are not the same surface
+   (WebGPU is 3D-first, with explicit pipelines). Should Spiral expose
+   WebGPU by routing it through wgpu directly, or wait until Vello
+   supports compute / 3D?
+
+4. **WebGL priority vs WebGPU.** WebGL 1/2 still ship in every browser
+   in 2026 and a meaningful slice of web content still uses it (WebGL2
+   is preferred over WebGL1 for numerical code). WebGL on top of wgpu
+   requires either `wgpu` exposing a GL compat profile (no) or routing
+   through ANGLE (large, Chromium-only). Should Spiral target WebGL2
+   via ANGLE, or accept a "no WebGL" stance and require WebGPU from
+   web content?
+
+5. **WebXR scope.** WebXR is a Chromium / visionOS / Firefox Reality
+   Hub surface. On desktop Linux / Windows / macOS it is rare outside
+   Valve Index and Meta Quest Link. Is WebXR a Phase 6 (post-MP) goal
+   or a "not in plan" capability?
+
+6. **Hardware APIs (Serial / USB / Bluetooth / NFC / MIDI).** These are
+   niche, mostly Chromium-only, and each needs a native device-binding
+   layer (IOKit on macOS, libusb / dbus on Linux, WinUSB on Windows).
+   Should they be tracked as one "hardware API" cluster with a shared
+   `spiral-device` crate, or as separate deliverables, or deferred
+   indefinitely until the user signals demand?
+
+7. **Push service.** Web Push requires a push service endpoint
+   (FCM, Mozilla autopush, or self-hosted). VAPID, RFC 8030, and the
+   subscription handshake are non-trivial. Is there a target push
+   service provider, or should Web Push be deferred until the network
+   stack is stable enough to talk to a test endpoint?
+
+8. **WebNN.** WebNN is in Origin Trial in Chromium and has no Gecko or
+   WebKit commitment. The M4 novelty-claim rule says we should verify
+   before claiming "first" or "novel". WebNN is not novel (it is a
+   spec), but its priority is low. Confirm: track as a Phase 6
+   "evaluate later" item?
+
+9. **File System Access scope.** The Chromium-only API has been
+   [WICG-stabilised since 2024](https://wicg.github.io/file-system-access/)
+   but is still single-vendor. OPFS (cross-vendor, scoped to a single
+   origin) is the safer starting point. Should Spiral ship OPFS first
+   (likely in chunk 4 §B already tracks) and defer the picker-based
+   File System Access APIs to Phase 6, or build the picker-based APIs
+   at the same time?
+
+10. **Speech recognition.** W3C `SpeechRecognition` is not in any
+    shipping browser except Chrome (where it is `webkitSpeechRecognition`
+    and behind a flag). The vendor-prefixed shape is a real interop
+    hazard. Is the speech recognition row above the target (spec
+    conformance) or the realistic (Chromium-prefix) baseline?
 
 ## Scope
 
