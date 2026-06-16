@@ -4065,3 +4065,71 @@ identified. Key findings:
   Wave G), neither packet is a
   cross-cutting design change,
   so no ADR is required.
+
+## [2026-06-16] [custom] [docs, repo/ci, spiral-gpu, spiral-sandbox, spiral-imagedecoder, spiral-paint, spiral-context, spiral-browser] — Setup doc-drift prevention and wiring audit fixes
+
+- **Doc-drift prevention system.**
+  - Added `.spiral/rules/doc-drift-prevention.md` covering SSOT hierarchy, update invariants, and pre-merge PR checklist.
+  - Added a `doc-drift` job in `.github/workflows/ci.yml` running `./scripts/audit-doc-drift.sh`.
+  - Expanded vocabulary check allowed paths (`archive_paths`) in `scripts/audit-doc-drift.sh` to allowlist historical files/context.
+  - Rewrote sections of `docs/active_context.md` to remove retired time-based vocabulary.
+
+- **Wiring & Integration.**
+  - Resolved 23 orphan exports by adding 6 new surface integration test files for the skeleton crates:
+    - `crates/spiral-gpu/tests/gpu_surface.rs`
+    - `crates/spiral-sandbox/tests/sandbox_surface.rs`
+    - `crates/spiral-imagedecoder/tests/imagedecoder_surface.rs`
+    - `crates/spiral-paint/tests/paint_surface.rs`
+    - `crates/spiral-context/tests/context_surface.rs`
+    - `crates/spiral-browser/tests/browser_surface.rs`
+  - All 20 crates in the workspace are now successfully wired (OK).
+  - Updated `docs/active_context.md` test counts from 58 to 64, and orphan candidates count from 23 to 0.
+
+- **Verification.**
+  - Both `./scripts/audit-doc-drift.sh` and `./scripts/audit-orphan-exports.sh` exit 0 successfully.
+  - `cargo test --workspace` compiles and passes cleanly with 64 test binaries.
+
+---
+
+## [2026-06-16] [custom] [docs, .spiral/rules] — Enhance developer guidelines, rules, and blueprints
+
+- **Enhanced Developer Rules:**
+  - Created `.spiral/rules/performance.md` defining Criterion/Divan benchmarking standards, microbenchmarking scopes (Vortex, Gyre, Fmt), and CI gate regression thresholds.
+  - Created `.spiral/rules/unsafe-standards.md` establishing safety proof requirements (the `// SAFETY:` block convention) and unsafe block constraints.
+  - Modified `.spiral/rules/testing.md` to reference the new performance/benchmarking rules, the WPT blueprint, Miri UB checking, and Address/Thread Sanitizers.
+
+- **Auditable Security & Architecture:**
+  - Created `docs/security/unsafe_registry.md` as a central registry cataloging unsafe blocks. Confirmed 0 unsafe blocks currently exist, and laid out the registration procedure.
+  - Created `docs/architecture/wpt-integration.md` defining a concrete strategy to import, subset, and run Web Platform Tests (WPT) against `spiral-fmt` and `spiral-dom` during development cycles rather than delaying to Phase 9.
+
+- **Clippy Hygiene & Format Cleanup:**
+  - Fixed pre-existing cargo clippy warnings in `spiral-network`, `spiral-filter`, and `spiral-context` related to manual character comparisons and unused imports.
+  - Auto-formatted files in the workspace via `cargo fmt`.
+
+- **Verification:**
+  - `cargo test --workspace` compiles and passes 100% cleanly (64 test binaries).
+  - Both `./scripts/audit-doc-drift.sh` and `./scripts/audit-orphan-exports.sh` exit successfully with 0 findings.
+
+---
+
+## [2026-06-16] [custom] [docs, spiral-context] — Sequence spark-joy proposals into implementation tracker + fix ContextOps orphan
+
+- **Implementation Tracker Update:**
+  - Added `Packet 3.6.1` (Ad-Shedding Diet Dashboard) under a new `Step 3.6 — Filter diet dashboard` in Phase 3.
+  - Added `Packet 4.2.4` (Chameleon Chrome) and `Packet 4.2.5` (Tab Origin Provenance Trees) under `Step 4.2 — Browser chrome` in Phase 4.
+  - Added `Packet 4.4.1` (Native Spatial Navigation) under a new `Step 4.4 — Spatial navigation` in Phase 4.
+  - Added `Packet 4.5.1` (Gyre Layout Shift Heatmap) under a new `Step 4.5 — Gyre layout shift heatmap` in Phase 4.
+  - Added `Packet 5.3.1` (Disposable tab contexts) under a new `Step 5.3 — Disposable tabs` in Phase 5.
+  - Added `Packet 6.4.1` (Vortex Engine Lens DevTools panel) under a new `Step 6.4 — Vortex engine lens` in Phase 6.
+  - Added `Packet 8.4.1` (Ghost Tabs UI & defrost waking) under a new `Step 8.4 — Ghost tabs UI` in Phase 8.
+  - Added `Packet 9.1.2` (Performance Regression Sentinel) under `Step 9.1` in Phase 9.
+  - Added `Packet 9.2.3` (WPT progress widget in dev builds) under `Step 9.2` in Phase 9.
+
+- **Wiring Audit Fix:**
+  - Resolved an orphan export warning on `ContextOps` in `spiral-context` by importing and referencing it in `crates/spiral-context/tests/context_surface.rs`.
+
+- **Verification:**
+  - `cargo test --workspace` compiles and passes successfully with 64 test binaries.
+  - Both `./scripts/audit-doc-drift.sh` and `./scripts/audit-orphan-exports.sh` exit successfully with 0 findings.
+
+

@@ -332,6 +332,9 @@ Owner: spiral-network, spiral-crypto, spiral-ipc, spiral-sandbox.
 - [ ] **Packet 3.5.1** — Frame-level checksum.
 - [ ] **Packet 3.5.2** — Backpressure-aware channel.
 
+### Step 3.6 — Filter diet dashboard
+- [ ] **Packet 3.6.1** — Ad-Shedding Diet Dashboard (live UI reporting metrics on compile-time filtered markup, saved JS heap, and reduced reflow count).
+
 ### Wiring & Integration (Phase 3)
 
 - **Call sites:** `spiral-network::Client::get` ← `spiral-filter` (default fetch hook).
@@ -353,10 +356,18 @@ Owner: spiral-render, spiral-ui, spiral-theme.
 - [ ] **Packet 4.2.1** — Tab bar, URL bar, status bar.
 - [ ] **Packet 4.2.2** — Sidebar tabs (Zen-style).
 - [ ] **Packet 4.2.3** — Floating URL bar.
+- [ ] **Packet 4.2.4** — Chameleon Chrome (Ambient website bleed via dynamic `wgpu`/`Vello` shader gradients updated from page context).
+- [ ] **Packet 4.2.5** — Tab Origin Provenance Trees (Visual sidebar research tree hierarchies, collapsible branches, and branch workspace saving).
 
 ### Step 4.3 — Theme system
 - [ ] **Packet 4.3.1** — Light/dark mode toggle.
 - [ ] **Packet 4.3.2** — System preference detection.
+
+### Step 4.4 — Spatial navigation
+- [ ] **Packet 4.4.1** — Native GPU-composited Spatial Keyboard Navigation (Vim-style navigation overlay integrated directly into DOM traversal and `spiral-ui`).
+
+### Step 4.5 — Gyre layout shift heatmap
+- [ ] **Packet 4.5.1** — GPU-rendered Cumulative Layout Shift (CLS) overlay and debug heatmap showing reflow vectors and triggers.
 
 ### Wiring & Integration (Phase 4)
 
@@ -375,6 +386,9 @@ Bet 1 runtime. The type system from Phase 1 (M4 design pass) goes live.
 
 ### Step 5.2 — Capability tokens in production paths
 - [ ] **Packet 5.2.1** — Replace blanket `pub` with `cap::Token`-guarded APIs.
+
+### Step 5.3 — Disposable tabs
+- [ ] **Packet 5.3.1** — Disposable tab contexts (per-tab temporary origin-tagged zero-on-close arenas with zero storage/cookie footprint).
 
 ### Wiring & Integration (Phase 5)
 
@@ -399,6 +413,9 @@ Vortex tree-walker → bytecode VM, gated on real-world profile data.
 ### Step 6.3 — Profile gate
 - [ ] **Packet 6.3.1** — Real-world profile data from Phase 1 site renders.
 - [ ] **Packet 6.3.2** — JIT decision: ship tree-walker+VM, defer JIT.
+
+### Step 6.4 — Vortex engine lens
+- [ ] **Packet 6.4.1** — Vortex Engine Lens DevTools panel (live bytecode stream execution and GC `OriginArena` / `TaggedCell` memory visualization).
 
 ### Wiring & Integration (Phase 6)
 
@@ -445,6 +462,9 @@ Bet 4. Vortex heap + layout tree + document checkpoints.
 ### Step 8.3 — Document checkpoint
 - [ ] **Packet 8.3.1** — DOM serialisation.
 
+### Step 8.4 — Ghost tabs UI
+- [ ] **Packet 8.4.1** — Ghost Tabs frosted glass UI and GPU-accelerated defrost waking animation on `mmap` restore.
+
 ### Wiring & Integration (Phase 8)
 
 - **End-to-end surface:** A warm tab reopens in <100ms via mmap.
@@ -457,10 +477,12 @@ The CI gates. Not a feature Phase.
 
 ### Step 9.1 — Memory budget CI gate
 - [ ] **Packet 9.1.1** — Per-phase memory budget enforced in CI.
+- [ ] **Packet 9.1.2** — Performance Regression Sentinel (CI benchmarks comparing `GcKey` distribution and layout speed against main).
 
 ### Step 9.2 — WPT coverage
 - [ ] **Packet 9.2.1** — WPT runner in CI.
 - [ ] **Packet 9.2.2** — Per-Phase coverage targets.
+- [ ] **Packet 9.2.3** — WPT progress widget in developer/debug builds.
 
 ### Step 9.3 — Fuzz harnesses
 - [ ] **Packet 9.3.1** — Fuzz harness per public parser.

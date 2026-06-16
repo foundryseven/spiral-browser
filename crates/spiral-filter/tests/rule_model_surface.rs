@@ -14,10 +14,10 @@
 //! the heavy consumers; for Phase 1, this test file is the
 //! wiring proof.
 
-use spiral_filter::{
-    Action, Filter, FilterError, FilterHook, Matcher, RuleKind, Severity,
+use spiral_filter::rule::{
+    DomainConstraint, NetPattern, NetworkMatcher, Party, Rule, Source, SourceList, Stewardship,
 };
-use spiral_filter::rule::{DomainConstraint, NetPattern, NetworkMatcher, Party, Rule, Source, SourceList, Stewardship};
+use spiral_filter::{Action, Filter, FilterError, FilterHook, Matcher, RuleKind, Severity};
 
 /// Build a minimal `Rule` for inspection. This is the only place
 /// outside the lib that constructs a `Rule` directly in Phase 1;

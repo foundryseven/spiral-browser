@@ -156,8 +156,7 @@ impl FilterHook for Filter {
                 rule_id: rule.id,
                 reason: format!(
                     "matched {host} (severity {:?}, policy {})",
-                    rule.severity,
-                    self.policy,
+                    rule.severity, self.policy,
                 ),
             };
         }
@@ -211,10 +210,22 @@ pub fn default_network_rules() -> Vec<Rule> {
     // engines. All third-party, all `WorstOffender` severity.
     vec![
         rule("doubleclick.net", Severity::WorstOffender, Party::Third),
-        rule("googlesyndication.com", Severity::WorstOffender, Party::Third),
-        rule("googleadservices.com", Severity::WorstOffender, Party::Third),
+        rule(
+            "googlesyndication.com",
+            Severity::WorstOffender,
+            Party::Third,
+        ),
+        rule(
+            "googleadservices.com",
+            Severity::WorstOffender,
+            Party::Third,
+        ),
         rule("adnxs.com", Severity::WorstOffender, Party::Third),
-        rule("scorecardresearch.com", Severity::WorstOffender, Party::Third),
+        rule(
+            "scorecardresearch.com",
+            Severity::WorstOffender,
+            Party::Third,
+        ),
         rule("outbrain.com", Severity::WorstOffender, Party::Third),
         rule("taboola.com", Severity::WorstOffender, Party::Third),
     ]

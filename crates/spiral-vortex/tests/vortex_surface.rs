@@ -35,8 +35,7 @@ fn vortex_eval_arithmetic_expression() {
 
 #[test]
 fn vortex_eval_string_concatenation() {
-    let v = vortex_eval("'hello' + ', ' + 'world'")
-        .expect("string concat parses and evaluates");
+    let v = vortex_eval("'hello' + ', ' + 'world'").expect("string concat parses and evaluates");
     assert_eq!(v, JsValue::String("hello, world".to_string()));
 }
 
@@ -74,19 +73,13 @@ fn vortex_eval_rejects_unterminated_string() {
     // `UnterminatedString` token. The parser rejects it, so the
     // public surface reports a `Parse` error.
     let result = vortex_eval("var s = 'oops");
-    assert!(matches!(
-        result,
-        Err(VortexError::Parse { .. })
-    ));
+    assert!(matches!(result, Err(VortexError::Parse { .. })));
 }
 
 #[test]
 fn vortex_eval_parse_error_on_bogus_keyword() {
     let result = vortex_eval("var = 5");
-    assert!(matches!(
-        result,
-        Err(VortexError::Parse { .. })
-    ));
+    assert!(matches!(result, Err(VortexError::Parse { .. })));
 }
 
 // ---------------------------------------------------------------------------

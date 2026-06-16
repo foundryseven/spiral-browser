@@ -22,9 +22,10 @@ use spiral_network::Client;
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
-    let url = args.get(1).cloned().unwrap_or_else(|| {
-        "https://example.com/".to_string()
-    });
+    let url = args
+        .get(1)
+        .cloned()
+        .unwrap_or_else(|| "https://example.com/".to_string());
 
     let mut resolver = DnsResolver::new();
     resolver.init()?;

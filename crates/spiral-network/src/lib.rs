@@ -224,7 +224,10 @@ impl<R: Resolver> Client<R> {
                 Decision::Block { rule_id, reason } => {
                     log::info!(
                         "Filter blocked: url={} party={:?} rule_id={} reason={}",
-                        url, PARTY, rule_id, reason
+                        url,
+                        PARTY,
+                        rule_id,
+                        reason
                     );
                     Err(Error::Network(format!(
                         "blocked by filter (rule_id={rule_id}, policy={}): {reason}",
@@ -301,14 +304,8 @@ fn extract_host(url: &str) -> Result<String> {
     let rest = url
         .strip_prefix("http://")
         .or_else(|| url.strip_prefix("https://"))
-        .ok_or_else(|| {
-            Error::Network(format!(
-                "URL must be http:// or https:// (got {url:?})"
-            ))
-        })?;
-    let host_end = rest
-        .find(|c: char| c == '/' || c == ':' || c == '?')
-        .unwrap_or(rest.len());
+        .ok_or_else(|| Error::Network(format!("URL must be http:// or https:// (got {url:?})")))?;
+    let host_end = rest.find(['/', ':', '?']).unwrap_or(rest.len());
     let host = &rest[..host_end];
     if host.is_empty() {
         return Err(Error::Network(format!("URL has empty host: {url:?}")));
@@ -322,9 +319,15 @@ mod tests {
 
     #[test]
     fn extract_host_strips_scheme_and_path() {
-        assert_eq!(extract_host("http://example.com/foo").unwrap(), "example.com");
+        assert_eq!(
+            extract_host("http://example.com/foo").unwrap(),
+            "example.com"
+        );
         assert_eq!(extract_host("https://example.com").unwrap(), "example.com");
-        assert_eq!(extract_host("https://example.com:8080/x").unwrap(), "example.com");
+        assert_eq!(
+            extract_host("https://example.com:8080/x").unwrap(),
+            "example.com"
+        );
     }
 
     #[test]

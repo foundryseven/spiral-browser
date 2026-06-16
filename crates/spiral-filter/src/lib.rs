@@ -38,5 +38,5 @@ pub use rule::{Action, Matcher, Rule, RuleKind, Severity};
 // `Party` and `FilterHook` + `Decision` are owned by `spiral-core`
 // per ADR 0005. Re-export them from the canonical home so consumers
 // can `use spiral_filter::Party` if they prefer.
+pub use runtime::{default_network_rules, Filter};
 pub use spiral_core::{Decision, FilterHook, Party};
-pub use runtime::{Filter, default_network_rules};

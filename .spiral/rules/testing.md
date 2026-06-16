@@ -31,7 +31,8 @@ and must be rewritten.
   crate root. These exercise the public surface from outside
   the crate.
 - **Fuzz harnesses** in `fuzz/` per crate (when applicable).
-- **WPT** at the workspace root under `tests/wpt/` (when applicable).
+- **WPT** at the workspace root under `tests/wpt/` (see WPT integration blueprint).
+- **Benchmarks** in `benches/` (see performance standards).
 
 ## Test naming
 
@@ -72,6 +73,16 @@ and must be rewritten.
 - Never commit secrets, real user data, or production keys
   to a test fixture.
 
+## Advanced Verification (Miri, Sanitizers)
+
+For performance-critical or security-sensitive crates (such as `spiral-vortex` and `spiral-sandbox`):
+* **Miri:** Run `cargo miri test` to check for Undefined Behaviour (UB), memory leaks, and pointer alignment issues in unsafe paths.
+* **Sanitizers:** Compile and run the test suite with AddressSanitizer (ASan) or ThreadSanitizer (TSan) enabled locally to catch data races and memory corruption:
+  ```bash
+  RUSTFLAGS="-Zsanitizer=address" cargo test --target x86_64-apple-darwin
+  ```
+  *(Note: Adjust target for your local platform as required; requires nightly compiler).*
+
 ## What NOT to do
 
 - `assert!(true)` — hollow.
@@ -92,7 +103,12 @@ cargo test --doc --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 ```
 
-The CI runs all three. The "verification protocol" in
+For crates containing `unsafe` code:
+```bash
+cargo miri test -p <crate_name>
+```
+
+The CI runs all three standard checks. The "verification protocol" in
 [`docs/agents/implementer.md`](../docs/agents/implementer.md)
 § Verification Protocol is the ground truth.
 

@@ -32,7 +32,7 @@ pub fn extract_host(url: &str) -> Option<String> {
 
     // Host ends at the first '/', ':', '?', or '#'.
     let host_end = after_userinfo
-        .find(|c: char| c == '/' || c == ':' || c == '?' || c == '#')
+        .find(['/', ':', '?', '#'])
         .unwrap_or(after_userinfo.len());
     let host = &after_userinfo[..host_end];
     if host.is_empty() {
@@ -48,33 +48,54 @@ mod tests {
 
     #[test]
     fn basic_https() {
-        assert_eq!(extract_host("https://example.com/"), Some("example.com".to_string()));
-        assert_eq!(extract_host("https://example.com"), Some("example.com".to_string()));
+        assert_eq!(
+            extract_host("https://example.com/"),
+            Some("example.com".to_string())
+        );
+        assert_eq!(
+            extract_host("https://example.com"),
+            Some("example.com".to_string())
+        );
     }
 
     #[test]
     fn basic_http() {
-        assert_eq!(extract_host("http://example.com/foo"), Some("example.com".to_string()));
+        assert_eq!(
+            extract_host("http://example.com/foo"),
+            Some("example.com".to_string())
+        );
     }
 
     #[test]
     fn with_port() {
-        assert_eq!(extract_host("https://example.com:8080/x"), Some("example.com".to_string()));
+        assert_eq!(
+            extract_host("https://example.com:8080/x"),
+            Some("example.com".to_string())
+        );
     }
 
     #[test]
     fn with_userinfo() {
-        assert_eq!(extract_host("https://u:p@example.com/x"), Some("example.com".to_string()));
+        assert_eq!(
+            extract_host("https://u:p@example.com/x"),
+            Some("example.com".to_string())
+        );
     }
 
     #[test]
     fn with_query_and_fragment() {
-        assert_eq!(extract_host("https://example.com/x?y=1#z"), Some("example.com".to_string()));
+        assert_eq!(
+            extract_host("https://example.com/x?y=1#z"),
+            Some("example.com".to_string())
+        );
     }
 
     #[test]
     fn host_is_lowercased() {
-        assert_eq!(extract_host("https://EXAMPLE.COM/"), Some("example.com".to_string()));
+        assert_eq!(
+            extract_host("https://EXAMPLE.COM/"),
+            Some("example.com".to_string())
+        );
     }
 
     #[test]

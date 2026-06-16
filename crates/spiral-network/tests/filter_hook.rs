@@ -139,10 +139,7 @@ async fn filter_accessor_returns_installed_hook() {
     assert!(client.filter().is_none(), "no filter at construction");
     client.set_filter(Some(Box::new(Filter::with_default_policy())));
     assert!(client.filter().is_some());
-    assert_eq!(
-        client.filter().unwrap().policy_name(),
-        "worst-offenders"
-    );
+    assert_eq!(client.filter().unwrap().policy_name(), "worst-offenders");
 }
 
 #[tokio::test]
@@ -152,9 +149,7 @@ async fn decision_block_carries_rule_id() {
     let mut client = client();
     client.set_filter(Some(Box::new(Filter::with_default_policy())));
 
-    let err = client
-        .get("https://doubleclick.net/")
-        .await;
+    let err = client.get("https://doubleclick.net/").await;
     let msg = match err {
         Ok(_) => panic!("tracker must be blocked"),
         Err(e) => e.to_string(),

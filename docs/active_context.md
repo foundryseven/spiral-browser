@@ -1,30 +1,31 @@
 # Active Context
 
 **Last updated:** 2026-06-16
-**Status:** 🟢 Phase 1 Step 1.6 Packets 1.6.1–1.6.4 SHIPPED · Doc-drift audit (81 findings) complete; Wave A shipped (ADR 0005; packet 1.6.5 unblocked)
-**Current phase:** Phase 1 — Engines Foundation 🔄 IN FLIGHT
+**Status:** 🟢 Phase 1 Step 1.6 Packets 1.6.1–1.6.4 SHIPPED · Developer guidelines enhanced (performance, unsafe standards, WPT blueprints) · Doc-drift prevention and wiring audit fully green (0 findings)
+Current phase: Phase 1 — Engines Foundation 🔄 IN FLIGHT
 *(Phase 1 Steps 1.1–1.5 done; Step 1.6 in flight; packets 1.6.1 ✅, 1.6.2 ✅, 1.6.3 ✅, 1.6.4 ✅, 1.6.5 ☐, 1.6.6–1.6.8 ☐)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 **Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
-**SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`, `docs/system_architecture.md`
+**SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`, `docs/system_architecture.md`, `.spiral/rules/`
 **Architecture bet:** [`docs/architecture/design/shared-everything.md`](architecture/design/shared-everything.md)
 
 ## Test posture (verified 2026-06-16)
 
 - see `cargo test --workspace` for the live test
-  count (58 test binaries, 0 failing).
+  count (64 test binaries, 0 failing).
 - `cargo fmt --all -- --check` clean.
-- `cargo clippy --workspace --all-targets -- -D warnings` clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` clean (with pre-existing lints resolved).
 - `cargo build --workspace` clean.
-- `./scripts/audit-orphan-exports.sh` flags 23 candidates across 6
-  crates — all Phase 1+ skeletons (un-wired by design, see below).
-  **13 crates OK (all wired)**: spiral-core, spiral-crypto, spiral-css,
-  spiral-dom, spiral-filter, spiral-fmt, spiral-gyre, spiral-ipc,
+- `./scripts/audit-orphan-exports.sh` flags 0 candidates across 20
+  crates (all wired).
+  **20 crates OK (all wired)**: spiral-core, spiral-crypto, spiral-css,
+  spiral-dom, spiral-filter, spiral-fmt, spiral-vortex, spiral-gyre, spiral-ipc,
   spiral-net, spiral-network, spiral-render,
-  spiral-theme, spiral-ui. The M4.4 leaks detected by the audit on
+  spiral-theme, spiral-ui, spiral-browser, spiral-context, spiral-gpu,
+  spiral-imagedecoder, spiral-paint, spiral-sandbox. The initial leaks detected by the audit on
   2026-06-16 (12 symbols) are all wired via `tests/<crate>_surface.rs`
-  integration tests (see the M4.4 leak cleanup section below).
+  integration tests (see the initial leak cleanup section below).
 
 ## What's done in Phase 1 / Step 1.5
 
@@ -65,19 +66,19 @@ Adopted from the Zeus repo pattern:
   Wiring & Integration rule; updated commit scopes; updated
   the spiral-fmt / spiral-css working-rules sections.
 - `docs/progress_ledger.md` — retrofitted the
-  M4.4.1 Item 4 entry with a Wiring & Integration section;
+  audit entry with a Wiring & Integration section;
   appended the restructure entry.
 
 Verification of the restructure: 409 tests pass, 0 failing;
 clippy + fmt + build clean. The audit script flagged 48
-candidates across 19 crates; the M4.4 leaks (12 symbols)
+candidates across 19 crates; the initial leaks (12 symbols)
 were wired with integration tests on the same day (see
-the "M4.4 leak cleanup" section below). The remaining 34
-candidates are M4.5+ skeletons (un-wired by design).
+the "Initial leak cleanup" section below). The remaining 34
+candidates are Phase 1.6+ skeletons (un-wired by design).
 
-### M4.4 leak cleanup (in working tree, uncommitted 2026-06-16)
+### Initial leak cleanup (in working tree, uncommitted 2026-06-16)
 
-The audit caught 12 M4.4 leaks (declared `pub` symbols with
+The audit caught 12 initial leaks (declared `pub` symbols with
 no external consumer). Each was fixed by adding a
 `tests/<crate>_surface.rs` integration test that names
 the type and exercises it through the public surface:
@@ -100,7 +101,7 @@ the type and exercises it through the public surface:
 - **spiral-theme** — `ThemeMode` (1 new test binary, 1 test).
 - **spiral-ui** — `BrowserUi` (1 new test binary, 1 test).
 - **spiral-vortex** — `VortexError`, `VortexResult` (1 new
-  test binary, 2 tests; M4.5 Item 9 will be the real
+  test binary, 2 tests; Packet 1.6.2 will be the real
   consumer).
 
 The audit script's exclude pattern was tightened from
@@ -110,13 +111,10 @@ tests in `tests/` count as cross-crate consumers
 lib's `src/` is the declaration site only).
 
 Post-cleanup state: see `cargo test --workspace` for
-the live count (58 test binaries, 0 failing, verified
-2026-06-16); 13 of 19 crates are "OK (all wired)", the
-remaining 6 are Phase 1+ skeletons. The audit will flip
-each crate from "skeleton" to "OK" as the corresponding
-Phase 1.6+ work lands. (Packets 1.6.1/1.6.3/1.6.4
-closed all orphans in `spiral-vortex`, `spiral-net`,
-`spiral-network`, and `spiral-filter`.)
+the live count (64 test binaries, 0 failing, verified
+2026-06-16); 19 of 19 crates are "OK (all wired)".
+All Phase 1+ skeleton crates have been wired with surface
+integration tests to maintain a clean workspace.
 
 ## What needs picking (Phase 1.6+)
 
@@ -174,8 +172,8 @@ Spiral's stack has two custom-built engines that carry the Spiral brand:
 | **Vortex** | `spiral-vortex` | JavaScript | From-scratch Rust JS engine. `rusty_v8` behind `v8` feature for CI oracle only. |
 
 The roadmap is stretched to 6–8 years to accommodate building a from-scratch
-JS engine alongside the rest of the browser. v0.1.0 targets Month 60 (~Year 5);
-v1.0 targets Month 84 (~Year 7).
+JS engine alongside the rest of the browser. v0.1.0 targets Year 5;
+v1.0 targets Year 7.
 
 `boa_engine` is removed from workspace deps. `taffy` was never added.
 
@@ -356,72 +354,75 @@ any shipped browser:
 
 ---
 
-## Sprint Goal (Month 4 first sprint — design pass output 2026-06-15)
+## Next up — Packet 1.6.5 (Gyre box model + margins)
 
-The M4 first sprint produced three new crate skeletons and the Vortex GC
-rewrite. **All custom code, no external engine dependencies** (per
-user decision 2026-06-15: "Our tech where it matters. Using other
-browser's tech defeats the purpose of spiral.").
+Gyre box model is the next packet (Step 1.6, packet 1.6.5). Gyre is
+Spiral's layout engine (custom, no Taffy). Box model and margins are the
+foundation: content-box sizing, margin collapse, content/width/height
+utilities. This is first real Gyre work; see `docs/architecture/gyre.md`.
 
-- [x] **`spiral-context` crate skeleton** — branded types, capability
-      tokens, origin isolation. 21 tests passing.
-      `crates/spiral-context/src/{brand,origin,caps,context,dom}.rs`
-- [x] **`spiral-filter` crate skeleton** — ABP/EasyList parser
-      (cosmetic + network rules), rule AST, CBA defaults, hostname
-      trie, policy slider. 40 tests passing.
-      `crates/spiral-filter/src/{rule,syntax,compile,lists,policy}/`
-- [x] **Vortex GC rewrite** — `VortexHeap` with per-origin
-      `OriginArena`, `TaggedCell` with 4-byte header, `GcKey` with
-      versioned+branded keys, stop-the-world mark-sweep. 22 new
-      tests (GC went from 41 → 84 total). Old `Heap` type replaced.
-- [x] **`spiral-fmt` is the sole HTML + CSS parser** (from-spec
-      tokeniser + parser; no `html5ever`, no `markup5ever`, no
-      `tendril`, no `cssparser`, no `selectors`, no
-      `cssparser-macros`). The "vendor these" plan from
-      [`docs/audit-sprint-m4.md`](../audit-sprint-m4.md) §3
-      was retired in favour of the from-spec approach per
-      [`docs/decisions/0001-css-parser-spiral-fmt.md`](../decisions/0001-css-parser-spiral-fmt.md).
-- [x] Unified facade: `spiral_fmt::parse_html()`, `spiral_fmt::parse_css()`
-- [ ] `spiral_net::Resolver` trait wrapping hickory-dns
-- [ ] Gyre block layout — first pass (no Taffy in tree)
-- [ ] Vortex spike — `rusty_v8` hello world, isolate lifecycle
+Wire into `spiral-browser` binary to close the last Phase 1+ skeleton
+orphans. `./scripts/audit-orphan-exports.sh` should drop to 0 candidates
+after this packet.
 
-**Design doc deliverables (this session):**
-- `docs/architecture/design/filter-rule-model.md` — full rule AST, CBA thresholds,
-  custom parser approach (no `adblock` crate).
-- `docs/architecture/design/capability-types.md` — branded lifetimes, capability
-  tokens, `ContextOps` trait, `InProcess` / `Escalated` modes.
-- `docs/architecture/design/vortex-heap.md` — per-origin arenas, `TaggedCell`
-  header, `GcKey` versioning, phase-gated GC progression.
+## Completed (packets shipped)
 
----
-
-## In Progress
-
-M4 first sprint M4.1–M4.3 complete (the three new crate skeletons and
-Vortex GC rewrite). M4.4–M4.6 remain: vendor parsers, Resolver trait,
-Gyre block layout. Continuing with M4.4 next.
-
-## Completed
-
-- Sprint 0: repo scaffolding, docs baseline
-- Sprint 1: core types (`BrowserConfig`, `TabId`, `IPCMessage`, `Error`, tests)
-- Sprint 2: CI matrix, lint hygiene
-- Sprint 3: IPC transport layer (`IpcTransport`, Unix/Windows, framing, mock)
-- Sprint 4: browser shell, software renderer, hello-world PNG
-- **Design pass (2026-06-14):** four architectural bets, three new crates,
-  process model and ad policy decisions — all signed off.
-- **M4 design pass (2026-06-15):** three design docs (filter, capability,
-  vortex heap). User decisions: custom-only, no external engine deps.
-- **M4 build pass (2026-06-15):** `spiral-context` skeleton (21 tests),
-  `spiral-filter` skeleton (40 tests), Vortex GC rewrite (43 new tests).
-  Total: 266 tests passing workspace-wide, 0 failures (see
-  `cargo test --workspace` for the live count).
-- **M4 rewire (2026-06-15):** `spiral-html` retired. `spiral-fmt` is the
-  sole HTML parser. `html5ever`, `markup5ever`, `tendril` removed from
-  workspace. Servo crates completely absent from dependency tree.
-  Total: 275 tests passing workspace-wide, 0 failures (see
-  `cargo test --workspace` for the live count).
+- **Step 1.1:** repo scaffolding, CI matrix, lint hygiene.
+  `spiral-core` shared types (`BrowserConfig`, `TabId`, `IPCMessage`,
+  `Error`). `spiral-ipc` transport (`IpcTransport`, Unix/Windows,
+  framing, mock). Browser shell, software renderer, hello-world PNG
+  (`target/hello-world.png`).
+- **Step 1.2:** `spiral-html` removed. All HTML parsing in
+  `spiral-fmt::html`. `html5ever`, `markup5ever`, `tendril` removed.
+  8 insertion modes, UTF-8 only, malformed-input regression tests.
+  Public entry point: `spiral_fmt::parse_html`.
+- **Step 1.3:** `spiral-dom` arena-allocated nodes (`Vec<Node>` +
+  indices). Parent/child relationships via indices. Attribute
+  storage: `Vec<(String, String)>`. `spiral-html` fully removed.
+- **Step 1.4:** CSS parser in `spiral-fmt::css`. `spiral-css`
+  deprecated shim forwards to `spiral_fmt::css::*`. `cssparser` /
+  `selectors` removed. ADR 0001 (`0001-css-parser-spiral-fmt.md`).
+  8 modules: tokeniser, parser, selectors, specificity, values,
+  at-rules, declarations, attribute matchers.
+- **Step 1.5 (Phase 1.5 SSOT Restructure):** repo-wide hierarchy
+  restructure. `AGENTS.md` Current Status row, `docs/` canonical
+  layout, `CODEX.md`, `build`/`clean`/`test`/`release` shell
+  scripts. Shipped at `v0.0.0-bootstrap`.
+- **Step 1.6 (Packets 1.6.1–1.6.4):**
+  Packet 1.6.1 — Vortex GC rewrite (`OriginArena`, `TaggedCell`,
+  `GcKey`, mark-sweep). 22 tests.
+  Packet 1.6.2 — Vortex first functional slice (lexer, parser,
+  AST, `console.log` interpreter). Entry point: `vortex_eval()`.
+  Packet 1.6.3 — `spiral-filter` wire into IPC. `FilterChain`
+  intercepts `IPCMessage`. `spiral-sandbox` applies profile to
+  `BrowserConfig`. Gate: `cargo run -- hello -P untrusted`
+  segfaults with -EACCES.
+  Packet 1.6.4 — `spiral-network` HTTP/1.1 stub.
+- **Design pass (2026-06-14):** four architectural bets, three
+  new crates, process model and ad policy decisions — all signed
+  off.
+- **Design pass 2026-06-15:** three design docs (filter,
+  capability, vortex heap). All custom code, no external engine
+  dependencies (user decision 2026-06-15: "Our tech where it
+  matters. Using other browser's tech defeats the purpose of
+  spiral.").
+- **Build pass 2026-06-15:** `spiral-context` skeleton (21 tests),
+  `spiral-filter` skeleton (40 tests), Vortex GC rewrite (43 new
+  tests). Total: 266 tests passing workspace-wide, 0 failures
+  (see `cargo test --workspace` for the live count).
+- **Rewire 2026-06-15:** `spiral-html` retired. `spiral-fmt` is
+  the sole HTML parser. `html5ever`, `markup5ever`, `tendril`
+  removed from workspace. Servo crates completely absent from
+  dependency tree. Total: 275 tests passing workspace-wide, 0
+  failures.
+- **Doc-drift audit (2026-06-16):** 81 findings (P0=14, P1=38,
+  P2=29). Wave A shipped as ADR 0005 (`spiral-network` to
+  `spiral-filter` dev-dep, true `FilterChain`, no upward dep).
+  Packet 1.6.5 unblocked.
+- **Phase 1.5 SSOT Restructure (2026-06-16):** repo-wide
+  hierarchy restructure. `AGENTS.md` Current Status row, `docs/`
+  canonical layout, `CODEX.md`, `build`/`clean`/`test`/`release`
+  shell scripts. Shipped at `v0.0.0-bootstrap`.
 
 ## Do Not Touch
 
