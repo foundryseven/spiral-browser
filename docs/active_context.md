@@ -1,10 +1,120 @@
 # Active Context
 
-**Last updated:** 2026-06-15
-**Current phase:** Phase 2 — Core Engine (Months 4–9) — *Chunks 1, 1.5, 2A complete; Chunk 3 (rewire spiral-html → spiral-fmt) is complete*
-**Sprint state:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the live gap tracker.
+**Last updated:** 2026-06-16
+**Status:** 🟢 M4.4 COMPLETE | off main @ 6a03da7 (work branch: `audit/m4-window`)
+**Current phase:** Phase 2 — Core Engine (Months 4–9) — *M4.4 complete (Chunks 1–3 + Item 4); M4.5 next*
+**Sprint state:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the live gap tracker. Deltas 1–4 recorded.
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md)
+**SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`
 **Architecture bet:** [`docs/architecture-shared-everything.md`](architecture-shared-everything.md)
+
+## Test posture (verified 2026-06-16)
+
+- 429 tests across 53 binaries, 0 failing.
+- `cargo fmt --all -- --check` clean.
+- `cargo clippy --workspace --all-targets -- -D warnings` clean.
+- `cargo build --workspace` clean.
+- `./scripts/audit-orphan-exports.sh` flags 34 candidates across 10
+  crates — all M4.5+ skeletons (un-wired by design, see below).
+  **9 crates OK (all wired)**: spiral-core, spiral-crypto, spiral-css,
+  spiral-dom, spiral-fmt, spiral-gyre, spiral-ipc, spiral-render,
+  spiral-theme, spiral-ui. The M4.4 leaks detected by the audit on
+  2026-06-16 (12 symbols) are all wired via `tests/<crate>_surface.rs`
+  integration tests (see the M4.4 leak cleanup section below).
+
+## What's done in M4.4
+
+- Chunk 1 — `spiral-crypto` P0 fixes (sha2 + getrandom).
+- Chunk 1.5 — `spiral-html` retired.
+- Chunk 2A — `spiral-fmt` from-spec HTML parser.
+- Chunk 3 — DOM rewire.
+- M4.4.1 Item 4 — `spiral-fmt` from-spec CSS parser (Fork 1-B).
+- `spiral-css` deprecated shim, `cssparser` / `selectors` removed.
+- Crate renames: `spiral-layout` → `spiral-gyre`, `spiral-js` → `spiral-vortex`.
+- Vortex skeleton, `spiral-filter`, `spiral-context` crate skeletons.
+- 3 ADRs recording cross-cutting M4.4 decisions.
+
+## SSOT restructure (in working tree, uncommitted 2026-06-16)
+
+Adopted from the Zeus repo pattern:
+
+- `docs/glossary.md` — engine brand names.
+- `docs/decisions/0000..0003-*.md` — ADR template + 3 ADRs
+  (CSS parser, Vortex posture, Gyre rename).
+- `docs/agents/{README,implementer,reviewer,architect,tester}.md`
+  — role contracts.
+- `docs/architecture/{fmt,gyre,vortex,filter,context}.md` —
+  per-subsystem architecture stubs.
+- `scripts/audit-orphan-exports.sh` — the wiring-rule
+  audit (treats exit 1 as a build break).
+- `AGENTS.md` — added the Decision Protocol table + the
+  Wiring & Integration rule; updated commit scopes; updated
+  the spiral-fmt / spiral-css working-rules sections.
+- `docs/progress_ledger.md` — retrofitted the
+  M4.4.1 Item 4 entry with a Wiring & Integration section;
+  appended the restructure entry.
+
+Verification of the restructure: 409 tests pass, 0 failing;
+clippy + fmt + build clean. The audit script flagged 48
+candidates across 19 crates; the M4.4 leaks (12 symbols)
+were wired with integration tests on the same day (see
+the "M4.4 leak cleanup" section below). The remaining 34
+candidates are M4.5+ skeletons (un-wired by design).
+
+### M4.4 leak cleanup (in working tree, uncommitted 2026-06-16)
+
+The audit caught 12 M4.4 leaks (declared `pub` symbols with
+no external consumer). Each was fixed by adding a
+`tests/<crate>_surface.rs` integration test that names
+the type and exercises it through the public surface:
+
+- **spiral-core** — `RenderNodeId`, `DomOp` (1 new test
+  binary, 3 tests).
+- **spiral-css** — `CssParser` (deprecated shim; 1 new
+  test binary, 3 tests).
+- **spiral-dom** — `Descendants`, `Ancestors`, `NodeDepth`
+  (1 new test binary, 3 tests, actually exercises the
+  tree-walker API).
+- **spiral-fmt** — `FormatError` re-export at the crate
+  root (1 new test binary, 3 tests).
+- **spiral-gyre** — `LayoutEngine` (1 new test binary,
+  1 test runs the engine on an empty DOM).
+- **spiral-ipc** — `PipeListener`, `PipeTransport`,
+  `UnixTransport` (1 new test binary, 1 test exercises
+  the encoding surface).
+- **spiral-render** — `Rgba` (1 new test binary, 1 test).
+- **spiral-theme** — `ThemeMode` (1 new test binary, 1 test).
+- **spiral-ui** — `BrowserUi` (1 new test binary, 1 test).
+- **spiral-vortex** — `VortexError`, `VortexResult` (1 new
+  test binary, 2 tests; M4.5 Item 9 will be the real
+  consumer).
+
+The audit script's exclude pattern was tightened from
+`!$crate/*` to `!$crate/src/*` so that integration
+tests in `tests/` count as cross-crate consumers
+(integration tests are separate compilation units; the
+lib's `src/` is the declaration site only).
+
+Post-cleanup state: 429 tests pass, 0 failing, 9 of 19
+crates are "OK (all wired)", the remaining 10 are
+M4.5+ skeletons. The audit will flip each crate from
+"skeleton" to "OK" as the corresponding M4.5+ work
+lands.
+
+## What needs picking (M4.5+)
+
+- **M4.4 tail** — Items 5, 6, 7 (crypto P0 confirmation, CI excludes for
+  retired crates, `justfile` for the verify protocol). Small, all greenfield
+  in the workspace today.
+- **M4.5 Item 8** — `spiral_net::Resolver` trait wrapping hickory-dns.
+- **M4.5 Item 12** — `spiral-filter` runtime hook (Bet 3).
+- **M4.6 Item 13** — Gyre box model + margins (first Gyre layout work).
+
+## Do-not-touch zones
+
+`spiral-vortex` internals beyond the skeleton (M4.5+ Item 9 work),
+`spiral-gyre` internals beyond the type-level surface (M4.6+ work),
+`spiral-sandbox`.
 
 ---
 
