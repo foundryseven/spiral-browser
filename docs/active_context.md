@@ -113,10 +113,40 @@ lands.
 
 ## What needs picking (M4.5+)
 
+### In-flight M4.5 items (unchanged)
+
 - **M4.5 Item 9** — Vortex first functional slice (lexer → parser → AST → console.log interpreter).
 - **M4.5 Item 11** — `spiral-network` HTTP client (takes `R: Resolver` by generic bound; the consumer for M4.5 Item 8).
 - **M4.5 Item 12** — `spiral-filter` runtime hook (Bet 3).
 - **M4.6 Item 13** — Gyre box model + margins (first Gyre layout work).
+
+### Recommended next M4.5/M5 picks (from competitive-parity research, 2026-06-16)
+
+The top-20 competitive gaps identified by the research are foundational P2 work that must land during the M4.5–M5 sprint window. Pick in this order:
+
+**Sprint 1 (M4.5 wrap-up — after Items 9/11/12/13):**
+- [ ] **M4.5.14** — Adoption agency algorithm (WHATWG HTML §12.2.6.1). Required for correct rendering of real-world HTML.
+- [ ] **M4.5.15** — Active formatting elements list (WHATWG HTML §12.2.6.1). Required by adoption agency.
+- [ ] **M4.5.16** — Foster parenting (WHATWG HTML §12.2.6.1). Required for correct table parsing.
+
+**Sprint 2 (M5):**
+- [ ] **M5.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
+- [ ] **M5.2** — DOM collection types: `NodeList`, `HTMLCollection`, `DOMTokenList`, `Attr`, `NamedNodeMap`, `DocumentType`.
+- [ ] **M5.3** — Global attributes IDL (id, class, style, title, lang, dir, hidden, tabindex, contenteditable, inert, popover).
+- [ ] **M5.4** — `data-*` custom data attributes (dataset IDL).
+- [ ] **M5.5** — `globalThis` (ECMA-262 §19.4.1).
+- [ ] **M5.6** — `structuredClone` (WHATWG HTML §8.2.7).
+- [ ] **M5.7** — `URL` + `URLSearchParams` (WHATWG URL §4).
+
+**Sprint 3 (M5.5):**
+- [ ] **M5.5.1** — Quirk mode classifier (WHATWG HTML §12.1).
+- [ ] **M5.5.2** — `<noscript>` element (WHATWG HTML §4.6.7).
+- [ ] **M5.5.3** — `<template>` content document-fragment construction.
+- [ ] **M5.5.4** — `Proxy` + `Reflect` (ECMA-262 §10.5, §28.1). L complexity; can wait for M5.5.
+
+**Pulled forward to M5 (from P4):**
+- [ ] **M5.8** — HTTP/1.1 client (basic page fetching). Already in flight as M4.5 Item 11.
+- [ ] **M5.9** — Cookie jar (basic session management).
 
 ## Do-not-touch zones
 

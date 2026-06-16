@@ -171,21 +171,7 @@
 - [ ] PNG, JPEG, WebP, AVIF support; lazy + progressive loading
 - [ ] End-to-end: navigate → fetch HTML → parse → layout → render → Vortex run → event dispatch
 
-### Competitive parity additions (from M4.5 research, 2026-06-16)
-- [ ] Adoption agency algorithm (WHATWG HTML §12.2.6.1)
-- [ ] Active formatting elements list (WHATWG HTML §12.2.6.1)
-- [ ] Foster parenting (WHATWG HTML §12.2.6.1)
-- [ ] Fragment parsing algorithm (WHATWG HTML §12.4)
-- [ ] DOM collection types: `NodeList`, `HTMLCollection`, `DOMTokenList`, `Attr`, `NamedNodeMap`, `DocumentType`
-- [ ] Global attributes IDL (`id`, `class`, `style`, `title`, `lang`, `dir`, `hidden`, `tabindex`, `contenteditable`, `inert`, `popover`)
-- [ ] `data-*` custom data attributes (`dataset` IDL)
-- [ ] `globalThis` (ECMA-262 §19.4.1)
-- [ ] `structuredClone` (WHATWG HTML §8.2.7)
-- [ ] `Proxy` + `Reflect` (ECMA-262 §10.5, §28.1)
-- [ ] `URL` + `URLSearchParams` (WHATWG URL §4)
-- [ ] Quirk mode classifier (WHATWG HTML §12.1)
-- [ ] `<noscript>` element (WHATWG HTML §4.6.7)
-- [ ] `<template>` content document-fragment construction (bump to active sprint)
+> **Note:** The "Competitive parity additions" block below was added by the M4.5 research and was originally placed at the end of Phase 3 by mistake. It is **Phase 2 work** (months 4–9) and must land during the **M4.5/M5 sprint window**, not Phase 3. The block sits at the bottom of Phase 3 for visual continuity with the Phase 3 additions that follow.
 
 **Exit Criteria:**
 - Block + flex + grid layout: common patterns render correctly
