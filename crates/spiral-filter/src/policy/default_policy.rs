@@ -52,6 +52,26 @@ impl PolicyLevel {
             None => false,
         }
     }
+
+    /// A short, stable identifier (used for log keys and the
+    /// [`crate::runtime::FilterHook::policy_name`] surface).
+    #[must_use]
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::WorstOffenders => "worst-offenders",
+            Self::CommonAnnoyances => "common-annoyances",
+            Self::PrivacyFocused => "privacy-focused",
+            Self::Strict => "strict",
+            Self::Maximum => "maximum",
+        }
+    }
+}
+
+impl std::fmt::Display for PolicyLevel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 #[cfg(test)]

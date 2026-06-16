@@ -2,8 +2,11 @@
 
 > **Brand:** *(unbranded).* **Crate:** `spiral-net`.
 > **Scope:** DNS resolution + TLS configuration.
-> **Status:** M4.5 Item 8 shipped (`Resolver` trait,
-> `DnsResolver` Phase 1 stub, `TlsConfig`).
+> **Status:** Step 1.6 / Packet 1.6.3 shipped (`Resolver` trait,
+> `DnsResolver` Phase 1 stub, `TlsConfig`); consumed by
+> `spiral-network` (Packet 1.6.4 — `Client<R>` is generic
+> over `R: Resolver`). All orphans closed in 1.6.3
+> (see `audit-orphan-exports.sh`).
 
 `spiral-net` is Spiral's DNS + TLS resolution layer.
 It is the boundary between Spiral's high-level
@@ -20,7 +23,7 @@ Phase 2 work (M5+) replaces the stub with the real
 
 ---
 
-## Public surface (M4.5)
+## Public surface (Step 1.6 / Packet 1.6.3)
 
 ```rust
 // DNS resolution trait.
@@ -45,6 +48,14 @@ it uses native `async fn` in traits, which returns
 resolver by generic bound (`R: Resolver`). See
 [ADR 0004](../decisions/0004-resolver-trait-async-
 design.md) for the design rationale.
+
+Packet 1.6.3 added no new public types — it landed the
+generic-bound consumer wiring (`Client<R: Resolver>`)
+in `spiral-network`, which is the live "wired" signal
+for the trait. Pre-1.6.3 the `Resolver` was a symbol
+with no consumer (orphan); post-1.6.3
+`./scripts/audit-orphan-exports.sh` reports
+`spiral-net OK (3 symbols, all wired)`.
 
 ---
 
@@ -129,3 +140,28 @@ tests for `spiral-net`.
   working rules for this crate).
 - `crates/spiral-network/` — the HTTP consumer
   that will take `R: Resolver` (M4.5+ Item 11).
+
+---
+
+## Filter hook integration (Packet 1.6.4)
+
+`spiral-net` itself does not call into the filter — the
+filter integration lives in `spiral-network::Client`,
+not here. However, the network path the filter
+intercepts is "before DNS resolution":
+
+```
+caller → Client::request → FilterHook::decide → Resolver::resolve → TLS
+```
+
+So a blocked request short-circuits before any DNS
+work happens. The DNS resolver only sees URLs that
+the filter has already accepted. See
+`spiral-network/src/lib.rs:152-230` (the `Client<R>`
+generic-bound consumer) and
+[`ADR 0005`](../decisions/0005-filter-hook-architecture.md)
+for the architecture decision that moved
+`FilterHook` + `Decision` + `Party` from
+`spiral-filter` to `spiral-core` (so the network
+crate could depend on them without depending on
+the whole `spiral-filter` dep graph).

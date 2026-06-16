@@ -7,8 +7,10 @@
 /crates/spiral-core/         @spiral/core-maintainers
 /crates/spiral-ipc/          @spiral/core-maintainers
 /crates/spiral-dom/          @spiral/dom-maintainers
-/crates/spiral-html/         @spiral/dom-maintainers
-/crates/spiral-css/          @spiral/gyre-maintainers
+/crates/spiral-fmt/          @spiral/dom-maintainers
+/crates/spiral-css/          @spiral/dom-maintainers  (deprecated shim → spiral-fmt)
+/crates/spiral-context/      @spiral/dom-maintainers
+/crates/spiral-filter/       @spiral/dom-maintainers
 /crates/spiral-gyre/         @spiral/gyre-maintainers
 /crates/spiral-paint/        @spiral/render-maintainers
 /crates/spiral-render/       @spiral/render-maintainers
@@ -18,7 +20,7 @@
 /crates/spiral-net/          @spiral/net-maintainers
 /crates/spiral-crypto/       @spiral/net-maintainers
 /crates/spiral-imagedecoder/ @spiral/render-maintainers
-/crates/spiral-sandbox/      @spiral/security-maintainers
+/crates/spiral-sandbox/      @spiral/sandbox-maintainers
 /crates/spiral-ui/           @spiral/ui-maintainers
 /crates/spiral-theme/        @spiral/ui-maintainers
 /crates/spiral-browser/      @spiral/browser-maintainers

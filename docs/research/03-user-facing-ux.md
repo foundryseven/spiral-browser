@@ -53,7 +53,7 @@ end of this file.
 - `specs/GAP_ANALYSIS.md` §3.3 (lines ~220–235) flags every chrome
   surface as `[ ]` (not started) except `spiral-theme` (Phase 4, do
   not touch) and `spiral-ui` winit scaffold (Phase 4, do not touch).
-- Architecture bet: `docs/architecture-shared-everything.md`. Spiral
+- Architecture bet: `docs/architecture/design/shared-everything.md`. Spiral
   ships a custom UI on a custom renderer; the chromium / firefox
   / webkit UI shells are not in scope as code dependencies, only as
   feature references for this matrix.

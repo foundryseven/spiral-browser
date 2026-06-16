@@ -411,44 +411,27 @@ store and the cookie jar.
 
 ---
 
-## 3. Sequencing — Recommended 12-Week Plan
+## 3. Sequencing — pointer
 
-This is the plan I'd execute starting next week. It assumes Phase 1 is
-complete (it is) and that we have 1–2 engineers available.
+> **This section was rewritten 2026-06-16 during the SSOT restructure.**
+>
+> The original "12-Week Plan" table has been removed. The current
+> sequencing (which is no longer week-bound) lives in
+> [`docs/implementation_tracker.md`](../implementation_tracker.md)
+> (Group → Phase → Step → Packet).
+>
+> The strategy and trade-off analysis (the four tracks A, B, D, E) is
+> preserved below in §3.1 as historical context. The actual schedule
+> is the tracker's job.
 
-| Week | Tracks (parallel) | Crate | Goal |
-|------|-------------------|-------|------|
-| 1 | A1: Vendor `html5ever` into `spiral-fmt` | `spiral-fmt` (new) | Code in tree, builds |
-| 1 | A2: Vendor `cssparser` into `spiral-fmt` | `spiral-fmt` (new) | Code in tree, builds |
-| 1 | E1: Design `spiral_net::Resolver` trait | `spiral-net` | API stabilised |
-| 2 | A1: Modernise `html5ever` deps (tendril → compact_str, etc.) | `spiral-fmt` | Lints clean |
-| 2 | A2: Modernise `cssparser` deps | `spiral-fmt` | Lints clean |
-| 2 | E2: Design `spiral_net::TlsConnector` trait | `spiral-net` | API stabilised |
-| 3 | A3: Vendor `selectors` into `spiral-fmt` | `spiral-fmt` | Code in tree, builds |
-| 3 | A4: Unified facade `spiral_fmt::parse_html` / `parse_css` | `spiral-fmt` | API stable |
-| 3 | E3: `spiral_network::Client` trait | `spiral-network` | API stabilised |
-| 4 | A5: Port original html5ever HTML5 lib tests; subset must pass | `spiral-fmt` | Test contract preserved |
-| 4 | A6: Port original cssparser tests; subset must pass | `spiral-fmt` | Test contract preserved |
-| 4 | D1: Spike — `rquickjs` hello world in `spiral-js` | `spiral-js` | Engine chosen |
-| 5 | A7: `spiral-html` rewires to `spiral-fmt` | `spiral-html` | Servo dep gone from `spiral-html` |
-| 5 | A8: `spiral-css` rewires to `spiral-fmt` | `spiral-css` | Servo deps gone from `spiral-css` |
-| 5 | B1: `spiral-layout` block layout — first pass | `spiral-layout` | Roadmap Month 7 |
-| 6 | A9: Fuzz harness for `parse_html`, `parse_css` | `spiral-fmt` | No panics on 10k corpus |
-| 6 | D2: `rquickjs` → `console.log` → `RendererToBrowser` | `spiral-js` | Console pipe live |
-| 6–8 | B2: Block layout — floats, BFC, margin collapse | `spiral-layout` | Roadmap Months 7–8 |
-| 6–8 | E4: `spiral_imagedecoder::Decoder` enum | `spiral-imagedecoder` | Roadmap Month 18 (front-loaded) |
-| 9–10 | D3: `rquickjs` DOM bindings — `createElement`, `appendChild`, `setAttribute` | `spiral-js` | DOM-mutate works |
-| 9–12 | B3: Flex layout — first pass, no Taffy | `spiral-layout` | Roadmap Month 8 |
-| 11–12 | D4: `trait JSRuntime` abstraction in `spiral-js` | `spiral-js` | Engine-swap path open |
-| 11–12 | B4: WPT fixtures for block layout | `spiral-layout` | Test harness operational |
+### 3.1 The Four Tracks (preserved for context)
 
-**End of week 12:**
-- Servo parser crates are gone from `spiral-html` and `spiral-css`.
-- `taffy` is still in the tree, on track for removal at month 18.
-- `boa_engine` is no longer in the plan; `rquickjs` is.
-- `spiral-net`, `spiral-network`, `spiral-imagedecoder` have clean wrapper
-  APIs.
-- Block layout is shipping its first WPT-federated milestone.
+| Track | Subsystem | What it owns | Decision (see §2) |
+|-------|-----------|--------------|-------------------|
+| **A** | `spiral-fmt` (new) | HTML+CSS parsers | Option A (vendor) was the original plan; superseded by Option A-Fork (from-spec rewrite). See ADR 0001. |
+| **B** | `spiral-gyre` (was `spiral-layout`) | Layout engine | Option B (custom, no Taffy). Gyre is fully custom. |
+| **D** | `spiral-vortex` (was `spiral-js`) | JavaScript engine | Option D (from-scratch). See ADR 0002. |
+| **E** | `spiral-network`, `spiral-imagedecoder` | Networking + image decoding | Option E (wrap, not fork). See ADR 0004 for the Resolver trait. |
 
 ---
 
@@ -540,54 +523,45 @@ content**. The post-research amendments below supersede §3.
 | `rquickjs`    | **(none)** | Never adopted. Vortex is from-scratch. |
 | V8            | Behind `v8` feature flag (CI compliance testing only) | Not the production engine. |
 
-### 8.2 Post-Research 12-Week Plan (M4.5 → M7.5)
+### 8.2 Post-Research 12-Week Plan (M4.5 → M7.5) — retired
 
-The plan below assumes M4.5 Item 8 is shipped (✅ 2026-06-16) and
-M4.5 Items 9/11/12/13 are in flight. It focuses on the top-20
-critical gaps from the competitive-parity research.
+> **This section was retired 2026-06-16 during the SSOT restructure.**
+> The week-based sprint plan has been moved to
+> [`docs/implementation_tracker.md`](../implementation_tracker.md) as
+> packets under Phases 1.6, 2, and 3. Compressed summary preserved
+> here for historical traceability.
+>
+> M4.5 wrap-up → Phase 1 Step 1.6 (Vortex slice, HTTP/1.1 stub, filter
+> runtime, Gyre box model, adoption agency, AFE, foster parenting).
+>
+> M5.0–M5.7 → Phase 2 (fragment parsing, DOM collections, global
+> attributes, dataset, globalThis, structuredClone, URL/URLSearchParams,
+> quirk mode, noscript, template, proxy/reflect, bytecode VM pass-through).
+>
+> M5.8–M5.9 → Phase 3 (HTTP/1.1 client, cookie jar).
+>
+> The end-of-week-12 state is captured in
+> [`docs/implementation_tracker.md`](../implementation_tracker.md) §
+> Phase 2 § Wiring & Integration.
 
-| Week | Sprint | Tracks (parallel) | Goal |
-|------|--------|-------------------|------|
-| 1 | M4.5 wrap-up | Items 9 (Vortex slice), 11 (HTTP/1.1), 12 (filter), 13 (Gyre box model) | M4.5 complete |
-| 2–3 | M5.0 | **M4.5.14** Adoption agency + **M4.5.15** AFE + **M4.5.16** Foster parenting | Top-20 gaps #2–#4 done |
-| 4 | M5.1 | **M5.1** Fragment parsing algorithm (`DOMParser.parseFragment`) | Top-20 gap #6 done |
-| 5 | M5.2 | **M5.2** DOM collection types (NodeList, HTMLCollection, DOMTokenList, Attr, NamedNodeMap, DocumentType) | Top-20 gaps #9–#14 done |
-| 6 | M5.3 | **M5.3** Global attributes IDL + **M5.4** dataset IDL | Top-20 gaps #1, #15 done |
-| 7 | M5.4 | **M5.5** globalThis + **M5.6** structuredClone + **M5.7** URL/URLSearchParams | Top-20 gaps #16, #17, #20 done |
-| 8 | M5.5 | **M5.5.1** Quirk mode + **M5.5.2** `<noscript>` + **M5.5.3** `<template>` content | Top-20 gaps #5, #7, #8 done |
-| 9–10 | M5.6 / M5.7 | **M5.5.4** Proxy + Reflect; basic Vortex bytecode VM pass-through | Top-20 gap #18, #19 done |
-| 11–12 | M5.8 | **M5.8** HTTP/1.1 client in production (Item 11 from M4.5 wraps here) + **M5.9** Cookie jar | P3 items #3, #4 done |
+### 8.3 Phase pull-forward summary — retired
 
-**End of week 12:**
-- All 20 top-20 critical gaps done.
-- HTTP/1.1 client and cookie jar shipped (P3 pull-forward done).
-- `spiral-fmt` HTML tree builder produces correct DOM for real-world
-  HTML.
-- `spiral-dom` has the collection types needed by JS code.
-- Vortex has the JS builtins needed for modern JS patterns.
-
-**End of week 12, additional cumulative state:**
-- P2 backlog: 14 items re-tagged to P3 (Q1). Remaining P2: 126 items.
-- Scoring formula: `spiral_urgency_weight` factor added (Q2). Max
-  score 800.
-- DevTools: full 7 panels planned for P6 (Q5). Nothing to do in
-  weeks 1-12.
-- Engines: 5 engines (Chromium, Firefox, WebKit, Servo, Ladybird)
-  (Q6). Flow column dropped from all matrix files.
-
-### 8.3 Phase pull-forward summary
-
-Per the user decisions on 2026-06-16 (Delta 7 in GAP_ANALYSIS):
-- HTTP/1.1 client: **P4 → P3** (now M5.8)
-- Cookie jar: **P4 → P3** (now M5.9)
-- 14 P2 items: **P2 → P3** (Q1 re-tag)
-
-No other phase changes. Networking depth, storage, media, security
-depth remain correctly in P4. DevTools and WebExtensions remain in
-P6 (now full scope, 7 panels).
+> **This section was retired 2026-06-16 during the SSOT restructure.**
+> The P-tag re-tagging (HTTP/1.1 P4 → P3, cookie jar P4 → P3, 14 P2
+> items → P3) is captured in the packet priority annotations on the
+> relevant Steps in
+> [`docs/implementation_tracker.md`](../implementation_tracker.md).
+>
+> No other phase changes. Networking depth, storage, media, security
+> depth remain in their assigned Phases. DevTools and WebExtensions
+> are forward-projected; not in the current Phase plan.
 
 ### 8.4 Supersedes
 
-This section **supersedes** §3 of `iteration-options.md`. The strategy
-in §1–§2 still applies (vendor/no-vendor/fork decision-making), but
-the concrete 12-week sprint plan in §3 is now §8.2.
+This section **supersedes** §3 of `iteration-options.md` (the
+12-Week Plan). The strategy in §1–§2 still applies
+(vendor/no-vendor/fork decision-making), but the concrete scheduling
+now lives in
+[`docs/implementation_tracker.md`](../implementation_tracker.md)
+(Group → Phase → Step → Packet). The §3.1 four-track summary
+preserves the strategy in compressed form.

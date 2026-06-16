@@ -16,6 +16,14 @@
 //! Rules have three parts: a **matcher** (URL pattern, CSS selector,
 //! or element attribute pattern), an **action** (block/hide/constrain/allow),
 //! and **metadata** (source, severity, stewardship score).
+//!
+//! # Network hook
+//!
+//! The [`runtime::Filter`] is the default implementer of
+//! [`spiral_core::FilterHook`]. The trait itself lives in
+//! `spiral-core` (per ADR 0005, 2026-06-16) so the network layer and
+//! the policy engine can both consume it without an upward
+//! dependency. Re-exported here for convenience.
 
 pub mod compile;
 pub mod error;
@@ -27,3 +35,8 @@ pub mod syntax;
 
 pub use error::FilterError;
 pub use rule::{Action, Matcher, Rule, RuleKind, Severity};
+// `Party` and `FilterHook` + `Decision` are owned by `spiral-core`
+// per ADR 0005. Re-export them from the canonical home so consumers
+// can `use spiral_filter::Party` if they prefer.
+pub use spiral_core::{Decision, FilterHook, Party};
+pub use runtime::{Filter, default_network_rules};

@@ -176,7 +176,7 @@ omitted silently:
   a browser feature.
 - **AI assistants** (e.g. integrated chatbot). These are a 2025–2026
   product differentiator, not a "modern browser" baseline. Spiral's
-  stance is covered in `docs/architecture-shared-everything.md`; this
+  stance is covered in `docs/architecture/design/shared-everything.md`; this
   research does not score them.
 - **Cryptocurrency wallet features.** Same reason. Not a baseline.
 - **Marketing/upsell surfaces** (e.g. built-in shopping portal, news

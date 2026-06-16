@@ -18,9 +18,23 @@
 #   ./scripts/audit-orphan-exports.sh            # audit all crates
 #   ./scripts/audit-orphan-exports.sh spiral-fmt # audit one crate
 #
+# Output format (per crate, then a summary line):
+#   <crate>          OK (N symbols, all wired)
+#   <crate>          ORPHANS (K / N):
+#                      - SymbolName
+#                      - SymbolName
+#   <crate>          (no candidates) OK
+#   <crate>          (no lib.rs; skipped)
+#
+#   OK: 0 orphan exports across M crate(s) audited (P with public symbols).
+#   FAIL: K orphan export(s) across M crate(s):
+#     - <crate>
+#     - <crate>
+#
 # Exit code:
-#   0  no orphans
-#   1  one or more orphans found
+#   0  no orphans (caller may claim "wired")
+#   1  one or more orphans found (treat as build break per
+#      AGENTS.md § Wiring & Integration)
 #   2  usage error (bad crate name, missing tool)
 #
 # Implementation notes:
@@ -28,6 +42,10 @@
 #     (no `mapfile`, no `declare -a`).
 #   - Prefers ripgrep (`rg`) if installed; falls back
 #     to `grep -R` + `find` otherwise.
+#   - Integration tests in `tests/`, examples in
+#     `examples/`, and benchmarks in `benches/` count as
+#     consumers (separate compilation units). Only the
+#     lib's `src/` is excluded from the consumer search.
 
 set -e
 

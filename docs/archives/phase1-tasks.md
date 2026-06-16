@@ -1,5 +1,12 @@
 # Phase 1 — Granular Task Breakdown
 
+> **⚠️ Archived 2026-06-16.** Pre-restructure vocabulary (Month / Task).
+> Retained for traceability. See
+> [`docs/implementation_tracker.md`](../implementation_tracker.md)
+> for the current Group → Phase → Step → Packet checklist. Per
+> [`docs/audits/2026-06-16-doc-drift.md`](../audits/2026-06-16-doc-drift.md)
+> P0 #8, no per-task status is updated here.
+
 **Phase goal:** Cargo workspace, IPC shell, browser launches and renders
 "Hello World" in a window.
 

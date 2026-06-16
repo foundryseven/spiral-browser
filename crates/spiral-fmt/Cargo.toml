@@ -3,7 +3,7 @@ name = "spiral-fmt"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Spiral's vendored parser crate — from-spec HTML5 tokeniser + tree builder, CSS parser"
+description = "Spiral's from-spec HTML5 tokeniser + tree builder, CSS parser (no html5ever, no cssparser)"
 
 [dependencies]
 spiral-core.workspace = true

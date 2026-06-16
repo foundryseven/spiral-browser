@@ -61,12 +61,9 @@ tokio = { version = "1", features = ["full"] }
 serde = { version = "1", features = ["derive"] }
 bincode = "1"
 
-# HTML parsing
-# (spiral-html retired 2026-06-15; spiral-fmt is the from-spec implementation)
-
-# CSS parsing
-cssparser = "0.37"
-selectors = "0.38"
+# HTML + CSS parsing
+# (spiral-html retired 2026-06-15; spiral-fmt is the from-spec implementation.
+#  No html5ever, no markup5ever, no tendril, no cssparser, no selectors.)
 
 # Layout
 # Gyre is custom; no transitional layout engine dependency.

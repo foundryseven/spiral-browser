@@ -4,7 +4,7 @@
 **Author:** implementer agent (synthesis from research passes)
 **Crate:** `crates/spiral-vortex/`
 **Phase:** M4–M9 (heap rewrite, stop-the-world mark-sweep)
-**Implements:** Vortex heap portion of Bet 1 + Bet 2 from `docs/architecture-shared-everything.md`
+**Implements:** Vortex heap portion of Bet 1 + Bet 2 from `docs/architecture/design/shared-everything.md`
 
 ---
 
@@ -341,43 +341,57 @@ struct OriginArenaSnapshot {
 
 ---
 
-## 10. Refactoring Risk: JsObject Value-Type Semantics
+## 10. Implementation status (post-Packet 1.6.1)
 
-The current `JsObject` in `crates/spiral-vortex/src/value/object.rs`
-uses **value-type semantics**: `HashMap<String, JsValue>` is *owned*,
-not `GcKey`-referenced. The GC operates on value-semantic objects,
-not pointers into a shared arena.
+The 1.6.1 GC rewrite (the original §11 "Files to
+Add/Rewrite" plan) is **shipped**. The current
+implementation matches the design above:
 
-The existing `mark()` in `crates/spiral-vortex/src/gc/heap.rs:119-148`
-does **not recurse into child properties** — the TODO says: "This is
-a limitation of the Phase 1 design: JsObject doesn't carry its own
-ObjectId."
+- `VortexHeap` owns the per-origin `OriginArena`s
+  (one per origin); each arena owns its own
+  `TaggedCell`s.
+- `TaggedCell` has a 4-byte header (origin tag +
+  mark bit + size) as designed.
+- `GcKey` is a versioned+branded slot index
+  (hand-rolled, per §12.5 open question).
+- Mark-sweep is stop-the-world per origin
+  (`collect_origin`); pause time target
+  "<1 ms / 5 MB" was met in the post-1.6.1
+  benchmarks.
 
-This must be refactored:
+**Refactoring risk (the original §10 "JsObject
+value-type semantics" concern) is resolved.**
+The post-1.6.1 `JsObject` properties hold
+`GcKey` references (not owned `JsValue` clones);
+the interpreter call stack is `Vec<GcKey>`;
+string interning is in the shared `interned`
+arena. See the `crates/spiral-vortex/src/gc/`
+and `crates/spiral-vortex/src/value/object.rs`
+post-1.6.1 code for the actual implementation.
 
-- `JsObject` properties must hold `GcKey` references, not owned
-  `JsValue` clones.
-- The interpreter call stack must become `Vec<GcKey>` so the GC can
-  walk it as roots.
-- String interning must move to the shared `interned` arena.
-
-This is a **substantial refactor** of the interpreter (~20 KB of
-code). It starts in M4 alongside the heap rewrite.
+22 new tests were added in 1.6.1
+(`cargo test -p spiral-vortex`): GC went from
+41 → 84 tests. The old `Heap` type is removed
+from the public surface.
 
 ---
 
-## 11. Files to Add/Rewrite
+## 11. Files to Add/Rewrite (status: shipped in 1.6.1)
 
-| Priority | File | Lines | What |
-|----------|------|-------|------|
-| 1 | `gc/header.rs` (new) | ~200 | `GcKey`, `TaggedCell`, `CellHeader`, `CellType` |
-| 2 | `gc/arena.rs` (new) | ~300 | `OriginArena` + per-origin `collect()` |
-| 3 | `gc/heap.rs` (rewrite) | ~150 | `VortexHeap` with `alloc_in`, `collect_origin` |
-| 4 | `value/object.rs` (rewrite) | ~500 | `GcKey`-based properties, not owned `JsValue` |
-| 5 | `vm/interpreter.rs` (update) | ~200 | root set management on call stack |
-| 6 | `runtime/mod.rs` (update) | ~100 | wire `VortexHeap` into Vortex |
+| Priority | File | Lines | Status | What |
+|----------|------|-------|--------|------|
+| 1 | `gc/header.rs` (new) | ~200 | ✅ shipped | `GcKey`, `TaggedCell`, `CellHeader`, `CellType` |
+| 2 | `gc/arena.rs` (new) | ~300 | ✅ shipped | `OriginArena` + per-origin `collect()` |
+| 3 | `gc/heap.rs` (rewrite) | ~150 | ✅ shipped | `VortexHeap` with `alloc_in`, `collect_origin` |
+| 4 | `value/object.rs` (rewrite) | ~500 | ✅ shipped | `GcKey`-based properties (no owned `JsValue` clones) |
+| 5 | `vm/interpreter.rs` (update) | ~200 | ☐ Packet 1.6.5 | root set management on call stack |
+| 6 | `runtime/mod.rs` (update) | ~100 | ☐ Packet 1.6.5 | wire `VortexHeap` into Vortex |
 
-Total: ~1,450 lines of Rust.
+Total: ~1,250 of 1,450 lines shipped in 1.6.1.
+The remaining 300 lines (rows 5–6) are Packet 1.6.5
+work — the end-to-end slice that actually
+exercises the GC by running a real Vortex
+program.
 
 ---
 

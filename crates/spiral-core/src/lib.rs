@@ -371,6 +371,86 @@ pub enum Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+// ---------------------------------------------------------------------------
+// Filter hook — the network-layer decision engine interface.
+//
+// **ADR 0005 (2026-06-16).** These types live in `spiral-core` (not
+// `spiral-filter`) because they are the *contract* between the
+// network layer and the policy engine, not the *implementation*.
+// `spiral-filter::Filter` implements `FilterHook`; `spiral-network::Client`
+// takes `Box<dyn FilterHook>`. The dep arrow is `filter → core ← network`,
+// which respects the "down-only" rule in `.spiral/rules/architecture.md`.
+//
+// The trait is **object-safe** (no `async fn`, no associated types with
+// generics, no `Self` in return position) so call sites can hold an
+// `Option<Box<dyn FilterHook>>`. This is the inverse of the
+// `spiral_net::Resolver` convention (ADR 0004) — URL inspection is
+// sync, so `dyn` is the right tool here.
+// ---------------------------------------------------------------------------
+
+/// First/third-party classification of an outgoing network request.
+///
+/// The party is determined by the caller (the document origin is the
+/// reference); the filter does not need to re-classify.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Party {
+    /// Either first- or third-party. Used when the caller has not
+    /// classified the request.
+    Any,
+    /// Same origin as the document.
+    First,
+    /// Different origin from the document.
+    Third,
+}
+
+/// A decision returned by [`FilterHook::should_block`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Decision {
+    /// The request should be allowed.
+    Allow,
+    /// The request should be blocked.
+    Block {
+        /// The rule ID that triggered the block. Opaque to the network
+        /// layer; just a stable identifier for logs.
+        rule_id: u64,
+        /// A human-readable reason (for logs).
+        reason: String,
+    },
+}
+
+impl Decision {
+    /// True if the decision is `Allow`.
+    #[must_use]
+    pub fn is_allowed(&self) -> bool {
+        matches!(self, Decision::Allow)
+    }
+
+    /// True if the decision is `Block`.
+    #[must_use]
+    pub fn is_blocked(&self) -> bool {
+        matches!(self, Decision::Block { .. })
+    }
+}
+
+/// The trait that the network layer calls per outgoing request.
+///
+/// Object-safe: any consumer can hold `Box<dyn FilterHook>` or
+/// `Option<Box<dyn FilterHook>>`. The default implementer is
+/// `spiral_filter::Filter` (see ADR 0005).
+pub trait FilterHook: Send + Sync {
+    /// Should this URL be allowed or blocked?
+    ///
+    /// `url` is the full URL string (the trait does not depend on the
+    /// `url` crate to keep `spiral-filter` self-contained). `party` is
+    /// the first/third-party classification the caller has already
+    /// determined — the filter does not need to re-classify.
+    fn should_block(&self, url: &str, party: Party) -> Decision;
+
+    /// A short, human-readable identifier for the policy in effect.
+    /// Used for logging.
+    fn policy_name(&self) -> &str;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

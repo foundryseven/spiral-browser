@@ -7,7 +7,7 @@ use super::object::JsObject;
 use std::fmt;
 
 /// A JavaScript value.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub enum JsValue {
     /// `undefined`
     #[default]

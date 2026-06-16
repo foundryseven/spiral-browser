@@ -2,7 +2,12 @@
 
 **Status:** 2026-06-15, fully audited, consolidated
 **Source:** all 5 brainstorm batches in [`docs/innovations-stubs-archive/`](innovations-stubs-archive/),
-plus the M4 audit methodology at [`docs/audit-sprint-m4.md`](audit-sprint-m4.md).
+plus the 2026-06-15 baseline audit methodology at
+[`docs/audits/2026-06-15-baseline.md`](audits/2026-06-15-baseline.md)
+(the M4 audit
+[`docs/audit-sprint-m4.md`](audit-sprint-m4.md) is the
+novelty-claim research input to the baseline audit; the
+baseline audit is the consolidated product).
 **Replaces:** `innovations-index.md`, `innovations-routing.md`,
 `innovations-top-10.md`, `innovations-quality-novelty-summary.md`
 (consolidated 2026-06-15; the four originals are deleted).
@@ -309,7 +314,7 @@ can match it with a fresh, user-visible implementation.
 that pays off long-term.
 
 - **Cost:** 2–3 mo.
-- **Dependencies:** Gyre box model, `spiral-html` streaming
+- **Dependencies:** Gyre box model, `spiral-fmt` streaming
   parser.
 - **Risk:** Low (correctness work, well-trodden territory).
 - **Wave?** Yes.
@@ -699,13 +704,13 @@ top 10.
   log
 - [`docs/audit-sprint-m4.md`](audit-sprint-m4.md) — M4
   audit methodology
-- [`docs/architecture-shared-everything.md`](architecture-shared-everything.md)
+- [`docs/architecture/design/shared-everything.md`](../architecture/design/shared-everything.md)
   — Bet 1 full writeup
-- [`docs/design-filter-rule-model.md`](design-filter-rule-model.md)
+- [`docs/architecture/design/filter-rule-model.md`](../architecture/design/filter-rule-model.md)
   — `spiral-filter` rule AST and parser approach
-- [`docs/design-capability-types.md`](design-capability-types.md)
+- [`docs/architecture/design/capability-types.md`](../architecture/design/capability-types.md)
   — branded lifetimes and capability tokens
-- [`docs/design-vortex-heap.md`](design-vortex-heap.md) —
+- [`docs/architecture/design/vortex-heap.md`](../architecture/design/vortex-heap.md) —
   per-origin arenas and `TaggedCell` header
 - [`docs/plans/iteration-options.md`](plans/iteration-options.md)
   — 12-week tactical plan (pulls from this backlog)

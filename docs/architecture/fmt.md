@@ -1,12 +1,12 @@
 # `spiral-fmt` (Forge) — Format Parsers
 
 > **Brand:** Forge. **Crate:** `spiral-fmt`. **Scope:**
-> HTML5 + CSS Syntax Level 3 parsers. **Status:** M4.4
-> complete (Chunks 1–3 + Item 4 shipped).
+> HTML5 + CSS Syntax Level 3 parsers. **Status:** Phase 1
+> Step 1.3 + 1.5 complete (HTML parser + CSS parser shipped).
 
 Forge is Spiral's from-spec format parser. It produces
 `spiral_dom::Dom` (HTML) or `spiral_fmt::css::Stylesheet`
-(CSS). It is one of three engines in the M4.4 posture
+(CSS). It is one of three engines in the Phase 1 posture
 that carries the Spiral brand (the others: Gyre, Vortex).
 See `docs/glossary.md` for the brand table.
 
@@ -56,8 +56,8 @@ spiral-fmt/src/
 ## Constraints
 
 - **No `html5ever`, no `markup5ever`, no `tendril`.**
-  Pure from-spec Rust. The M4 audit gates this
-  explicitly.
+  Pure from-spec Rust. The Phase 1 audit gates this
+  explicitly (Phase 1 Step 1.2 retired `spiral-html`).
 - **No `cssparser`, no `selectors`, no `cssparser-
   macros`.** Same constraint, same gate. ADR 0001.
 - **Output types come from `spiral-dom`.** Forge does
@@ -68,7 +68,7 @@ spiral-fmt/src/
   relevant spec sections (HTML5 §13.2.6, CSS Syntax
   3 §5).
 - **UTF-8 only.** No encoding detection beyond UTF-8
-  (yet). Latin-1 / Shift-JIS handling is M5+.
+  (yet). Latin-1 / Shift-JIS handling is Phase 2+.
 
 ---
 
@@ -79,12 +79,12 @@ spiral-fmt/src/
   flag.
 - 39 e2e tests cover the HTML parser (25) and the CSS
   parser (14) end-to-end.
-- The pre-M4.4 `spiral-html` test corpus (the 6
+- The pre-Phase 1 `spiral-html` test corpus (the 6
   previously panicking tests) is fully migrated.
 
 ---
 
-## Do-not-touch zones (M4.4)
+## Do-not-touch zones (Phase 1)
 
 - The CSS `parse()` function signature is the public
   contract. Adding parameters is a breaking change.
@@ -100,8 +100,7 @@ spiral-fmt/src/
 - `docs/decisions/0001-css-parser-spiral-fmt.md` — the
   Fork 1-B decision that moved the CSS parser here.
 - `docs/glossary.md` — the Forge brand entry.
-- `specs/GAP_ANALYSIS.md` Delta 1 (Chunks 1–3), Delta
-  2 (Item 2 rawtext), Delta 3 (Item 3 numeric refs),
-  Delta 4 (Item 4 CSS parser).
+- `docs/implementation_tracker.md` § Phase 1 Step 1.3 / 1.5 —
+  the canonical status of this crate.
 - `AGENTS.md` § `spiral-fmt` — the working rules for
   this crate.

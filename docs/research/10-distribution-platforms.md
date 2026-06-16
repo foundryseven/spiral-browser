@@ -77,7 +77,7 @@ chunk 7 is the engine-coverage deep dive.
 - `spiral-ipc` provides the `IpcTransport` trait + Unix/Windows
   transport impls + bincode framing. The multi-process model needed
   for the sandbox section is *designed* in
-  `docs/architecture-shared-everything.md` (Bet 1) but the runtime
+  `docs/architecture/design/shared-everything.md` (Bet 1) but the runtime
   is M25+ per `GAP_ANALYSIS.md:1.7`.
 - `ROADMAP.md` Phase 6 (M61–84) explicitly lists "cross-platform
   packaging, v0.1.0".

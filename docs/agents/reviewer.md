@@ -18,7 +18,10 @@ Before reading the diff, confirm you have read:
 - [ ] `AGENTS.md` (project operating contract — the
   rules you enforce)
 - [ ] `docs/active_context.md` (so you know what
-  sprint state should *not* be disturbed)
+  Phase state should *not* be disturbed)
+- [ ] `docs/implementation_tracker.md` (so you know
+  which packet this change claims to close; flag if
+  no packet ticked)
 - [ ] `docs/progress_ledger.md` (last 5 entries — to
   understand what just shipped and the style
   conventions in use)
@@ -97,12 +100,18 @@ For each commit / diff:
   English.
 
 ### SSOT
+- `docs/implementation_tracker.md` is stale (last
+  update older than the current task) — flag as
+  **blocking**.
 - `docs/active_context.md` is stale (last update
   older than the current task) — flag as **blocking**.
 - `docs/progress_ledger.md` has no entry for the
   change — flag as **blocking**.
-- A tracked gap in `specs/GAP_ANALYSIS.md` was
-  closed but no Delta was appended — flag.
+- A packet was closed in the tracker but the
+  corresponding Step's Wiring & Integration section
+  was not updated — flag.
+- A cross-cutting decision was taken but the ADR is
+  not linked from the relevant Step — flag.
 
 ### Tests
 - Public function with no test. → Flag.

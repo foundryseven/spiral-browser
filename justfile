@@ -48,3 +48,27 @@ test-crate crate:
 # Run tests matching a name: just test-name parse_simple_div
 test-name name:
     cargo test --workspace {{name}}
+
+# Run the wiring & integration audit (orphan exports).
+# Exit 0 = all wired. Exit 1 = orphans (treat as build break).
+wiring:
+    @echo "=== Wiring & Integration Audit ==="
+    @bash scripts/audit-orphan-exports.sh
+
+# Run cargo-audit (advisory database check).
+audit:
+    @echo "=== cargo audit ==="
+    @command -v cargo-audit >/dev/null 2>&1 || cargo install --locked cargo-audit
+    cargo audit
+
+# Run cargo-deny (license + advisory + ban check).
+deny:
+    @echo "=== cargo deny check ==="
+    @command -v cargo-deny >/dev/null 2>&1 || cargo install --locked cargo-deny
+    cargo deny check
+
+# Pre-release checklist.
+# Runs the full verification pipeline + supply-chain + wiring.
+# Use before tagging a release (see docs/agents/release.md).
+release-check: verify wiring audit deny
+    @echo "=== RELEASE CHECK PASSED ==="

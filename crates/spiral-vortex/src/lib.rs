@@ -46,3 +46,21 @@ pub mod v8;
 
 pub use error::{VortexError, VortexResult};
 pub use runtime::Vortex;
+pub use value::JsValue;
+
+/// One-shot Vortex entry point: lex, parse, and run a script.
+///
+/// This is the canonical packet-1.6.2 surface. Use it when the caller
+/// does not need to keep a [`Vortex`] runtime alive between calls (e.g.
+/// throwaway scripts, tests, the Phase-1 `spiral_context::Context`
+/// binding). The returned [`JsValue`] is the value of the last evaluated
+/// expression statement (matches the `Vortex::execute` contract).
+///
+/// If the script calls `console.log`, the output is captured in the
+/// [`Vortex`] instance — to drain it, use [`Vortex::execute_with_console`]
+/// instead. This function does **not** return console output.
+pub fn vortex_eval(source: &str) -> VortexResult<JsValue> {
+    let mut runtime = Vortex::new();
+    runtime.init()?;
+    runtime.execute(source)
+}

@@ -7,6 +7,20 @@ description = "HTTP client and networking for Spiral Browser"
 
 [dependencies]
 spiral-core.workspace = true
+# `spiral-net` is a regular dep so `Client<R: Resolver>` can name the
+# `Resolver` trait in `lib.rs` (not just in dev-dep tests). The
+# `spiral_net::Resolver` trait is the workspace-wide async-trait
+# convention per ADR 0004; the HTTP client is the canonical first
+# consumer.
+spiral-net.workspace = true
+# `spiral-filter` is a dev-dep: the network layer takes a
+# `Box<dyn spiral_core::FilterHook>` (the trait lives in
+# `spiral-core` per ADR 0005, 2026-06-16). The default implementer
+# `spiral_filter::Filter` is constructed by integration tests
+# (tests/filter_hook.rs) and by future code in `spiral-browser`,
+# not by `spiral-network` itself. The dep arrow stays
+# `filter → core ← network`, which respects the "down-only" rule
+# in `.spiral/rules/architecture.md`.
 hyper.workspace = true
 hyper-util.workspace = true
 http-body-util.workspace = true
@@ -15,3 +29,6 @@ hickory-proto.workspace = true
 tokio.workspace = true
 log.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+spiral-filter.workspace = true

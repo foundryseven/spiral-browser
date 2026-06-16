@@ -23,7 +23,7 @@ Spiral's stack has two custom-built engines that bear the Spiral brand:
 
 Vortex is **not** a V8 wrapper. It is a ground-up Rust JavaScript engine with its own lexer, parser, AST, bytecode compiler, mark-sweep GC, and (future) baseline JIT — comparable in ambition to Ladybird's LibJS or QuickJS. Google's V8 (`rusty_v8`) is available only behind a `v8` Cargo feature flag for CI compliance testing: the test harness runs the same JS snippets through both Vortex and V8 and compares outputs.
 
-Everything else (HTML/CSS parser, paint, network, GPU) uses vendored or upstream code with our wrappers. The two engines above are the only parts of the stack that carry the Spiral brand.
+Everything else (HTML/CSS parser, paint, network, GPU) is written in Spiral-native Rust with thin upstream wrappers (e.g. hyper, hickory-dns, rustls, vello, wgpu). The two engines above — plus the from-spec HTML+CSS parser in `spiral-fmt` (which the docs/glossary calls **Fmt**) — are the parts of the stack that carry the Spiral brand.
 
 ### Core Principles
 - **Independence:** No browser engine dependencies (Chromium/WebKit/Gecko)
@@ -76,12 +76,11 @@ C:\Browser Project\
 └── crates/
     ├── spiral-core/              # Shared types, IPC protocol, config
     ├── spiral-browser/           # Browser process (main entry, tab management)
-    ├── spiral-fmt/               # Vendored Servo parsers (html5ever, cssparser, selectors)
-    ├── spiral-html/              # HTML pipeline (uses spiral-fmt)
-    ├── spiral-css/               # CSS cascade + specificity (uses spiral-fmt)
+    ├── spiral-fmt/               # From-spec HTML5 tokeniser + tree builder, CSS parser
+    ├── spiral-css/               # Deprecated shim → spiral-fmt
     ├── spiral-gyre/              # Gyre — custom layout engine (block, flex, grid)
     ├── spiral-render/            # 2D GPU renderer (Vello + wgpu)
-    ├── spiral-vortex/            # Vortex — JavaScript engine (rusty_v8 / V8)
+    ├── spiral-vortex/            # Vortex — from-scratch JavaScript engine
     ├── spiral-dom/               # DOM tree (Node, Element, Document)
     ├── spiral-paint/             # Display list + compositing
     ├── spiral-network/           # HTTP client (hyper + hickory-dns), wrapped
@@ -92,7 +91,9 @@ C:\Browser Project\
     ├── spiral-net/               # TLS + DNS resolution wrappers (rustls, hickory-dns)
     ├── spiral-crypto/            # TLS primitives wrapper
     ├── spiral-gpu/               # GPU abstraction (wgpu)
-    └── spiral-imagedecoder/      # Image decoding (PNG, JPEG, WebP, AVIF)
+    ├── spiral-imagedecoder/      # Image decoding (PNG, JPEG, WebP, AVIF)
+    ├── spiral-context/           # Capability-typed API (Bet 1)
+    └── spiral-filter/            # Compile-time HTML/CSS policy (Bet 3)
 ```
 
 ---
@@ -103,9 +104,8 @@ C:\Browser Project\
 spiral-core        → (no deps, foundation)
 spiral-ipc         → spiral-core, tokio, serde, bincode
 spiral-dom         → spiral-core
-spiral-fmt         → spiral-dom (vendored html5ever, cssparser, selectors internals)
-spiral-html        → spiral-core, spiral-dom, spiral-fmt
-spiral-css         → spiral-core, spiral-dom, spiral-fmt
+spiral-fmt         → spiral-dom  (from-spec HTML5 + CSS; no html5ever, no cssparser)
+spiral-css         → spiral-core, spiral-dom, spiral-fmt  (deprecated shim → spiral_fmt)
 spiral-gyre        → spiral-core, spiral-css, spiral-dom  (custom layout; no Taffy)
 spiral-paint       → spiral-core, spiral-dom, spiral-gyre
 spiral-render      → spiral-core, spiral-paint, vello, wgpu, spiral-gpu
@@ -116,6 +116,8 @@ spiral-net         → spiral-core, rustls, hickory-dns (thin wrappers, no re-ex
 spiral-crypto      → spiral-core, rustls
 spiral-imagedecoder→ spiral-core, png, zune-jpeg, webp, ravif
 spiral-sandbox     → spiral-core, rustix (Landlock), caps (capabilities)
+spiral-context     → spiral-core  (capability-typed API)
+spiral-filter      → spiral-core  (compile-time policy)
 spiral-ui          → spiral-core, spiral-gpu, spiral-theme
 spiral-theme       → spiral-core, serde
 spiral-browser     → spiral-core, spiral-ipc, spiral-ui, spiral-theme
@@ -156,226 +158,42 @@ enum RendererToBrowser {
 
 ---
 
-## 6. Implementation Phases
 
-### Phase 1: Foundation (Months 1-3) ✅ COMPLETE
-**Milestone:** Cargo workspace, IPC shell, renders "Hello World"
+## 6. Implementation Phases (pointer)
 
-| Week | Task | Crate | Deliverable |
-|------|------|-------|-------------|
-| 1-2 | Workspace setup | Cargo.toml | 18 crate stubs |
-| 3-4 | Core types | spiral-core | `BrowserConfig`, `TabId`, `IPCMessage` |
-| 5-6 | IPC transport | spiral-ipc | `IpcServer`, `IpcClient` |
-| 7-8 | Browser shell | spiral-browser | Process spawning, tab management |
-| 9-10 | Renderer shell | spiral-render | "Hello World" display list |
-| 11-12 | End-to-end | all | Launch → parse → render → display |
+> **This section was rewritten 2026-06-16 during the SSOT restructure.**
+>
+> The old "Month X" table that previously lived here has been removed.
+> Status, sequencing, and task breakdown are SSOT in
+> [`docs/implementation_tracker.md`](docs/implementation_tracker.md)
+> (Group → Phase → Step → Packet). The time-based Month / Sprint / Chunk
+> / Item vocabulary is retired.
+>
+> The plan below is **architectural and strategic**: which subsystems
+> exist, what they own, and which cross-cutting decisions have been
+> taken. Implementation status is the tracker's job.
 
-### Phase 2: Core Engine (Months 4-12)
-**Milestone:** Vendored parsers, block/flex layout, text rendering, JS engine
+### Phase 0 — Foundation ✅ COMPLETE
+Crate workspace, IPC shell, hello-world render. See
+[`docs/implementation_tracker.md` § Phase 0](docs/implementation_tracker.md).
 
-This phase integrates two parallel tracks. Track A (parser/vendor) and Track E
-(wrapper/integrate) run alongside Track B (layout + text).
+### Phase 1 — Engines Foundation 🔄 IN FLIGHT
+Vortex, spiral-fmt (HTML + CSS), Gyre (box model), spiral-filter.
+See [`docs/implementation_tracker.md` § Phase 1](docs/implementation_tracker.md).
 
-#### Month 4–6: Vendoring & Foundation
+### Phase 2+ — Forward-projected
+Engines depth (fragment parsing, DOM collections, dataset, structuredClone,
+URL), Networking, Presentation, Capability types runtime, Bytecode VM,
+Media + DRM, Persistent renderer, Hardening. See
+[`docs/implementation_tracker.md` § Phases 2–9](docs/implementation_tracker.md).
 
-**Track A — Vendor Servo parsers into `spiral-fmt`**
-| Month | Task | Crate |
-|-------|------|-------|
-| 4 | Vendor `html5ever` into `spiral-fmt`; modernise deps (tendril→compact_str, string_cache→owned Atoms) | spiral-fmt |
-| 4 | Vendor `cssparser` + `selectors` into `spiral-fmt`; update Cargo manifests | spiral-fmt |
-| 4 | Unified facade: `spiral_fmt::parse_html()`, `spiral_fmt::parse_css()` | spiral-fmt |
-| 5 | Port html5ever HTML5 lib test subset; fix all build warnings | spiral-fmt |
-| 5 | Port cssparser + selectors unit tests; fuzz harness for both parsers | spiral-fmt |
-| 6 | Rewire `spiral-html` from `html5ever` → `spiral-fmt` | spiral-html |
-| 6 | Rewire `spiral-css` from `cssparser`+`selectors` → `spiral-fmt` | spiral-css |
+### Exit criteria
+The Phase-by-Phase exit criteria are documented in
+[`docs/implementation_tracker.md`](docs/implementation_tracker.md) under
+each Phase's "Wiring & Integration" subsection.
 
-**Track E — Thin integration wrappers (background, parallelisable)**
-| Month | Task | Crate |
-|-------|------|-------|
-| 4 | `spiral_net::Resolver` trait wrapping hickory-dns | spiral-net |
-| 5 | `spiral_net::TlsConnector` trait wrapping rustls | spiral-net |
-| 5 | `spiral_imagedecoder::Decoder` enum dispatching per-format | spiral-imagedecoder |
-| 6 | `spiral_network::Client` trait wrapping hyper | spiral-network |
-
-#### Month 6–9: DOM, Block Layout & Text
-
-**Track B — Core layout and text**
-| Month | Task | Crate |
-|-------|------|-------|
-| 6 | Implement spiral-dom tree structure (`Node`, `Element`, `Text`, `Document`); attribute access, parent/child relationships | spiral-dom |
-| 6 | HTML→DOM pipeline: produce `Document` from bytes via spiral-fmt + spiral-dom | spiral-html |
-| 7 | Box model: margin, border, padding, content area | spiral-gyre |
-| 7 | Block layout: vertical stacking, margin collapse, BFC/IFC | spiral-gyre |
-| 8 | Floats (left/right, clear, BFC containment); positioning (static, relative, absolute, fixed, sticky) | spiral-gyre |
-| 8 | Cascade engine: origin order, specificity, `!important`, inheritance | spiral-css |
-| 9 | Text shaping via harfrust, text rendering via swash, text layout via cosmic-text | spiral-render |
-| 9 | Text display end-to-end: styled text in layout box, rendered to display list | spiral-render |
-
-#### Month 10–12: Flex Layout & JS Engine
-
-**Track B — Flex layout (custom, no Taffy)**
-| Month | Task | Crate |
-|-------|------|-------|
-| 10 | Flex container model: main/cross axis, flex lines; `flex-direction`, `flex-wrap`, `flex-flow` | spiral-gyre |
-| 10 | `justify-content`, `align-items`, `align-content`, `align-self` | spiral-gyre |
-| 11 | `flex-grow`, `flex-shrink`, `flex-basis`; `min-width`/`max-width` interaction; `order` | spiral-gyre |
-| 11 | WPT fixtures for block + flex layout | tests/wpt |
-**Track D — JS engine (Vortex, from-scratch)**
-
-| Month | Task | Crate |
-|-------|------|-------|
-| 10 | Spike: Vortex hello world — lexer + parser + tree-walking interpreter | spiral-vortex |
-| 11 | `console.log`/`info`/`warn`/`error` → `RendererToBrowser::ConsoleMessage` | spiral-vortex |
-| 12 | DOM bindings: `createElement`, `appendChild`, `insertBefore`; `setAttribute`, `getAttribute` | spiral-vortex |
-| 12 | `addEventListener`, `dispatchEvent`; event dispatch skeleton | spiral-vortex |
-| 12 | `setTimeout`, `setInterval`, `queueMicrotask` | spiral-vortex |
-
-**Exit Criteria (Phase 2):**
-- `spiral-html` and `spiral-css` depend on `spiral-fmt` only; no Servo crates in `cargo tree`
-- Block layout renders: margin collapse, floats, BFC/IFC, all positioning modes
-- Flex layout renders common patterns (centring, sidebar+content, wrap)
-- Text is shaped and rendered correctly (basic Latin, CJK start)
-- Vortex is the default JS engine — from-scratch Rust, interpreter-ready; `boa_engine` is gone from `Cargo.toml`
-- DOM manipulation from JS triggers re-layout
-- Basic page renders at 60fps
-- WPT block layout pass rate ≥ 40%; flex pass rate ≥ 30%
-
-### Phase 3: Full Engine (Months 13-21)
-**Milestone:** Grid layout, networking, HTTP navigation, form submission, image decoding
-
-#### Month 13–15: Grid Layout (custom)
-
-| Month | Task | Crate |
-|-------|------|-------|
-| 13 | Grid container: explicit tracks, implicit tracks, `grid-template-columns/rows` | spiral-gyre |
-| 13 | Grid template areas, named lines, line-based placement | spiral-gyre |
-| 14 | `grid-auto-flow`, `grid-gap`, span placement | spiral-gyre |
-| 14 | `subgrid` (Level 2) | spiral-gyre |
-| 15 | WPT grid fixtures; pass target ≥ 40% of `css/css-grid/` | tests/wpt |
-
-#### Month 15–18: Networking
-
-| Month | Task | Crate |
-|-------|------|-------|
-| 15-16 | HTTP client via hyper (through `spiral_network::Client`) | spiral-network |
-| 16 | DNS resolution via hickory-dns (through `spiral_net::Resolver`) | spiral-net |
-| 17 | TLS via rustls (through `spiral_net::TlsConnector`); certificate verification | spiral-net |
-| 17 | Connection pooling, redirect following, cookie jar | spiral-network |
-| 18 | Form submission (GET/POST); `FormData` support | spiral-network |
-
-#### Month 18–21: DOM Polish & Image Decoding
-
-| Month | Task | Crate |
-|-------|------|-------|
-| 18 | (N/A — Gyre is in-house from day one; no Taffy to remove) | — |
-| 18 | Image decoding pipeline (through `spiral_imagedecoder::Decoder`) | spiral-imagedecoder |
-| 19 | PNG, JPEG, WebP, AVIF support; lazy + progressive loading | spiral-imagedecoder |
-| 19 | DOM manipulation from JS: `removeChild`, `textContent`, `style` | spiral-vortex |
-| 20 | CSS matching on DOM mutation; incremental re-style | spiral-css, spiral-dom |
-| 21 | Full event dispatch: `MouseEvent`, `KeyboardEvent`, `FocusEvent` | spiral-vortex, spiral-dom |
-
-**Exit Criteria (Phase 3):**
-- Grid layout renders common patterns (holy grail, dashboard, gallery)
-- Can navigate to real websites over HTTP/HTTPS
-- JavaScript executes DOM manipulation; events fire correctly
-- Forms submit; cookies persist; images load and display
-- `taffy` was never added to `Cargo.toml` — Gyre is custom from day one
-- WPT grid pass rate ≥ 40%
-- Layout benchmarks within 2× of Taffy on representative pages
-
-### Phase 4: UI & Polish (Months 22-33)
-**Milestone:** Zen UI, GPU rendering, Vello optimisation, security sandboxing
-
-| Month | Task | Crate |
-|-------|------|-------|
-| 22-23 | Zen-style theme engine; design tokens; light/dark mode; system preference detection | spiral-theme |
-| 24-25 | Sidebar tabs UI: creation, switching, closing, drag/reorder, context menu | spiral-ui |
-| 26-27 | Floating URL bar: autocomplete, navigation buttons, settings panel | spiral-ui |
-| 28-29 | GPU rendering pipeline via Vello; display list → Vello scene → swap chain | spiral-render |
-| 29-30 | Vello fork: tile-based picture caching; dirty-rect invalidation; scroll at 120fps | spiral-render (vello fork) |
-| 30 | `trait JSRuntime` abstraction in Vortex; Phase 1 interpreter → Phase 2 bytecode VM → Phase 3 baseline JIT | spiral-vortex |
-| 31-32 | Platform sandboxing: Linux seccomp-bpf + Landlock, macOS Seatbelt, Windows Restricted Token | spiral-sandbox |
-| 33 | DevTools basics: element inspector, console output, network panel | spiral-ui |
-
-**Exit Criteria (Phase 4):**
-- Zen-inspired UI is functional: sidebar tabs, floating URL bar, accent colours
-- GPU rendering is smooth; scrolling at 120fps on integrated graphics
-- Vello picture cache memory overhead < 200 MB for typical pages
-- `trait JSRuntime` is defined; Vortex is the default engine; V8 oracle available behind `v8` feature for CI compliance
-- Sandbox is active on all platforms
-- DevTools shows DOM tree and console output
-
-### Phase 5: Production (Months 34-39)
-**Milestone:** WPT compliance, performance, release
-
-| Month | Task | Crate |
-|-------|------|-------|
-| 34-35 | WPT test integration; layout test pass target ≥ 50% | tests/wpt |
-| 35 | Performance benchmarks: layout <1ms, render <16.67ms (60fps), IPC <1ms round-trip | benches/ |
-| 36 | Cross-platform packaging: Linux AppImage, macOS .app, Windows installer | CI/CD |
-| 37 | Security audit, fuzzing, penetration testing; fix findings | all |
-| 38-39 | v0.1.0 release: release notes, documentation, blog post | all |
-
-**Exit Criteria (Phase 5):**
-- v0.1.0 released on all platforms
-- 50%+ WPT pass rate
-- 60fps rendering
-- No known security vulnerabilities
-
----
-
-## 7. Technology Choices
-
-| Component | Choice | Reason |
-|-----------|--------|--------|
-| Language | Rust | Memory safety, modern ecosystem |
-| Windowing | winit | Cross-platform, Rust-native |
-| GPU Abstraction | wgpu | Vulkan/Metal/DX12/OpenGL |
-| 2D Rendering | Vello | GPU compute, modern pipeline |
-| HTML Parsing | spiral-fmt (vendored html5ever) | Owned, maintained by us; upstream stale since 2021 |
-| CSS Parsing | spiral-fmt (vendored cssparser + selectors) | Owned, maintained by us; upstream stale since 2022 |
-| Layout | Custom (Gyre / `spiral-gyre`) | Full CSS spec parity; in-house from day one, no Taffy |
-| Text Shaping | harfrust (HarfBuzz) | Industry standard, pure Rust |
-| Text Rendering | swash | Rust-native, CPU-efficient |
-| Text Layout | cosmic-text | Full text pipeline |
-| JS Engine | Vortex (from-scratch Rust) | Custom lexer, parser, AST, bytecode VM, mark-sweep GC, future baseline JIT; V8 oracle behind `v8` feature for CI only |
-| HTTP | hyper | Production-grade, Rust-native, wrapped in spiral-network |
-| TLS | rustls | Memory-safe, no OpenSSL, wrapped in spiral-net |
-| DNS | hickory-dns | Rust-native, full resolver, wrapped in spiral-net |
-| Serialization | serde + bincode | Fast, type-safe IPC |
-| Async | tokio | Industry standard |
-| Image Loading | png, zune-jpeg, webp, ravif | Per-format decoders, wrapped in spiral-imagedecoder |
-
----
-
-## 8. Testing Strategy
-
-| Level | Tool | Scope |
-|-------|------|-------|
-| Unit | `cargo test` | Per-crate, isolated |
-| Integration | `cargo test --workspace` | Cross-crate flows |
-| WPT | `tests/wpt/` | Web standards compliance |
-| Bench | `criterion` | Layout, render, IPC throughput |
-| CI | GitHub Actions | Linux/macOS/Windows matrix |
-| Lint | `clippy` | Code quality |
-| Format | `rustfmt` | Consistent style |
-
----
-
-## 9. Success Criteria
-
-- [ ] Launches on Windows, macOS, Linux
-- [ ] Renders basic HTML pages (text, images, links)
-- [ ] Block layout correct (margin collapse, floats, BFC/IFC, positioning)
-- [ ] Flexbox layout works for common patterns
-- [ ] Grid layout works for common patterns
-- [ ] CSS cascade and specificity correct
-- [ ] JavaScript execution via Vortex (console, DOM, events)
-- [ ] HTTP/HTTPS navigation with TLS
-- [ ] Multi-process architecture (tab isolation)
-- [ ] Zen-inspired UI (sidebar tabs, floating URL bar)
-- [ ] Passes 50%+ of WPT layout tests
-- [ ] 60fps rendering for static pages
-- [ ] Servo upstream crates fully vendored (no stale deps in tree)
-- [ ] Taffy removed from Cargo.toml (layout is fully custom)
-- [ ] JS engine is JIT-capable (Vortex = from-scratch Rust, future baseline JIT)
+### What "v0.1.0" means
+Per the release model in [`docs/agents/release.md`](docs/agents/release.md),
+v0.1.0 will be tagged when a Phase boundary is crossed with all packets
+closed. There is no calendar deadline. The semantic version follows the
+Phase → version mapping convention adopted 2026-06-16.

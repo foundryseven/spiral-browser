@@ -44,20 +44,20 @@ Network Response (HTML bytes)
         │
         ▼
 ┌───────────────┐
-│  HTML Parser  │  spiral-fmt (vendored html5ever) → DOM Tree
-│  (spiral-html)│
+│  HTML Parser  │  spiral-fmt (from-spec tokeniser + tree builder) → DOM Tree
+│  (spiral-fmt) │
 └───────┬───────┘
         │
         ▼
 ┌───────────────┐
-│  CSS Parser   │  spiral-fmt (vendored cssparser + selectors) → Style Rules
-│  (spiral-css) │
+│  CSS Parser   │  spiral-fmt (from-spec CSS parser) → Stylesheet
+│  (spiral-fmt) │  (spiral-css is a deprecated shim → spiral-fmt)
 └───────┬───────┘
         │
         ▼
 ┌───────────────┐
 │  Style        │  Cascade + Specificity → Computed Styles
-│  Resolution   │
+│  Resolution   │  (lives in spiral-gyre for now)
 └───────┬───────┘
         │
         ▼
@@ -98,19 +98,30 @@ Transport layer for inter-process communication.
 - `MessageFraming`: length-prefixed bincode
 - Platform-specific socket/pipe implementation
 
-### spiral-html
-HTML5 parser.
-- Uses `spiral-fmt` (vendored html5ever, maintained by Spiral)
-- Produces `spiral_dom::Document` tree
-- Handles encoding detection (UTF-8, Latin-1, etc.)
-- Supports `<!DOCTYPE html>`, fragments
+### spiral-fmt
+HTML5 tokeniser + tree builder and CSS parser, written from-spec in
+Spiral-native Rust. No `html5ever`, no `markup5ever`, no `tendril`, no
+`cssparser`, no `selectors`, no `cssparser-macros`. Public entry points:
+`spiral_fmt::parse_html` and `spiral_fmt::parse_css`. Output is
+`spiral_dom::Dom` (HTML) or `spiral_fmt::css::Stylesheet` (CSS).
+
+- HTML parser: 8 insertion modes (initial, before html, before head, in
+  head, in head noscript, after head, in body, in frameset; plus
+  after-after-body, after-after-frameset, text).
+- CSS parser: 8 modules — tokeniser, parser, selectors, specificity,
+  values, at-rules, declarations, attribute matchers.
+- Encoding detection: UTF-8 only for now; explicit `<meta charset>`
+  honoured where present.
+- Tree builder is lenient by design (HTML5 §8.2.5 parse-error
+  recovery).
+- See `docs/decisions/0001-css-parser-spiral-fmt.md` for the decision
+  context (Fork 1-B).
 
 ### spiral-css
-CSS parser and cascade engine.
-- Uses `spiral-fmt` (vendored cssparser + selectors, maintained by Spiral)
-- Parses stylesheets, media queries, selectors
-- Computes cascade order (origin, specificity)
-- Resolves `!important`, inheritance
+**Deprecated shim (Phase 1 Step 1.5, 2026-06-16).** Forwards to
+`spiral_fmt::css::*` and provides a `CssParser` adapter that calls
+`spiral_fmt::parse_css`. New code should depend on `spiral-fmt`
+directly. The `deprecation` lint is set on the crate.
 
 ### spiral-gyre (Gyre)
 Gyre is Spiral's custom, in-house layout engine. Box model, block flow,
@@ -119,8 +130,9 @@ Taffy, no Servo layout code.
 
 - Box model: `margin`, `border`, `padding`, `content`
 - Block layout: normal flow, floats, BFC/IFC
-- Flexbox: custom implementation (Phase 2, Month 10-11)
-- Grid: custom implementation (Phase 3, Month 13-14)
+- Flexbox: custom implementation (Phase 2 — see
+  `docs/implementation_tracker.md` Group 1 / Phase 2 packets)
+- Grid: custom implementation (Phase 2 — same group)
 - CSS values: `Length`, `Percentage`, `Auto`
 
 ### spiral-dom
@@ -224,8 +236,8 @@ Main browser process.
 3. Browser process routes message to target renderer
 4. Renderer sends HTTP request via spiral-network
 5. spiral-network returns HTML bytes
-6. spiral-html parses bytes → spiral-dom Document
-7. spiral-css parses `<style>` + linked stylesheets → Style Rules
+6. spiral-fmt (from-spec HTML5 tokeniser + tree builder) parses bytes → spiral-dom Document
+7. spiral-fmt (from-spec CSS parser) parses `<style>` + linked stylesheets → Stylesheet
 8. Style Resolution computes Computed Styles on DOM nodes
 9. spiral-gyre (Gyre) computes the Layout Tree (box positions + sizes)
 10. spiral-paint builds Display List from Layout Tree

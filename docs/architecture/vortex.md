@@ -3,8 +3,14 @@
 > **Brand:** Vortex. **Crate:** `spiral-vortex`. **Scope:**
 > lexer → parser → AST → bytecode compiler → interpreter
 > → GC, with a V8 oracle harness under the `v8` feature
-> flag. **Status:** M4.4 skeleton; first functional slice
-> is M4.5 Item 9.
+> flag. **Status:** Step 1.6 / Packet 1.6.1 shipped
+> (GC rewrite: `VortexHeap` + per-origin `OriginArena` +
+> `TaggedCell` + `GcKey` + mark-sweep; old `Heap` type
+> retired). Pre-1.6.1 GC was a 4-array mark-sweep; post-1.6.1
+> it is origin-tagged. See
+> [`docs/architecture/design/vortex-heap.md`](design/vortex-heap.md)
+> for the design rationale. All 4 of the
+> `spiral-vortex` orphans closed in 1.6.1.
 
 Vortex is Spiral's from-scratch JavaScript engine,
 written entirely in safe Rust. It implements
@@ -19,9 +25,19 @@ rusty_v8 two-step plan).
 
 ---
 
-## Public surface (target, M5+)
+## Public surface (Step 1.6 / Packet 1.6.1)
 
 ```rust
+// Errors + top-level entry point.
+pub use error::{VortexError, VortexResult};
+pub use runtime::Vortex;
+pub use value::JsValue;
+
+/// End-to-end entry point (Packet 1.6.5+).
+/// Parses, compiles, and runs `source`; returns the
+/// expression-statement result or `Err(VortexError)`.
+pub fn vortex_eval(source: &str) -> VortexResult<JsValue>;
+
 // Lexer → parser → AST.
 pub struct Lexer { … }
 pub struct Parser { … }
@@ -39,14 +55,21 @@ pub struct VM { … }
 pub enum Value { … }                 // JS value representation
 pub struct Handle<T> { … }           // GC handle
 
-// GC.
-pub struct Heap { … }                // mark-sweep
+// GC (post-1.6.1 rewrite; old `Heap` retired).
+pub struct VortexHeap { … }          // owner of all arenas
+pub struct OriginArena { … }         // one per origin; owns TaggedCells
+pub struct TaggedCell { … }          // 4-byte header (origin tag + mark bit + size)
+pub struct GcKey { … }               // versioned + branded key into the arena
 ```
 
-The M4.4 skeleton has the **module layout** but not
-the implementation. M4.5 Item 9 delivers the first
-end-to-end slice (lexer → parser → AST → console.log
-interpreter).
+The M4.4 skeleton has the **module layout**; the
+post-1.6.1 implementation has the **GC rewrite**
+(`VortexHeap` / `OriginArena` / `TaggedCell` /
+`GcKey` + mark-sweep). M4.5 Item 9 (the
+end-to-end slice: lexer → parser → AST →
+interpreter) lands in Packet 1.6.5; it is
+the next "what needs picking" item in
+[`docs/implementation_tracker.md`](../implementation_tracker.md).
 
 ---
 
@@ -56,25 +79,26 @@ interpreter).
 spiral-vortex/src/
 ├── lib.rs           — public surface, lib-level docs
 ├── error.rs         — VortexError, VortexResult
-├── lexer/           — ES lexer (M4.5+)
-├── parser/          — ES parser (M4.5+)
-├── ast/             — AST types (M4.5+)
+├── lexer/           — ES lexer (Packet 1.6.5+)
+├── parser/          — ES parser (Packet 1.6.5+)
+├── ast/             — AST types (Packet 1.6.5+)
 ├── value/           — JS value types (number, string,
-│                     object, function, …) (M4.5+)
-├── gc/              — mark-sweep GC (M4.6+)
-├── vm/              — interpreter (M4.5+)
-├── runtime/         — builtins (Math, JSON, console, …) (M4.5+)
+│                     object, function, …) (1.6.5+; JsValue shipped in 1.6.1)
+├── gc/              — mark-sweep GC (1.6.1 SHIPPED)
+│                     — VortexHeap, OriginArena, TaggedCell, GcKey
+├── vm/              — interpreter (1.6.5+)
+├── runtime/         — Vortex struct + builtins (Math, JSON, console, …) (1.6.5+)
 ├── v8/              — V8 oracle harness (gated on `v8`
-│                     feature flag) (M5+)
-├── dom_bindings/    — DOM integration (M6+)
-├── event_loop/      — microtask + macrotask scheduling (M6+)
+│                     feature flag) (5+)
+├── dom_bindings/    — DOM integration (Phase 6+)
+├── event_loop/      — microtask + macrotask scheduling (Phase 6+)
 └── builtins/        — JS standard library (Array, Object,
-                      Promise, …) (M6+)
+                      Promise, …) (Phase 6+)
 ```
 
-The skeleton is in place. Each module is currently
-empty (or contains only a stub `mod.rs`); M4.5+
-fills them in.
+The skeleton is in place. The GC is implemented
+(post-1.6.1); the lexer/parser/ast/vm are stub
+modules awaiting Packet 1.6.5.
 
 ---
 
@@ -98,12 +122,17 @@ fills them in.
 
 ## Test posture
 
-- 0 functional tests in M4.4 (the skeleton compiles
-  but the engine is not yet implemented).
-- M4.5 Item 9 adds the first slice: lexer tests,
-  parser tests, and an end-to-end test that
-  `console.log("hello, world!")` works.
-- M5+ adds the V8 oracle harness: a corpus of
+- 84 tests post-1.6.1 (GC went 41 → 84 across the
+  rewrite): 22 new GC tests cover
+  `VortexHeap` / `OriginArena` / `TaggedCell` /
+  `GcKey` + mark-sweep correctness
+  (allocation, trace, mark, sweep, drop-arenas,
+  cross-origin isolation).
+- Packet 1.6.5 (the end-to-end slice) adds the
+  first functional tests: lexer tests, parser
+  tests, and an end-to-end test that
+  `vortex_eval("1 + 2")` returns `3`.
+- Phase 5+ adds the V8 oracle harness: a corpus of
   ~200 JS snippets run through both Vortex and
   V8, with output diffing as the test.
 - Total projected: ~500 tests for Vortex, of which
@@ -111,7 +140,7 @@ fills them in.
 
 ---
 
-## Do-not-touch zones (M4.4)
+## Do-not-touch zones (post-1.6.1)
 
 - The `lib.rs` module declarations. Adding a new
   module is a public-surface change.
@@ -119,6 +148,11 @@ fills them in.
   variants is a breaking change.
 - The `v8/` feature flag wiring. Removing the flag
   is a posture change and needs an ADR.
+- The `VortexHeap` / `OriginArena` / `TaggedCell` /
+  `GcKey` types and the 4-byte header layout.
+  These are the wire format for the multi-origin
+  isolation bet (Bet 1); changing them is a
+  posture change.
 
 ---
 
@@ -131,4 +165,4 @@ fills them in.
   rules.
 - `docs/audits/2026-06-15-baseline.md` §1.6 — the
   M4.4 / M4.5 / M4.6 priority list for Vortex.
-- `docs/design-vortex-heap.md` — the GC design.
+- `docs/architecture/design/vortex-heap.md` — the GC design.

@@ -5,8 +5,11 @@
 > **Crate:** `spiral-filter`. **Scope:** URL pattern
 > matchers, CSS-selector matchers, element-attribute
 > matchers, action enum (block / hide / constrain /
-> allow). **Status:** M4.4 crate skeleton in place;
-> runtime hook is M4.5 Item 12.
+> allow), runtime hook. **Status:** Step 1.6 /
+> Packet 1.6.4 shipped (runtime hook + `FilterHook`
+> trait in `spiral-core` per ADR 0005). All orphans
+> closed in 1.6.4 (see
+> `audit-orphan-exports.sh`: `spiral-filter OK (10/10)`).
 
 `spiral-filter` is Spiral's compile-time HTML/CSS
 policy engine. It sits between the network layer and
@@ -29,6 +32,9 @@ pub struct Matcher { … }             // URL / selector / attribute
 pub enum Action { … }                // Block, Hide, Constrain, Allow
 pub enum RuleKind { … }              // UrlRule, CssRule, ElementRule
 pub enum Severity { … }              // Advisory, Warning, Strict
+pub enum Party { First, Third }      // first-party vs third-party (in spiral-core per ADR 0005)
+pub enum Decision { Allow, Block { reason: String } }
+pub trait FilterHook { fn decide(&self, ctx: &FilterContext) -> Decision; }
 
 pub struct FilterEngine { … }
 impl FilterEngine {
@@ -38,10 +44,18 @@ impl FilterEngine {
 }
 ```
 
-The M4.4 skeleton has the **rule model types** but
-not the runtime. M4.5 Item 12 wires the engine into
-the network boundary as a no-op; the M5+ work fills
-in the actual rule evaluation.
+The M4.4 skeleton has the **rule model types**;
+M4.5 Item 12 / Packet 1.6.4 ships the runtime
+(`Filter` struct, `default_network_rules`,
+`match_url::extract_host`). The
+`FilterHook` trait itself lives in
+`spiral-core` (see "Fork 2" below) and is
+re-exported from `spiral-filter::lib.rs` for
+backwards compatibility. The M5+ work adds
+the user-facing DSL parser, the built-in
+filter lists, and the integration tests
+with `spiral-network` (already wired in
+Packet 1.6.4).
 
 ---
 
@@ -49,18 +63,23 @@ in the actual rule evaluation.
 
 ```
 spiral-filter/src/
-├── lib.rs           — public surface
-├── rule.rs          — Rule, Matcher, Action, RuleKind
-├── policy.rs        — Policy, default-policy constant
-├── syntax.rs        — rule syntax (the user-facing DSL) (M5+)
-├── lists.rs         — built-in filter lists (M5+)
-├── compile.rs       — compile-time rule evaluation (M5+)
-├── runtime.rs       — runtime hook (Decision::Allow / Block) (M4.5)
+├── lib.rs           — public surface (re-exports FilterHook from spiral-core per ADR 0005)
+├── rule.rs          — Rule, Matcher, Action, RuleKind, Party (re-exported)
+├── policy/          — Policy, default-policy constant, slider
+├── syntax/          — rule syntax (the user-facing DSL)
+├── lists/           — built-in filter lists
+├── compile/         — compile-time rule evaluation
+├── runtime/
+│   ├── mod.rs       — runtime hook (Filter, default_network_rules)
+│   └── match_url.rs — extract_host() (URL host extractor)
 └── error.rs         — FilterError
 ```
 
-The M4.4 skeleton has the rule model types and the
-error type; M5+ adds the rest.
+The skeleton has the rule model types, the error
+type, and (post-1.6.4) the runtime hook. M5+ adds
+the rest of the user-facing surface (network filter
+lists, integration tests against real filter lists,
+network integration tests).
 
 ---
 
@@ -86,20 +105,104 @@ error type; M5+ adds the rest.
 ## Test posture
 
 - 6 lib tests in M4.4 cover the rule-model types
-  (constructor, match, action enums). The runtime
-  is M4.5+ work; the runtime tests land with it.
-- M4.5 Item 12 adds the runtime-hook test
-  (allow-by-default, block-by-explicit-rule).
+  (constructor, match, action enums).
+- Packet 1.6.4 (the runtime) adds 4 more:
+  allow-by-default, block-by-explicit-rule,
+  third-party default, and the
+  `match_url::extract_host` host-extraction
+  regression tests. Total: 10 lib tests
+  (`cargo test -p spiral-filter`).
 - M5+ adds the syntax tests, the policy tests,
   and the integration tests with
-  `spiral-network`.
+  `spiral-network` (network-bound `FilterHook`
+  behaviour; already partially covered by
+  the 1.6.4 test in
+  `spiral-network/tests/net_surface.rs`).
 
 Total projected: ~30 lib tests + ~10 integration
 tests for `spiral-filter`.
 
 ---
 
-## Do-not-touch zones (M4.4)
+## Fork 2 — process-global `FilterHook` (ADR 0005)
+
+`spiral-filter` was the original home of the three
+types `FilterHook`, `Decision`, and `Party`. The
+audit of 2026-06-16 flagged this as a dep-arrow
+violation: `spiral-network` needed to call
+`FilterHook::decide` for every outbound request,
+and the only way to get that type was to depend
+on `spiral-filter`. That pulled in the whole
+HTML/CSS/rule-DSL dep graph into the network
+crate, which is wrong-shaped.
+
+**ADR 0005** ([`docs/decisions/0005-filter-hook-architecture.md`](../decisions/0005-filter-hook-architecture.md))
+moved the three types to `spiral-core` and
+re-exported them from `spiral-filter` for
+backwards compatibility. The current state:
+
+- `spiral_core::FilterHook` + `Decision` + `Party`
+  are the canonical definitions.
+- `spiral_filter::lib.rs` does
+  `pub use spiral_core::{Decision, FilterHook, Party};`
+  so existing call sites in
+  `spiral-filter/src/runtime/mod.rs` and
+  downstream consumers keep working.
+- `spiral-network` depends on `spiral-core` (not
+  `spiral-filter`); `spiral-filter` is a
+  `dev-dependency` only (for the integration test
+  in `tests/`).
+
+The process-global `FilterHook` is the
+`spiral_filter::runtime::Filter` default
+singleton (set via `set_global_filter` /
+read via `current()`). See
+`crates/spiral-filter/src/runtime/mod.rs:50-80`.
+
+---
+
+## URL host extractor (`match_url`)
+
+The runtime's per-request decision path is:
+
+```
+Client::request(url)
+  → FilterHook::decide(ctx)
+  → Filter::should_block(url)
+  → match_url::extract_host(url)
+  → hostname trie lookup
+  → Decision::Allow | Decision::Block
+```
+
+`match_url::extract_host(url: &str) -> Option<String>`
+extracts the host from a URL string. It is
+the boundary between "raw URL string from the
+network stack" and "host key for the
+hostname-trie index". It handles the common
+cases (`scheme://host[:port][/path][?query][#frag]`)
+and returns `None` for non-hierarchical URLs
+(`data:`, `javascript:`, `about:`, malformed
+input). See
+`crates/spiral-filter/src/runtime/match_url.rs:22-50`.
+
+---
+
+## Object-safety rationale
+
+`FilterHook` is **not object-safe**: it returns
+`Decision` (an owned enum) by value and uses
+no `&self` or `Box<dyn>` patterns. Consumers
+take it by generic bound
+(`fn decide(&self, hook: &impl FilterHook, ...)`),
+not as `Box<dyn FilterHook>`. This matches
+the "native trait, generic-bound consumer" pattern
+used by `Resolver` in `spiral-net` (see
+[ADR 0004](../decisions/0004-resolver-trait-async-design.md))
+and is the project's default for trait design.
+
+---
+
+## Do-not-touch zones (current)
 
 - The `Action` enum variants. Adding a variant is
   a breaking change.
@@ -107,6 +210,10 @@ tests for `spiral-filter`.
   a breaking change.
 - The default-policy constant. Changing what
   "worst offenders only" means requires an ADR.
+- The `FilterHook` / `Decision` / `Party` types
+  in `spiral-core` (post-ADR 0005). These are
+  the wire format for the network boundary;
+  moving them again requires another ADR.
 
 ---
 
@@ -114,8 +221,13 @@ tests for `spiral-filter`.
 
 - `docs/glossary.md` — the unbranded entry (and the
   "Spirit" priority clarification).
-- `AGENTS.md` § `spiral-filter` (forthcoming).
-- `docs/design-filter-rule-model.md` — the rule
+- `AGENTS.md` § `spiral-filter` (project operating contract).
+- `docs/architecture/design/filter-rule-model.md` — the rule
   model design.
 - `docs/audits/2026-06-15-baseline.md` §1.7 — the
-  M4.5 priority for `spiral-filter` runtime.
+  M4.5 priority for `spiral-filter` runtime
+  (now Packet 1.6.4; **shipped**).
+- [`docs/decisions/0005-filter-hook-architecture.md`](../decisions/0005-filter-hook-architecture.md) —
+  the architecture decision that moved
+  `FilterHook` / `Decision` / `Party` to
+  `spiral-core`.

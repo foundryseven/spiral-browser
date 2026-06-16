@@ -29,8 +29,17 @@ Every rule is one of three *kinds*:
 | Kind | Trigger | Consumer | Layer |
 |------|---------|----------|-------|
 | **Network** | Outgoing subresource fetch (request URL) | `spiral-net` before connection | L1 |
-| **Cosmetic** | DOM element already in the tree | `spiral-html` (parse-time) + `spiral-css` (user-origin stylesheet) | L2 + L3 |
-| **Policy** | CBA-derived page-level threshold | `spiral-html` + `spiral-css` (layout-aware evaluation) | L2 + L5 |
+| **Cosmetic** | DOM element already in the tree | `spiral-fmt` (parse-time) + the user-origin stylesheet (in `spiral-fmt::css`) | L2 + L3 |
+| **Policy** | CBA-derived page-level threshold | `spiral-fmt` + the user-origin stylesheet (layout-aware evaluation) | L2 + L5 |
+
+> **Pre-rename note.** The original table said
+> "`spiral-html` + `spiral-css`". `spiral-html`
+> was retired in Phase 1 Step 1.2 (2026-06-15) and
+> its HTML parser is now in `spiral-fmt::html`;
+> `spiral-css` is a deprecated shim that forwards
+> to `spiral-fmt::css::*` (per ADR 0001). The
+> "Cosmetic" and "Policy" rows should both read
+> "`spiral-fmt`" today.
 
 ---
 
@@ -302,8 +311,8 @@ as test fixtures.
 | Concern | Layer | Crate | When |
 |---------|-------|-------|------|
 | Network filter rules | L1 | `spiral-net` | Before connection |
-| Cosmetic CSS rules | L2 + L3 | `spiral-html` + `spiral-css` | Parse-time + user-origin sheet |
-| Procedural operators | L5 | `spiral-filter::runtime` | DOM mutation callback |
+| Cosmetic CSS rules | L2 + L3 | `spiral-fmt` (parse-time + user-origin stylesheet) | Parse-time |
+| Procedural operators | L5 | `spiral-filter::runtime` | DOM mutation callback (Phase 2+) |
 
 ---
 
@@ -449,9 +458,10 @@ crates/spiral-filter/
 │   │   ├── trie.rs                # HostnameTrie
 │   │   └── user_stylesheet.rs     # Origin::User sheet builder
 │   ├── runtime/
-│   │   ├── mod.rs                 # CosmeticRuntime: per-context state
-│   │   ├── sink.rs                # MutationSink adapter on spiral-dom
-│   │   └── procedural.rs          # JS-free procedural matcher
+│   │   ├── mod.rs                 # Filter struct (per-context; Packet 1.6.4 SHIPPED)
+│   │   ├── match_url.rs           # URL host extractor (Packet 1.6.4 SHIPPED)
+│   │   ├── sink.rs                # MutationSink adapter on spiral-dom (Phase 2+)
+│   │   └── procedural.rs          # JS-free procedural matcher (Phase 2+)
 │   ├── lists/
 │   │   ├── mod.rs                 # bundled filter lists
 │   │   ├── cba_defaults.toml      # CBA thresholds, human-editable
@@ -460,11 +470,22 @@ crates/spiral-filter/
 │       ├── mod.rs                 # user slider
 │       └── default.rs             # "worst offenders only" default
 └── tests/
-    ├── parse_test.rs              # EasyList syntax fixtures
-    ├── apply_test.rs              # apply filters to a DOM, assert removed
-    ├── procedural_test.rs         # :has, :has-text, :upward
-    └── mutation_test.rs           # simulate DOM add, assert runtime hides
+    ├── parse_test.rs              # EasyList syntax fixtures (Phase 5+)
+    ├── apply_test.rs              # apply filters to a DOM, assert removed (Phase 5+)
+    ├── procedural_test.rs         # :has, :has-text, :upward (Phase 2+)
+    └── mutation_test.rs           # simulate DOM add, assert runtime hides (Phase 2+)
 ```
+
+> **Cosmetic runtime is Phase 2+ future work.**
+> The `runtime/mod.rs` "CosmeticRuntime" referenced
+> in the original tree-builder plan above is **not
+> part of the 1.6.4 runtime**. Packet 1.6.4 ships
+> the network filter (`Filter` struct +
+> `match_url::extract_host`); the `CosmeticRuntime`
+> (per-context cosmetic-filter state, with
+> `MutationSink` and procedural matcher) lands
+> in Phase 2+. The current `runtime/mod.rs`
+> contains `Filter` + `match_url` only.
 
 ### 10.1 Dependencies
 

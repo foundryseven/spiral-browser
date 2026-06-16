@@ -1,6 +1,6 @@
 # System Architecture
 
-This document is a **living delta file** for `ARCHITECTURE.md`. It records only
+This document is the **delta file** for `ARCHITECTURE.md`. It records only
 changes, clarifications, and in-flight decisions that have not yet been
 reflected in the canonical `ARCHITECTURE.md`. If a detail exists in both files,
 `ARCHITECTURE.md` is authoritative.
@@ -14,10 +14,40 @@ design: process model, IPC layout, rendering pipeline, and data flows.
 
 The **June 2026 design pass** introduces a new top-level architectural bet
 that reframes the process model. It is documented in
-[`architecture-shared-everything.md`](architecture-shared-everything.md) and
-is the in-flight decision. The canonical `ARCHITECTURE.md` does not yet
+[`architecture/design/shared-everything.md`](architecture/design/shared-everything.md)
+and is the in-flight decision. The canonical `ARCHITECTURE.md` does not yet
 reflect it; this delta file is authoritative for the new design until the
 canonical doc is updated.
+
+---
+
+## Per-subsystem architecture
+
+The detailed per-subsystem design lives in
+[`docs/architecture/`](architecture/):
+
+- [`vortex.md`](architecture/vortex.md) — JavaScript engine
+- [`gyre.md`](architecture/gyre.md) — Layout engine
+- [`fmt.md`](architecture/fmt.md) — HTML+CSS parser
+- [`net.md`](architecture/net.md) — Networking
+- [`filter.md`](architecture/filter.md) — Content policy
+- [`context.md`](architecture/context.md) — Per-tab state
+
+## Design documents
+
+Design-time documents (architectural bets, exploration, design-time
+proposals) live in [`docs/architecture/design/`](architecture/design/).
+They are not SSOT; the implementation tracker and ADRs are. The design/
+folder is a working space for proposals.
+
+- [`shared-everything.md`](architecture/design/shared-everything.md) — The
+  shared-everything multi-process bet (June 2026 design pass).
+- [`capability-types.md`](architecture/design/capability-types.md) — The
+  capability-type-system design (Bet 1).
+- [`filter-rule-model.md`](architecture/design/filter-rule-model.md) — The
+  filter rule model (Bet 3).
+- [`vortex-heap.md`](architecture/design/vortex-heap.md) — The Vortex heap
+  and GC design.
 
 ---
 
@@ -66,7 +96,7 @@ runtime syscall check.
 resistant layout for secret-dependent data; no raw pointers in the shared
 arena; constant-time where crypto-relevant.
 
-**Full writeup:** [`docs/architecture-shared-everything.md`](architecture-shared-everything.md)
+**Full writeup:** [`docs/architecture/design/shared-everything.md`](architecture/design/shared-everything.md)
 
 #### Bet 2 — Vortex is JIT-optional, bytecode-first
 
@@ -218,9 +248,9 @@ updated to match.
       (✅ 2026-06-14)
 - [ ] `docs/active_context.md` reflects the new thesis, four bets, and
       three new crates (✅ 2026-06-14)
-- [ ] `docs/architecture-shared-everything.md` exists with the full
+- [ ] `docs/architecture/design/shared-everything.md` exists with the full
       Bet 1 writeup (✅ 2026-06-14)
-- [ ] `docs/phase1-tasks.md` is marked complete (✅ 2026-06-14)
+- [ ] `docs/archives/phase1-tasks.md` is marked complete (✅ 2026-06-14)
 - [ ] `ROADMAP.md` is updated to reflect the new memory budgets, WPT
       targets, and the three new crates (⏳ — next pass)
 - [ ] `PLAN.md` is updated to reflect the new thesis and the four

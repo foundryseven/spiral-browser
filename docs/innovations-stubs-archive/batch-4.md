@@ -246,7 +246,7 @@ progressive layout pattern.
 *correctness on the spec* (insertion doesn't break
 existing layout), not novelty.
 
-**Depends on.** Gyre box model, spiral-html streaming
+**Depends on.** Gyre box model, `spiral-fmt` streaming
 parser.
 
 ### #43 "Reuse Layout for Re-Renders" (Audited)

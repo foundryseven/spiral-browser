@@ -17,7 +17,9 @@ Before touching any file, confirm you have read in this
 order:
 
 - [ ] `AGENTS.md` (project operating contract)
-- [ ] `docs/active_context.md` (live sprint state)
+- [ ] `docs/active_context.md` (live Phase state)
+- [ ] `docs/implementation_tracker.md` (the source of
+  truth for status — Group → Phase → Step → Packet)
 - [ ] `docs/progress_ledger.md` (last 3 entries —
   to see what just shipped)
 - [ ] `docs/glossary.md` (so engine names make sense)
@@ -28,11 +30,12 @@ order:
   work touches a documented cross-cutting decision
   (e.g. `docs/decisions/0001-css-parser-spiral-fmt.md`
   before changing the CSS parser)
+- [ ] The relevant rule file in `.spiral/rules/`
+  (architecture, coding-standards, testing)
 
-If you cannot point to the unchecked tracker item you
-are picking up, **stop and ask**. The task tracker
-(`specs/GAP_ANALYSIS.md`, `docs/active_context.md`,
-`docs/progress_ledger.md`) is the source of truth;
+If you cannot point to the unchecked packet you
+are picking up in `docs/implementation_tracker.md`,
+**stop and ask**. The tracker is the source of truth;
 the user prompt may be a hint, but it is not a ticket.
 
 ---
@@ -75,6 +78,18 @@ from a real surface. Concretely:
   (`spiral-browser`) or have a unit-test entry that
   exercises its public API.
 
+**Self-check before claiming "done":**
+
+- [ ] Did I name the call sites (file:line if
+      specific)?
+- [ ] Did I name the test coverage that exercises
+      the path?
+- [ ] Did I name the end-to-end surface (a CLI
+      command, a `#[test]`, a fixture run, a render
+      output) that a human can verify?
+- [ ] Did the Wiring & Integration section in the
+      ledger entry satisfy all three of the above?
+
 Before claiming "done", run:
 
 ```
@@ -82,14 +97,18 @@ Before claiming "done", run:
 ```
 
 The script exits 1 on orphans; treat exit 1 as a build
-break. (The script can flag M4.5+ skeletons that
-genuinely are not yet wired — that is a feature, not
-a bug. The point is to know which is which.)
+break. (The script can flag Phase 1.6+ skeletons that
+genuinely are not yet wired — that is a feature, not a
+bug. The point is to know which is which.)
 
 Every ledger entry you write must include a
 **Wiring & Integration** section naming the call
 sites, the test coverage, and the end-to-end surface.
-See the M4.4.1 Item 4 ledger entry for an example.
+This requirement is **required**, not optional — it is
+the same shape as the four-field template in
+`AGENTS.md` SSOT Update Protocol and is the
+reviewer-agent's primary liveness check. See the
+Phase 1 Step 1.5 ledger entry for an example.
 
 ---
 
@@ -101,25 +120,50 @@ After completing any task loop, the implementer must:
    Use the existing entry format (date · agent · scope ·
    summary). Match the style of recent entries; the
    ledger is append-only.
-2. **Update `docs/active_context.md`** if sprint state,
+2. **Update `docs/active_context.md`** if Phase state,
    blockers, or "do not touch" zones changed. The
-   status emoji (`🟢 COMPLETE`, `🟡 IN PROGRESS`, `🔴
-   BLOCKED`) and the `Last updated:` header must be
+   status emoji and the `Last updated:` header must be
    current.
-3. **Append a Delta to `specs/GAP_ANALYSIS.md`** if
-   you closed a tracked gap (e.g. Item 4 added Delta
-   4 marking G1.2 fixed).
+3. **Tick the corresponding packet** in
+   `docs/implementation_tracker.md` (change `[ ]` to
+   `[x]`). This is the primary status update; the
+   tracker is the SSOT.
 4. **Create an ADR** under `docs/decisions/` if the
    task took a cross-cutting design choice. Use
    `0000-template.md`. The ADR is required if you
    renamed a crate, swapped a dep, or changed a
    public type (see the Decision Protocol table in
-   `AGENTS.md`).
+   `AGENTS.md`). Link the ADR from the relevant Step
+   in the tracker.
+
+**Decision Protocol compliance check (mandatory):**
+
+Before writing a task loop's code, ask:
+
+- Does the change fit the existing plan and use the
+  existing toolchain? → Proceed; mention in the next
+  ledger entry.
+- Is it a bug fix, small refactor, or docs tweak in a
+  single crate? → Proceed; mention in the next ledger
+  entry.
+- Does it rename a crate, swap a dep, change a public
+  type, or alter the build graph? → **STOP.** Write
+  an ADR first (`docs/decisions/NNNN-…md` from
+  `0000-template.md`). The ADR goes in *this* commit;
+  the implementation may follow.
+- Does it claim "novel", "first", "unique", "no prior
+  art", or "no shipped browser does this"? → **STOP.**
+  Run the Novelty Claims rule (see §Novelty Claims
+  in `AGENTS.md`) *before* writing code. The research
+  agent must check V8, SpiderMonkey, JSC, Servo,
+  Ladybird, Flow, Brave, and relevant academic
+  literature.
 
 If you are uncertain whether a change qualifies, the
 Decision Protocol table is the rule of thumb: if the
 fork is wider than a single-crate bug fix, write the
-ADR.
+ADR. **The ADR is in the same commit as the
+implementation, not in a follow-up commit.**
 
 ---
 
@@ -142,8 +186,9 @@ audit script is the ground truth for "wired or not".
 
 If the audit reports orphans in crates you did not
 touch, that is information, not a failure — the
-ledger will explain which are M4.5+ skeletons
-(un-wired by design) and which are real M4.4 leaks.
+tracker and ledger will explain which are Phase 1.6+
+skeletons (un-wired by design) and which are real
+Phase 1.x leaks.
 
 ---
 
@@ -186,5 +231,5 @@ leave a **HANDOVER** entry at the bottom of
   respect.
 - The verification command sequence to run on pickup.
 
-See the `HANDOVER: Item 4 mid-flight` entry dated
-2026-06-16 for a worked example.
+See the `HANDOVER: Phase 1 Step 1.5 mid-flight` entry
+dated 2026-06-16 for a worked example.

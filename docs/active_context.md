@@ -1,38 +1,42 @@
 # Active Context
 
 **Last updated:** 2026-06-16
-**Status:** 🟢 M4.5 Item 8 SHIPPED | off main @ 6a03da7 (work branch: `audit/m4-window`)
-**Current phase:** Phase 2 — Core Engine (Months 4–9) — *M4.4 complete; M4.5 Item 8 shipped; Items 9, 11, 12, 13 next*
-**Sprint state:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the live gap tracker. Deltas 1–4 recorded.
-**Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md)
-**SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`
-**Architecture bet:** [`docs/architecture-shared-everything.md`](architecture-shared-everything.md)
+**Status:** 🟢 Phase 1 Step 1.6 Packets 1.6.1–1.6.4 SHIPPED · Doc-drift audit (81 findings) complete; Wave A shipped (ADR 0005; packet 1.6.5 unblocked)
+**Current phase:** Phase 1 — Engines Foundation 🔄 IN FLIGHT
+*(Phase 1 Steps 1.1–1.5 done; Step 1.6 in flight; packets 1.6.1 ✅, 1.6.2 ✅, 1.6.3 ✅, 1.6.4 ✅, 1.6.5 ☐, 1.6.6–1.6.8 ☐)*
+**Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
+**Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
+**Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
+**SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`, `docs/system_architecture.md`
+**Architecture bet:** [`docs/architecture/design/shared-everything.md`](architecture/design/shared-everything.md)
 
 ## Test posture (verified 2026-06-16)
 
-- 429 tests across 53 binaries, 0 failing.
+- see `cargo test --workspace` for the live test
+  count (58 test binaries, 0 failing).
 - `cargo fmt --all -- --check` clean.
 - `cargo clippy --workspace --all-targets -- -D warnings` clean.
 - `cargo build --workspace` clean.
-- `./scripts/audit-orphan-exports.sh` flags 34 candidates across 10
-  crates — all M4.5+ skeletons (un-wired by design, see below).
-  **9 crates OK (all wired)**: spiral-core, spiral-crypto, spiral-css,
-  spiral-dom, spiral-fmt, spiral-gyre, spiral-ipc, spiral-render,
+- `./scripts/audit-orphan-exports.sh` flags 23 candidates across 6
+  crates — all Phase 1+ skeletons (un-wired by design, see below).
+  **13 crates OK (all wired)**: spiral-core, spiral-crypto, spiral-css,
+  spiral-dom, spiral-filter, spiral-fmt, spiral-gyre, spiral-ipc,
+  spiral-net, spiral-network, spiral-render,
   spiral-theme, spiral-ui. The M4.4 leaks detected by the audit on
   2026-06-16 (12 symbols) are all wired via `tests/<crate>_surface.rs`
   integration tests (see the M4.4 leak cleanup section below).
 
-## What's done in M4.4
+## What's done in Phase 1 / Step 1.5
 
-- Chunk 1 — `spiral-crypto` P0 fixes (sha2 + getrandom).
-- Chunk 1.5 — `spiral-html` retired.
-- Chunk 2A — `spiral-fmt` from-spec HTML parser.
-- Chunk 3 — DOM rewire.
-- M4.4.1 Item 4 — `spiral-fmt` from-spec CSS parser (Fork 1-B).
+- Step 1.1 — `spiral-crypto` P0 fixes (sha2 + getrandom).
+- Step 1.2 — `spiral-html` retired; `spiral-fmt` replaces it.
+- Step 1.3 — `spiral-fmt` from-spec HTML parser.
+- Step 1.4 — DOM rewire.
+- Step 1.5 — `spiral-fmt` from-spec CSS parser (Fork 1-B).
 - `spiral-css` deprecated shim, `cssparser` / `selectors` removed.
 - Crate renames: `spiral-layout` → `spiral-gyre`, `spiral-js` → `spiral-vortex`.
 - Vortex skeleton, `spiral-filter`, `spiral-context` crate skeletons.
-- 3 ADRs recording cross-cutting M4.4 decisions.
+- 5 ADRs recording cross-cutting Phase 1.5 / Step 1.5 decisions.
 
 ## External parity research landed (2026-06-16)
 
@@ -105,54 +109,58 @@ tests in `tests/` count as cross-crate consumers
 (integration tests are separate compilation units; the
 lib's `src/` is the declaration site only).
 
-Post-cleanup state: 429 tests pass, 0 failing, 9 of 19
-crates are "OK (all wired)", the remaining 10 are
-M4.5+ skeletons. The audit will flip each crate from
-"skeleton" to "OK" as the corresponding M4.5+ work
-lands.
+Post-cleanup state: see `cargo test --workspace` for
+the live count (58 test binaries, 0 failing, verified
+2026-06-16); 13 of 19 crates are "OK (all wired)", the
+remaining 6 are Phase 1+ skeletons. The audit will flip
+each crate from "skeleton" to "OK" as the corresponding
+Phase 1.6+ work lands. (Packets 1.6.1/1.6.3/1.6.4
+closed all orphans in `spiral-vortex`, `spiral-net`,
+`spiral-network`, and `spiral-filter`.)
 
-## What needs picking (M4.5+)
+## What needs picking (Phase 1.6+)
 
-### In-flight M4.5 items (unchanged)
+### In-flight Phase 1.6 packets
 
-- **M4.5 Item 9** — Vortex first functional slice (lexer → parser → AST → console.log interpreter).
-- **M4.5 Item 11** — `spiral-network` HTTP client (takes `R: Resolver` by generic bound; the consumer for M4.5 Item 8).
-- **M4.5 Item 12** — `spiral-filter` runtime hook (Bet 3).
-- **M4.6 Item 13** — Gyre box model + margins (first Gyre layout work).
+- **Packet 1.6.5** — Gyre box model + margins
+  (first Gyre layout work; no Taffy).
+- **Packet 1.6.2** — Vortex first functional slice
+  (lexer → parser → AST → console.log interpreter).
+  Entry point: `vortex_eval(script: &str) -> Result<JsValue, VortexError>`.
+- (1.6.1, 1.6.3, 1.6.4 SHIPPED — see the tracker.)
 
-### Recommended next M4.5/M5 picks (from competitive-parity research, 2026-06-16)
+### Recommended next packets (from competitive-parity research, 2026-06-16)
 
-The top-20 competitive gaps identified by the research are foundational P2 work that must land during the M4.5–M5 sprint window. Pick in this order:
+The top-20 competitive gaps identified by the research are foundational P2 work that must land during the Phase 1.6+ window. Pick in this order:
 
-**Sprint 1 (M4.5 wrap-up — after Items 9/11/12/13):**
-- [ ] **M4.5.14** — Adoption agency algorithm (WHATWG HTML §12.2.6.1). Required for correct rendering of real-world HTML.
-- [ ] **M4.5.15** — Active formatting elements list (WHATWG HTML §12.2.6.1). Required by adoption agency.
-- [ ] **M4.5.16** — Foster parenting (WHATWG HTML §12.2.6.1). Required for correct table parsing.
+**Packet 1.6.6 — Adoption agency algorithm (WHATWG HTML §12.2.6.1)** [retired to Step 2.8 / Packet 2.8.1]. Required for correct rendering of real-world HTML.
+**Packet 1.6.7 — Active formatting elements list (WHATWG HTML §12.2.6.1)** [retired to Step 2.8 / Packet 2.8.2]. Required by adoption agency.
+**Packet 1.6.8 — Foster parenting (WHATWG HTML §12.2.6.1)** [retired to Step 2.8 / Packet 2.8.3]. Required for correct table parsing.
 
-**Sprint 2 (M5):**
-- [ ] **M5.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
-- [ ] **M5.2** — DOM collection types: `NodeList`, `HTMLCollection`, `DOMTokenList`, `Attr`, `NamedNodeMap`, `DocumentType`.
-- [ ] **M5.3** — Global attributes IDL (id, class, style, title, lang, dir, hidden, tabindex, contenteditable, inert, popover).
-- [ ] **M5.4** — `data-*` custom data attributes (dataset IDL).
-- [ ] **M5.5** — `globalThis` (ECMA-262 §19.4.1).
-- [ ] **M5.6** — `structuredClone` (WHATWG HTML §8.2.7).
-- [ ] **M5.7** — `URL` + `URLSearchParams` (WHATWG URL §4).
+**Step 2.1 — Fragment parsing (Phase 2):**
+- [ ] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
+- [ ] **Packet 2.1.2** — DOM collection types: `NodeList`, `HTMLCollection`, `DOMTokenList`, `Attr`, `NamedNodeMap`, `DocumentType`.
+- [ ] **Packet 2.1.3** — Global attributes IDL (id, class, style, title, lang, dir, hidden, tabindex, contenteditable, inert, popover).
+- [ ] **Packet 2.1.4** — `data-*` custom data attributes (dataset IDL).
+- [ ] **Packet 2.1.5** — `globalThis` (ECMA-262 §19.4.1).
+- [ ] **Packet 2.1.6** — `structuredClone` (WHATWG HTML §8.2.7).
+- [ ] **Packet 2.1.7** — `URL` + `URLSearchParams` (WHATWG URL §4).
 
-**Sprint 3 (M5.5):**
-- [ ] **M5.5.1** — Quirk mode classifier (WHATWG HTML §12.1).
-- [ ] **M5.5.2** — `<noscript>` element (WHATWG HTML §4.6.7).
-- [ ] **M5.5.3** — `<template>` content document-fragment construction.
-- [ ] **M5.5.4** — `Proxy` + `Reflect` (ECMA-262 §10.5, §28.1). L complexity; can wait for M5.5.
+**Step 2.2 — Quirk + template:**
+- [ ] **Packet 2.2.1** — Quirk mode classifier (WHATWG HTML §12.1).
+- [ ] **Packet 2.2.2** — `<noscript>` element (WHATWG HTML §4.6.7).
+- [ ] **Packet 2.2.3** — `<template>` content document-fragment construction.
+- [ ] **Packet 2.2.4** — `Proxy` + `Reflect` (ECMA-262 §10.5, §28.1).
 
-**Pulled forward to M5 (from P4):**
-- [ ] **M5.8** — HTTP/1.1 client (basic page fetching). Already in flight as M4.5 Item 11.
-- [ ] **M5.9** — Cookie jar (basic session management).
+**Step 2.3 — HTTP basics:**
+- [ ] **Packet 2.3.1** — HTTP/1.1 client (basic page fetching). Wired in Packet 1.6.3; full implementation in 2.3.1.
+- [ ] **Packet 2.3.2** — Cookie jar (basic session management).
 
 ## Do-not-touch zones
 
-`spiral-vortex` internals beyond the skeleton (M4.5+ Item 9 work),
-`spiral-gyre` internals beyond the type-level surface (M4.6+ work),
-`spiral-sandbox`.
+`spiral-vortex` internals beyond the post-1.6.1 GC (Packet
+1.6.5 work), `spiral-gyre` internals beyond the type-level
+surface (Packet 1.6.5 work), `spiral-sandbox`.
 
 ---
 
@@ -243,7 +251,7 @@ any shipped browser:
   pointer arithmetic.
 - **Phase:** type system + Vortex isolate abstraction land in M4–M6.
   Runtime lands in M25–M36.
-- **Full writeup:** [`docs/architecture-shared-everything.md`](architecture-shared-everything.md)
+- **Full writeup:** [`docs/architecture/design/shared-everything.md`](architecture/design/shared-everything.md)
 
 ### Bet 2 — Vortex is JIT-Optional, Bytecode-First
 
@@ -366,19 +374,24 @@ browser's tech defeats the purpose of spiral.").
       `OriginArena`, `TaggedCell` with 4-byte header, `GcKey` with
       versioned+branded keys, stop-the-world mark-sweep. 22 new
       tests (GC went from 41 → 84 total). Old `Heap` type replaced.
-- [ ] Vendor `html5ever` into `spiral-fmt`; modernise deps
-- [ ] Vendor `cssparser` + `selectors` into `spiral-fmt`
-- [ ] Unified facade: `spiral_fmt::parse_html()`, `spiral_fmt::parse_css()`
+- [x] **`spiral-fmt` is the sole HTML + CSS parser** (from-spec
+      tokeniser + parser; no `html5ever`, no `markup5ever`, no
+      `tendril`, no `cssparser`, no `selectors`, no
+      `cssparser-macros`). The "vendor these" plan from
+      [`docs/audit-sprint-m4.md`](../audit-sprint-m4.md) §3
+      was retired in favour of the from-spec approach per
+      [`docs/decisions/0001-css-parser-spiral-fmt.md`](../decisions/0001-css-parser-spiral-fmt.md).
+- [x] Unified facade: `spiral_fmt::parse_html()`, `spiral_fmt::parse_css()`
 - [ ] `spiral_net::Resolver` trait wrapping hickory-dns
 - [ ] Gyre block layout — first pass (no Taffy in tree)
 - [ ] Vortex spike — `rusty_v8` hello world, isolate lifecycle
 
 **Design doc deliverables (this session):**
-- `docs/design-filter-rule-model.md` — full rule AST, CBA thresholds,
+- `docs/architecture/design/filter-rule-model.md` — full rule AST, CBA thresholds,
   custom parser approach (no `adblock` crate).
-- `docs/design-capability-types.md` — branded lifetimes, capability
+- `docs/architecture/design/capability-types.md` — branded lifetimes, capability
   tokens, `ContextOps` trait, `InProcess` / `Escalated` modes.
-- `docs/design-vortex-heap.md` — per-origin arenas, `TaggedCell`
+- `docs/architecture/design/vortex-heap.md` — per-origin arenas, `TaggedCell`
   header, `GcKey` versioning, phase-gated GC progression.
 
 ---
@@ -402,11 +415,13 @@ Gyre block layout. Continuing with M4.4 next.
   vortex heap). User decisions: custom-only, no external engine deps.
 - **M4 build pass (2026-06-15):** `spiral-context` skeleton (21 tests),
   `spiral-filter` skeleton (40 tests), Vortex GC rewrite (43 new tests).
-  Total: **266 tests passing workspace-wide**, 0 failures.
+  Total: 266 tests passing workspace-wide, 0 failures (see
+  `cargo test --workspace` for the live count).
 - **M4 rewire (2026-06-15):** `spiral-html` retired. `spiral-fmt` is the
   sole HTML parser. `html5ever`, `markup5ever`, `tendril` removed from
   workspace. Servo crates completely absent from dependency tree.
-  Total: **275 tests passing workspace-wide**, 0 failures.
+  Total: 275 tests passing workspace-wide, 0 failures (see
+  `cargo test --workspace` for the live count).
 
 ## Do Not Touch
 
@@ -414,7 +429,62 @@ Gyre block layout. Continuing with M4.4 next.
 - `spiral-sandbox` — Phase 4 (re-evaluated under Bet 1; sandbox becomes
   capability-typed, not OS-level, for default process model)
 - Vello fork (`spiral-vello`) — Phase 4
-- Widevine / EME binary integration — M36+ (v1.0). ClearKey only at M12.
+- Widevine / EME binary integration — Phase 9 / Packet 9.4.1 (v1.0).
+  ClearKey only until then.
+- **Architecture drift (2026-06-16, resolved by Wave A + ADR 0005).**
+  The canonical dep graph in `.spiral/rules/architecture.md:16-53`
+  was violated by packet 1.6.4 (`spiral-network` → `spiral-filter`
+  is the wrong direction per the "down-only" rule on lines 55–56).
+  Resolution: `FilterHook`, `Decision`, and `Party` moved from
+  `spiral-filter` to `spiral-core`; `spiral-filter` reverted to a
+  dev-dep of `spiral-network`. See
+  `docs/decisions/0005-filter-hook-architecture.md`. Future
+  packets that touch the dep graph must follow the Decision
+  Protocol in AGENTS.md (ADR before code).
+
+---
+
+## External assets (registered 2026-06-16)
+
+External infrastructure owned by the project, outside the repo. Recorded
+here so future agents don't reinvent or accidentally claim them.
+
+### Domain
+
+- **`spiralbrowser.com`** — registered. Reserved for the official
+  project site, update-check endpoint, and download hosting once
+  binaries exist. Do not park unrelated content on this domain.
+  No DNS records or hosting target are wired up in this repo today;
+  the asset registration is a note, not a deployment.
+
+### Cloudflare account (paid Workers plan)
+
+- **Account scope:** Cloudflare Workers paid plan is active. Eligible
+  products: Workers (incl. KV, Durable Objects, R2, D1, Queues),
+  Pages, Access, Turnstile, etc.
+- **Intended use (prod, when relevant code lands):** static asset
+  hosting for browser binary downloads, telemetry / crash-report
+  ingestion, "check for updates" endpoint, marketing site. R2 for
+  large binary storage. Workers for edge logic.
+- **Intended use (dev):** `wrangler dev` / `wrangler tail` for local
+  Workers emulation. Not useful today because no Workers code exists
+  in the repo; the local loop lights up once a packet adds the
+  first Worker (telemetry, update-check, or filter-list mirror).
+- **Intended use (CI):** `wrangler deploy --env preview` per PR once
+  a Worker exists. No CI integration to add now.
+- **Defer:** do **not** pre-write Workers code in this repo. No
+  packet in the current tracker requires it. The account is an
+  asset, not a deliverable.
+- **Cost posture:** the paid plan removes the 100k req/day free-tier
+  cap and unlocks Durable Objects + R2 + cron triggers. We do not
+  have a budget figure recorded here; the user owns the billing.
+
+### What's deliberately *not* recorded
+
+- Account IDs, zone IDs, API tokens, billing email, or any other
+  secret. Secrets belong in environment variables / 1Password / a
+  CI secret store, never in this file.
+- Specific Workers code. That's a packet, not an asset registration.
 
 ---
 
@@ -477,11 +547,11 @@ each sprint as the engines mature.
 
 ## SSOT Links
 
-- [`docs/architecture-shared-everything.md`](architecture-shared-everything.md) — full Bet 1 writeup
+- [`docs/architecture/design/shared-everything.md`](architecture/design/shared-everything.md) — full Bet 1 writeup
 - [`docs/progress_ledger.md`](progress_ledger.md) — change log
 - [`docs/plans/iteration-options.md`](plans/iteration-options.md) — dependency triage and 12-week plan
 - [`docs/audit-sprint-m4.md`](audit-sprint-m4.md) — M4 originality audit
-- [`docs/innovations-backlog.md`](innovations-backlog.md) — **single source of truth for the 70-idea backlog** (consolidates the former index, routing, top-10, and quality-novelty-summary files)
+- [`docs/innovations/backlog.md`](innovations/backlog.md) — **single source of truth for the 70-idea backlog** (consolidates the former index, routing, top-10, and quality-novelty-summary files)
 - [`docs/innovations-stubs-archive/`](innovations-stubs-archive/) — raw brainstorm inputs (5 batches, original and audited); traceability only
 - [`../specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) — **P0/P1/P2/P3 gap tracker across 4 engine sub-domains; priority stack and proposed first fill** (architect pass 2026-06-15)
 - [`ROADMAP.md`](../ROADMAP.md) — phase plan

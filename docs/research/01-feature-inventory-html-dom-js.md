@@ -478,7 +478,7 @@
   resolution) is the next year's work.
 - **"designed" never appears in this file.** Where there is a
   design doc or ADR for a row, it is in the relevant area (`docs/architecture/`
-  for Gyre, `docs/design-vortex-heap.md` for Vortex's heap), and
+  for Gyre, `docs/architecture/design/vortex-heap.md` for Vortex's heap), and
   the row says "not-started" because no code exists yet. This is
   deliberate — `designed` is reserved for code-in-flight cases
   (e.g. ongoing branch work) per the M4.4 review.

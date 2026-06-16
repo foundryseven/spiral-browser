@@ -7,7 +7,6 @@ description = "TLS and DNS resolution for Spiral Browser"
 
 [dependencies]
 spiral-core.workspace = true
-spiral-network.workspace = true
 rustls.workspace = true
 rustls-pemfile.workspace = true
 webpki-roots.workspace = true

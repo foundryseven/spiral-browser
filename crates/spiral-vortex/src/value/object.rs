@@ -13,7 +13,7 @@ use std::collections::HashMap;
 /// In Phase 1 (tree-walking interpreter) objects are ref-counted via
 /// `Rc<RefCell<...>>`. The bytecode VM will switch to GC-managed heap
 /// objects with `Handle<T>` pointers.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct JsObject {
     /// Named properties: `"foo" → JsValue`.
     pub properties: HashMap<String, JsValue>,

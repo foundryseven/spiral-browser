@@ -328,8 +328,8 @@ Spiral's *default* is stronger than Ladybird's best. Spiral's
 - Gyre block (M7–8), flex (M10–11), grid (M13–14) all written with
   the shared style cache. The first WPT fixture for shared cache
   hits is a unit test.
-- The `spiral-context` API is exercised by `spiral-html` parsing into
-  `spiral-dom` documents, which are then attached to a `Context`.
+- The `spiral-context` API is exercised by `spiral-fmt::html` parsing
+  into `spiral-dom` documents, which are then attached to a `Context`.
 
 ### M25–M36 (Phase 3) — The runtime
 
@@ -405,5 +405,35 @@ nothing to commit to early.
 - [`docs/progress_ledger.md`](progress_ledger.md) — change log
 - [`docs/system_architecture.md`](system_architecture.md) — architecture deltas
 - [`docs/plans/iteration-options.md`](plans/iteration-options.md) — dependency triage
-- [`ROADMAP.md`](../ROADMAP.md) — phase plan (to be updated)
-- [`ARCHITECTURE.md`](../ARCHITECTURE.md) — canonical architecture (to be updated)
+- `ROADMAP.md` — phase plan (Group → Phase → Step → Packet index)
+- `ARCHITECTURE.md` — canonical architecture (one-page index)
+
+## 9. Forks (decisions that bend the shared-everything bet)
+
+The shared-everything architecture is a single
+architectural bet, but it has had to be adjusted
+in two places since the design was written:
+
+- **Fork 1 — process-global JS context per
+  origin (1.6.1 GC rewrite).** Originally
+  the Vortex heap was a single global arena;
+  the 1.6.1 GC rewrite ([`vortex-heap.md`](vortex-heap.md))
+  split it into per-origin `OriginArena` chunks
+  so the GC can collect per-origin. This is
+  structural refinement, not a bet change.
+
+- **Fork 2 — process-global `FilterHook`
+  (ADR 0005).** The shared-everything bet
+  says the network stack calls into
+  `FilterHook::decide` for every outbound
+  request. ADR 0005 moved the three types
+  (`FilterHook` / `Decision` / `Party`) from
+  `spiral-filter` to `spiral-core` so the
+  network crate could depend on them without
+  pulling in the whole HTML/CSS/rule-DSL dep
+  graph. See
+  [`0005-filter-hook-architecture.md`](../decisions/0005-filter-hook-architecture.md).
+  This is a dep-arrow correction, not a bet
+  change.
+
+Both forks preserve the architectural bet.

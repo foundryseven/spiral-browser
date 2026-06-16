@@ -13,8 +13,8 @@ origin) and a mode (`InProcess` or `Escalated`); the
 type checker enforces that capabilities can flow
 only through compatible contexts.
 
-See `docs/architecture-shared-everything.md` and
-`docs/design-capability-types.md` for the design.
+See `docs/architecture/design/shared-everything.md` and
+`docs/architecture/design/capability-types.md` for the design.
 
 ---
 
@@ -105,10 +105,41 @@ integration tests.
 
 ---
 
+## Forward hooks
+
+The `spiral-context` API has one user-facing
+forward hook: `Context::run_script(&self, src:
+&str) -> Result<String, ContextError>`. The
+method is **declared** (it has the right
+signature and the `InProcess` impl exists) but
+**not yet wired to Vortex**: it accepts
+`"console.log('Hello, Spiral!')"` as a hard-coded
+stub return, and returns
+`Err(ContextError::ScriptExecution("Vortex not
+yet integrated"))` for everything else. The
+real implementation is Packet 1.6.2
+(`spiral-context` ↔ Vortex wiring) — the
+"what needs picking" item after 1.6.5
+(per [`docs/implementation_tracker.md`](../implementation_tracker.md)).
+
+The reason for declaring the method now is that
+the type signature pins down the contract:
+callers can write code that depends on the
+shape (`ctx.run_script(src)`) without
+caring about the implementation status, and
+the `ContextOps` trait (which abstracts over
+`InProcess` and `Escalated` modes) can be
+implemented by both modes. This is the same
+"declare-then-wire" pattern used for
+`FilterHook::decide` (Packet 1.6.4) and
+`Resolver::resolve` (Packet 1.6.3).
+
+---
+
 ## Related
 
-- `docs/architecture-shared-everything.md` — Bet 1
+- `docs/architecture/design/shared-everything.md` — Bet 1
   the architectural bet.
-- `docs/design-capability-types.md` — the
+- `docs/architecture/design/capability-types.md` — the
   capability-typed system design.
-- `AGENTS.md` § `spiral-context` (forthcoming).
+- `AGENTS.md` § `spiral-context` (project operating contract).

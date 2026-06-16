@@ -1,16 +1,29 @@
 # M4 Sprint 1 — Originality, Novelty, and License Audit
 
+> **⚠️ Historical document. Status as of 2026-06-15.** The live
+> novelty-claim methodology lives in
+> [`docs/agents/PROMPT_LIBRARY.md`](agents/PROMPT_LIBRARY.md)
+> + the "Novelty Claims" rule in [`AGENTS.md`](../AGENTS.md) +
+> [`docs/audits/2026-06-15-baseline.md`](audits/2026-06-15-baseline.md)
+> §5 (the baseline audit supersedes this file's sprint plan).
+> Retained for traceability. Per
+> [`docs/audits/2026-06-16-doc-drift.md`](audits/2026-06-16-doc-drift.md)
+> P1 #17, no per-finding status is updated here.
+
 **Date:** 2026-06-15
 **Auditor:** implementer agent (with research agents)
 **Scope:** all files added in the M4 first sprint (`spiral-context`,
 `spiral-filter`, Vortex GC rewrite) and the associated design docs
-(`docs/design-filter-rule-model.md`, `docs/design-capability-types.md`,
-`docs/design-vortex-heap.md`).
+(`docs/architecture/design/filter-rule-model.md`, `docs/architecture/design/capability-types.md`,
+`docs/architecture/design/vortex-heap.md`).
 
 **Related artifacts (each with one job):**
 - `docs/audits/2026-06-15-baseline.md` — functional baseline audit + M4.4–M4.6 prioritised plan
 - `specs/GAP_ANALYSIS.md` — live checkbox tracker, what is built / missing
+  (spec-only since 2026-06-16)
 - `docs/baseline-warnings.md` — `cargo check --workspace` warning drift baseline
+- `docs/audits/2026-06-16-doc-drift.md` — the doc-drift audit that
+  supersedes the M-suffix vocabulary in this file (2026-06-16)
 **Methodology:** four parallel research agents compared each artifact
 against canonical prior art (V8, SpiderMonkey, JSC, Boa, gc-arena,
 rust-gc, slotmap, generativity, qcell, ghost-cell, cap-std,
@@ -192,12 +205,12 @@ File: `crates/spiral-filter/src/lists/cba.rs`
 
 ### 6.2 Soften overclaimed novelty in design docs
 
-File: `docs/design-capability-types.md:9.2` and similar
+File: `docs/architecture/design/capability-types.md:9.2` and similar
 - Reword "implemented from scratch in Spiral-native code" to "re-implemented the brand and capability patterns from the prior art cited in Section 11"
 - Drop the "5th browser engine" framing as a uniqueness claim
 - Fix the "uBlock Origin blocks at runtime" claim (uBO on Firefox does response filtering)
 
-File: `docs/design-vortex-heap.md`
+File: `docs/architecture/design/vortex-heap.md`
 - Acknowledge SpiderMonkey's per-zone major GC (since 2014)
 - Frame the genuine novelty (origin in cell header) more precisely
 

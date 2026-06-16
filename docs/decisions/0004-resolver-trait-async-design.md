@@ -8,7 +8,8 @@
 >
 > **Status:** Accepted. 2026-06-16.
 >
-> **Driver:** M4.5 Item 8 (`spiral_net::Resolver`).
+> **Driver:** M4.5 Item 8 / **Packet 1.6.3**
+> (`spiral_net::Resolver` + `DnsResolver` stub).
 > **Deciders:** `ozore/custom` (Implementer) +
 > user.
 >
@@ -21,9 +22,10 @@
 
 ## Context
 
-M4.5 Item 8 introduces the `Resolver` trait, the
-canonical abstraction for DNS resolution. The trait
-method is `async fn resolve(&self, domain: &str) -> Result<Vec<IpAddr>>`.
+M4.5 Item 8 / **Packet 1.6.3** introduces the
+`Resolver` trait, the canonical abstraction for
+DNS resolution. The trait method is
+`async fn resolve(&self, domain: &str) -> Result<Vec<IpAddr>>`.
 
 Two design options were on the table:
 
@@ -104,13 +106,21 @@ as wired.
 
 ## Cross-cutting implications
 
-- **M4.5+ Item 11 (HTTP client).** The `spiral-
-  network` HTTP client will take `R: Resolver` by
-  generic bound, not `Box<dyn Resolver>`. The
-  pattern is inherited.
-- **M4.5+ Item 12 (filter runtime).** The filter
-  hook that takes DNS will also use the generic-
-  bound pattern.
+- **M4.5+ Item 11 / Packet 1.6.3 (HTTP client).**
+  The `spiral-network` HTTP client takes
+  `R: Resolver` by generic bound, not
+  `Box<dyn Resolver>`. The pattern is inherited
+  and **shipped** (see
+  [`crates/spiral-network/src/lib.rs`](../../crates/spiral-network/src/lib.rs)).
+- **M4.5+ Item 12 / Packet 1.6.4 (filter
+  runtime).** The `FilterHook::decide` method
+  is the same shape (native signature,
+  generic-bound consumer; not dyn-compatible).
+  The `FilterHook` / `Decision` / `Party` types
+  were moved from `spiral-filter` to
+  `spiral-core` per
+  [ADR 0005](0005-filter-hook-architecture.md)
+  to fix a dep-arrow violation.
 - **Future async traits.** Any new async trait in
   the workspace (Vortex's `JSRuntime` is one
   candidate) will use this pattern unless there is

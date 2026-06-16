@@ -19,7 +19,9 @@ Location: `crates/spiral-{name}/tests/*.rs`
 
 ```bash
 # Run integration tests for a crate
-cargo test --package spiral-html
+cargo test --package spiral-fmt
+cargo test --package spiral-vortex
+cargo test --package spiral-gyre
 ```
 
 ### Workspace Tests
@@ -88,8 +90,8 @@ use spiral_core::TabId;
 
 #[test]
 fn test_cross_crate_flow() {
-    // Test that spiral-html produces correct spiral-dom output
-    // when given HTML parsed by spiral-html
+    // Test that spiral-fmt produces correct spiral-dom output
+    // when given HTML parsed by spiral-fmt
 }
 ```
 

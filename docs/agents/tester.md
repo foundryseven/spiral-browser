@@ -139,11 +139,14 @@ When reporting test counts, always include:
 
 ---
 
-## 5. Fuzzing & Property Tests (M5+)
+## 5. Fuzzing & Property Tests (Phase 9)
 
 Spiral is on the cusp of needing fuzz harnesses. The
-M4 baseline audit flagged the need but deferred it to
-M5+. The tester is the steward of that future work.
+Phase 0 baseline audit flagged the need but deferred it
+to Phase 9 (Hardening). The tester is the steward of
+that future work. See
+[`docs/implementation_tracker.md`](../implementation_tracker.md)
+§ Phase 9 — Hardening § Step 9.3 — Fuzz harnesses.
 
 When it lands, the priorities are:
 

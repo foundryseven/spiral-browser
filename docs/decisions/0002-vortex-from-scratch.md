@@ -166,9 +166,11 @@ V8-shaped Rust code, `rusty_v8` is the right binding.
 
 ## Wiring & Integration
 
-- **Crates affected:** `spiral-vortex` (the new crate,
-  not the old `spiral-js` which was renamed in
-  ADR 0003).
+- **Crates affected:** `spiral-vortex` (the new
+  crate; the Vortex crate replaces the retired
+  `spiral-js`. The parallel Gyre rename
+  `spiral-layout` → `spiral-gyre` is documented
+  in [ADR 0003](0003-gyre-rename.md)).
 - **Call sites:** `spiral-vortex::Lexer`,
   `spiral-vortex::Parser`, `spiral-vortex::Bytecode
   Compiler`, `spiral-vortex::VM`, `spiral-vortex::GC`

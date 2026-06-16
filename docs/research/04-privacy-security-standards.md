@@ -401,7 +401,7 @@ These rows map to existing items in `specs/GAP_ANALYSIS.md`:
 | #93–95 (XSS/Trusted Types) | No existing reference. | New row for §4.1. |
 | #96–98 (Permission delegation) | §4.1 Permissions Policy `[ ]` | Subset of #42–45. |
 | #99–104 (Downloads) | No existing reference. | New row for §4.1. |
-| #105–107 (Site Isolation) | No existing reference. | New row for §4.1. Bet 1 (SEM) in `docs/architecture-shared-everything.md` designs a capability-type alternative. |
+| #105–107 (Site Isolation) | No existing reference. | New row for §4.1. Bet 1 (SEM) in `docs/architecture/design/shared-everything.md` designs a capability-type alternative. |
 | #110 (Clear-Site-Data) | No existing reference. | New row for §4.1. |
 | #111–114 (Reporting API/NEL) | No existing reference. | New row for §4.1. |
 | #115–122 (Fingerprinting) | §4.1 Anti-fingerprinting posture `[ ]` | Not started. |
@@ -418,7 +418,7 @@ These rows map to existing items in `specs/GAP_ANALYSIS.md`:
 - `spiral-filter` — full ad-filter policy engine at `crates/spiral-filter/`. Rule AST (`rule.rs`) includes `Action::Csp { policy }` for injecting CSP headers. Policy levels: Off → WorstOffenders → CommonAnnoyances → PrivacyFocused → Strict → Maximum. Not wired into the browser pipeline.
 - `spiral-crypto` — CSPRNG via `getrandom`, SHA-256 via `sha2` crate. Functional after Delta G0.1 fix. `generate_hex_token()` produces random hex for SRI hashes. No SRI validation logic exists.
 - `spiral-context` — capability-type skeleton (21 tests). `Origin`, `CapabilitySet`, `Context`, `ContextOps` defined. No runtime; types only.
-- Bet 1 (SEM) in `docs/architecture-shared-everything.md` — capability-typed security model with per-origin contexts in a single renderer process. OS-level sandbox as escalation for sensitive origins. No implementation beyond type skeleton.
+- Bet 1 (SEM) in `docs/architecture/design/shared-everything.md` — capability-typed security model with per-origin contexts in a single renderer process. OS-level sandbox as escalation for sensitive origins. No implementation beyond type skeleton.
 - Bet 3 (filter) in `crates/spiral-filter/` — content filter / privacy model with CBA-derived policy rules. CSP injection in rule actions exists structurally but is not executed.
 
 **What does not exist:**

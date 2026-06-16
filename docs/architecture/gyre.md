@@ -1,9 +1,14 @@
 # `spiral-gyre` (Gyre) — Layout Engine
 
 > **Brand:** Gyre. **Crate:** `spiral-gyre`. **Scope:**
-> block, flex, grid layout. **Status:** M4.4 type-level
-> surface in place; first layout slice (box model +
-> margins) is M4.6 Item 13.
+> block, flex, grid layout. **Status:** Step 1.6 /
+> Packet 1.6.5 next (the box-model + margin layout
+> slice); current code is the box model types
+> (`LayoutDimensions`, `BoxModel`, `EdgeSizes`)
+> + the `LayoutContext` scaffolding only. No
+> layout algorithm has been implemented yet;
+> 1.6.5 is the first slice that produces a real
+> laid-out tree from a real DOM.
 
 Gyre is Spiral's in-house layout engine. It computes
 the box model, block flow, flex layout, and grid

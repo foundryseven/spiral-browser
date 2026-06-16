@@ -66,12 +66,14 @@ pub enum NetPattern {
 }
 
 /// Party constraint.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Party {
-    Any,
-    First,
-    Third,
-}
+///
+/// **Moved to `spiral-core` (ADR 0005, 2026-06-16).** The trait
+/// `spiral_core::FilterHook` takes `Party` by value, so the type
+/// must live in `spiral-core` to avoid an upward dep from
+/// `spiral-core` to `spiral-filter`. This file now re-exports
+/// `Party` from `spiral-core` under the original `rule::Party`
+/// path; the type itself is defined in `spiral-core`.
+pub use spiral_core::Party;
 
 /// Domain constraint.
 #[derive(Debug, Clone)]

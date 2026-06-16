@@ -10,32 +10,35 @@ do not override).
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 2 — Core Engine (Months 4–9) |
-| **Sprint** | M4.5 (M4.4 complete: Chunks 1–3 + Item 4 shipped) |
-| **Active sprint state** | [`docs/active_context.md`](docs/active_context.md) |
+| **Phase** | Phase 1 — Engines Foundation 🔄 IN FLIGHT (Step 1.6 Vortex GC rewrite; packets 1.6.1–1.6.4 SHIPPED, packets 1.6.5 ☐, 1.6.6–1.6.8 retired to Step 2.8) |
+| **Phase 1.5 SSOT Restructure** | ✅ SHIPPED at `v0.0.0-bootstrap` (2026-06-16) |
+| **Active state** | [`docs/active_context.md`](docs/active_context.md) (live pointer) |
+| **Status SSOT** | [`docs/implementation_tracker.md`](docs/implementation_tracker.md) (Group → Phase → Step → Packet) |
+| **Architecture SSOT** | [`docs/system_architecture.md`](docs/system_architecture.md) |
 | **Glossary** | [`docs/glossary.md`](docs/glossary.md) (engine brand names) |
-| **ADRs** | [`docs/decisions/`](docs/decisions/) (cross-cutting decisions) |
-| **Role contracts** | [`docs/agents/`](docs/agents/) (implementer / reviewer / architect / tester) |
-| **Per-subsystem architecture** | [`docs/architecture/`](docs/architecture/) (gyre, vortex, fmt, …) |
-| **Task breakdown** | [`docs/phase1-tasks.md`](docs/phase1-tasks.md) |
-| **Architecture deltas** | [`docs/system_architecture.md`](docs/system_architecture.md) |
-| **Change log** | [`docs/progress_ledger.md`](docs/progress_ledger.md) |
-| **Iteration plans** | [`docs/plans/iteration-options.md`](docs/plans/iteration-options.md) |
-| **Full roadmap** | [`ROADMAP.md`](ROADMAP.md) |
+| **ADRs** | [`docs/decisions/`](docs/decisions/) (cross-cutting decisions; link from tracker) |
+| **Role contracts** | [`docs/agents/`](docs/agents/) (implementer / reviewer / architect / tester / security / release / onboarding / PROMPT_LIBRARY) |
+| **Per-subsystem architecture** | [`docs/architecture/`](docs/architecture/) (vortex, gyre, fmt, net, filter, context, design/) |
+| **Rule files** | [`.spiral/rules/`](.spiral/rules/) (architecture, coding-standards, testing) |
+| **Change log** | [`docs/progress_ledger.md`](docs/progress_ledger.md) (append-only) |
+| **Spec** | [`specs/GAP_ANALYSIS.md`](specs/GAP_ANALYSIS.md) (spec-only; status moved to tracker) |
+| **Roadmap** | [`ROADMAP.md`](ROADMAP.md) (one-page Group → Phase index) |
 | **Wiring audit script** | [`scripts/audit-orphan-exports.sh`](scripts/audit-orphan-exports.sh) |
 
-Read `docs/active_context.md` **before starting any task**. It is the single
-source of truth for what is in flight, what is blocked, and what you must not
-touch.
+Read [`docs/implementation_tracker.md`](docs/implementation_tracker.md) **before
+starting any task**. It is the single source of truth for what is in flight,
+what is blocked, and what you must not touch. The tracker is grouped by
+**Group → Phase → Step → Packet**; the time-based `Month` / `Sprint` / `Chunk` /
+`Item` vocabulary is **retired** as of 2026-06-16.
 
 ---
 
 ## Model Routing
 
-All agents in this repository use `ozore/custom` (1M context, 16k output).
-No model switching is configured at the repo level; the global config handles
-that. If you need a different model for a specific role, update
-`~/.config/opencode/opencode.jsonc`.
+All agents in this repository use `ozore/ozore/minimax-m3` (per the
+system prompt). No model switching is configured at the repo level; the
+global config handles that. If you need a different model for a
+specific role, update `~/.config/opencode/opencode.jsonc`.
 
 ---
 
@@ -44,14 +47,18 @@ that. If you need a different model for a specific role, update
 After completing any task loop, the **implementer agent** must:
 
 1. Append an entry to `docs/progress_ledger.md`.
-2. Update `docs/active_context.md` if sprint state, blockers, or "do not touch"
+2. Update `docs/active_context.md` if Phase state, blockers, or "do not touch"
    zones changed.
-3. Append a Delta to `specs/GAP_ANALYSIS.md` if a tracked gap was fixed.
+3. Tick the corresponding packet in `docs/implementation_tracker.md`
+   (change `[ ]` to `[x]`).
 4. Create an ADR under `docs/decisions/` if the task took a cross-cutting
-   design choice that future agents will need to find.
+   design choice; link the ADR from the relevant Step in the tracker.
+5. If a tracked gap from `specs/GAP_ANALYSIS.md` was fixed, the spec stays
+   unchanged (it is spec-only now); only the tracker packet ticks.
 
-The **reviewer agent** must flag a stale `active_context.md` (last update older
-than the current task) as a blocking issue.
+The **reviewer agent** must flag a stale `docs/implementation_tracker.md` or
+`docs/active_context.md` (last update older than the current task) as a
+blocking issue.
 
 ---
 
@@ -76,14 +83,16 @@ forward-reference, not a multi-day refactor.
 ## Quick Start
 
 1. Read `CODEX.md` for project overview
-2. Read `ARCHITECTURE.md` for system design
-3. Read `PLAN.md` for current phase and tasks
-4. Read `docs/active_context.md` for live sprint state
+2. Read `docs/system_architecture.md` for system design
+3. Read `docs/implementation_tracker.md` for current Phase and packets
+4. Read `docs/active_context.md` for live Phase state
 5. Skim `docs/glossary.md` so engine names make sense
 6. If picking up a numbered item, read the relevant ADR in `docs/decisions/`
-7. If the task is your first in the codebase, skim `docs/agents/<your-role>.md`
-8. Run `cargo build` to verify your environment
-9. Run `cargo test` to verify tests pass
+7. If the task is your first in the codebase, skim `docs/agents/onboarding.md`
+   then `docs/agents/<your-role>.md`
+8. Skim the relevant rule file in `.spiral/rules/`
+9. Run `cargo build` to verify your environment
+10. Run `cargo test` to verify tests pass
 
 ---
 
@@ -114,9 +123,9 @@ type(scope): description
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 Scopes: core, ipc, fmt, css, gyre, render, dom, vortex, net, network, ui, theme, browser, sandbox, filter, context, crypto
 
-> Note: scopes `js` and `layout` are deprecated as of M4.4 — they were the
-> pre-rename names. Use `vortex` and `gyre` instead. Old commits stay
-> unchanged for traceability.
+> Note: scopes `js` and `layout` are deprecated as of Phase 1 Step 1.2 — they
+> were the pre-rename names. Use `vortex` and `gyre` instead. Old commits
+> stay unchanged for traceability.
 
 Example:
 ```
@@ -174,7 +183,9 @@ ADR structure; the "Wiring & Integration" section is required.
   novel (combination is new)" or "configuration choice" are valid categories.
 - The M4 audit methodology (`docs/audit-sprint-m4.md`) is the canonical
   standard. Four rounds of retrospective correction taught us that overclaiming
-  is the default failure mode — gate it proactively.
+  is the default failure mode — gate it proactively. References to "M4" /
+  "M4.5" / "Item 8" in the historical record map to Phase 1.6 packets in
+  [`docs/implementation_tracker.md`](docs/implementation_tracker.md).
 - Design docs, progress ledger entries, and active_context updates are all
   in scope. Commit messages are not (too noisy).
 
@@ -213,7 +224,7 @@ ADR structure; the "Wiring & Integration" section is required.
   decision context.
 
 ### spiral-css
-- **Deprecated shim** (M4.4.1 Item 4, 2026-06-16). Forwards to
+- **Deprecated shim** (Phase 1 Step 1.5, 2026-06-16). Forwards to
   `spiral_fmt::css::*` and provides a `CssParser` adapter that calls
   `spiral_fmt::parse_css`. New code should depend on `spiral-fmt` directly.
 - Cascade order: user agent < user < author < author!important
@@ -226,8 +237,8 @@ ADR structure; the "Wiring & Integration" section is required.
 - Gyre is Spiral's in-house layout engine — fully custom, no Taffy
 - Box model is foundation — get this right first
 - Block layout: vertical stacking, margin collapse
-- Flexbox: custom implementation (Month 10–11)
-- Grid: custom implementation (Month 13–14)
+- Flexbox: custom implementation (Phase 2)
+- Grid: custom implementation (Phase 2)
 
 ### spiral-render
 - Vello for GPU rendering

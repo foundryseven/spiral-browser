@@ -68,6 +68,22 @@ If any section is "TBD", the ADR is not ready. Hold
 it back as **Status: Proposed** until the rest is
 filled in.
 
+### ADR → Step linkage
+
+After the ADR is written, **link it from the relevant
+Step in `docs/implementation_tracker.md`**. Format:
+
+```
+### Step X.Y — <title>
+- [ ] (packets)
+- ADR: [NNNN-slug](../decisions/NNNN-slug.md) (Status YYYY-MM-DD)
+```
+
+The tracker is the SSOT for "what is in flight". A floating
+ADR (not linked from a Step) is harder to find and easier
+to forget. The link is required before the ADR can move
+to **Status: Accepted**.
+
 ### ADR numbering
 
 Next number is `NNNN` where `NNNN` is one greater
@@ -157,7 +173,9 @@ Your job is done when:
 - The ADR is committed (or in the working tree, ready
   to commit when the user asks).
 - The active context reflects the new decision
-  (status emoji updated, sprint state adjusted).
+  (status emoji updated, Phase state adjusted).
+- The implementation tracker Step is linked to the ADR
+  (see "ADR → Step linkage" above).
 - The implementer has a concrete next step
   (a 5–10 line edit at a specific file:line, with
   the ADR cited).

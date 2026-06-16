@@ -4,7 +4,7 @@
 **Author:** implementer agent (synthesis from research passes)
 **Crate:** `crates/spiral-context/`
 **Phase:** M4 (skeleton) → M25 (runtime)
-**Implements:** Bet 1 from `docs/architecture-shared-everything.md`
+**Implements:** Bet 1 from `docs/architecture/design/shared-everything.md`
 
 ---
 
@@ -436,7 +436,7 @@ of Rust that we own entirely.
 ## 11. Sources
 
 - [GhostCell paper (ICFP 2021)](https://plv.mpi-sws.org/rustbelt/ghostcell/)
-- [Rustonomicon — PhantomData](https://doc.rust-lang.org/nomicon/phantom-data.html)
+- [Rustonomicon — PhantomData](https://doc.rust-lang.org/nomicon/phantomdata.html)
 - [`cap-std` docs](https://docs.rs/cap-std/) — filesystem capability model
 - [`ambient-authority` crate](https://github.com/sunfishcode/ambient-authority)
 - [`generativity` crate](https://docs.rs/generativity/) — minimal brand generator
@@ -445,3 +445,71 @@ of Rust that we own entirely.
 - [FreeBSD Capsicum](https://en.wikipedia.org/wiki/Capsicum_(Unix))
 - [seL4 capabilities tutorial](https://docs.sel4.systems/Tutorials/capabilities.html)
 - [`typed-builder` crate](https://docs.rs/typed-builder/)
+
+---
+
+## 12. Network filter hook (Packet 1.6.4 / ADR 0005)
+
+The `FilterHook` is the capability-typed boundary
+between the network stack and the policy engine.
+A `FilterHook` is **not** a capability in the
+type-system sense above (it is a free-standing
+trait, not a `CapabilitySet` member), but it
+follows the same "explicit grant, no implicit
+authority" principle: the network stack
+explicitly takes a `&impl FilterHook` (or a
+generic bound) on `Client::request`, and the
+caller must pass one. There is no global default
+"allow" hook in production — only the test
+suite's "always allow" mock.
+
+The 1.6.4 packet + ADR 0005 (2026-06-16) moved
+`FilterHook` + `Decision` + `Party` from
+`spiral-filter` to `spiral-core` so the network
+crate (`spiral-network`) could depend on them
+without depending on the whole
+HTML/CSS/rule-DSL dep graph. The current state:
+
+- `spiral_core::FilterHook` (the trait),
+  `spiral_core::Decision` (the `Allow` / `Block`
+  enum), and `spiral_core::Party` (`First` /
+  `Third`) are the canonical definitions.
+- `spiral-filter::lib.rs` re-exports them for
+  backwards compatibility:
+  `pub use spiral_core::{Decision, FilterHook, Party};`
+- `spiral-network` depends on `spiral-core`
+  (not `spiral-filter`); the integration test
+  that needs the full `Filter` impl is in
+  `spiral-filter` (the only consumer outside
+  the symbol's home crate that needs the
+  generic `Filter` struct, not the trait).
+
+The trait signature:
+
+```rust
+pub trait FilterHook {
+    fn decide(&self, ctx: &FilterContext) -> Decision;
+}
+
+pub enum Decision { Allow, Block { reason: String } }
+pub enum Party { First, Third }
+```
+
+`FilterContext` carries the request URL, the
+first-party origin, and a few flags
+(`is_third_party`, `resource_type`). The
+default `impl FilterHook for Filter`
+(`spiral-filter/src/runtime/mod.rs`) wraps the
+`CompiledFilter` + `PolicyLevel` pair, calls
+`match_url::extract_host` on the URL, and
+returns `Decision::Allow` or `Decision::Block`
+based on the hostname-trie lookup.
+
+See
+[`docs/decisions/0005-filter-hook-architecture.md`](../../decisions/0005-filter-hook-architecture.md)
+for the architecture decision rationale,
+[`docs/architecture/net.md`](../net.md) §"Filter
+hook integration" for the call-site wiring,
+and [`docs/architecture/filter.md`](../filter.md)
+§"Fork 2 — process-global `FilterHook`" for the
+runtime side.

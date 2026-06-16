@@ -1,0 +1,23 @@
+# gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "gitleaks config — Spiral Browser"
+
+# Allow-list for test fixtures and known patterns.
+# Add comments here only for false-positive reasons with context.
+[allowlist]
+description = "Allowlist for Spiral Browser"
+paths = [
+    # Test corpora — public test data, not secrets.
+    '''tests/wpt/''',
+    '''tests/html5lib-tests/''',
+    # Sample / fixture data, non-secret.
+    '''**/fixtures/''',
+    '''**/*.test.html''',
+    '''**/*.test.css''',
+    '''**/*.test.js''',
+]
+
+# Standard rule set.
+[extend]
+useDefault = true

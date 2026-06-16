@@ -19,7 +19,7 @@ without an entry here, that is a bug — add it.
 
 ## Policy / Runtime Layer
 
-> Note: "Spirit" in `docs/innovations-backlog.md:141` is a
+> Note: "Spirit" in `docs/innovations/backlog.md:141` is a
 > **priority category** (items that "wave" with the
 > capability-typed system), not a brand name for a crate.
 > It is listed here as a clarification, not as a brand.
