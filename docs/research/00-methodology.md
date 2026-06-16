@@ -241,3 +241,15 @@ commitment.
 The "Mobile is not in scope" item is **removed** from §9. Mobile and
 embedded surfaces are in scope per the locked decision above. The
 "AI assistants" and "cryptocurrency wallet" exclusions remain.
+
+## 11.2 Locked decisions from chunk 1 review (2026-06-16)
+
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | Prevalence column: MDN Baseline vs HTTP Archive vs per-engine? | **MDN Baseline** (current approach). Per-engine `yes/no/partial` is the engine notes column — no double-counting. |
+| 2 | Obsolete-but-parsed HTML elements (`<acronym>`, `<big>`, `<marquee>`, etc.) | **Collapsed single row.** Expanding adds noise, not insight. |
+| 3 | Masonry CSS layout feature — chunk 1 (CSS) or chunk 8 (developer)? | **Stay in chunk 1.** It's a CSS layout feature; chunk 8 is developer tools. |
+| 4 | Intl: row-per-builtin or row-per-locale-sensitivity? | **Row-per-builtin** (current approach). Locale-sensitivity is a property of a builtin, not a distinct capability. |
+| 5 | Early-stage engine "no" coverage — `no-with-plan` / `no-without-plan` qualifier? | **No qualifier.** Blanket "no" is honest; the matrix cannot reliably guess intent. |
+| 6 | `@scope` and `::scroll-marker*` — chunk 1 or chunk 8? | **`@scope` stays in chunk 1** (CSS at-rule). **`::scroll-marker*` stays in chunk 1** if it's in a shipped spec (CSS Pseudo-Elements 4); defer to chunk 7 if draft-only. |
+| 7 | Houdini worklets split — `@property` in chunk 1, worklets in chunk 6/8? | **`@property` in chunk 1** (CSS registered custom properties). **Worklets** (paint, layout, animation) go in **chunk 6** (APIs & runtime). The current split is correct. |
