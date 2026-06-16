@@ -171,6 +171,22 @@
 - [ ] PNG, JPEG, WebP, AVIF support; lazy + progressive loading
 - [ ] End-to-end: navigate → fetch HTML → parse → layout → render → Vortex run → event dispatch
 
+### Competitive parity additions (from M4.5 research, 2026-06-16)
+- [ ] Adoption agency algorithm (WHATWG HTML §12.2.6.1)
+- [ ] Active formatting elements list (WHATWG HTML §12.2.6.1)
+- [ ] Foster parenting (WHATWG HTML §12.2.6.1)
+- [ ] Fragment parsing algorithm (WHATWG HTML §12.4)
+- [ ] DOM collection types: `NodeList`, `HTMLCollection`, `DOMTokenList`, `Attr`, `NamedNodeMap`, `DocumentType`
+- [ ] Global attributes IDL (`id`, `class`, `style`, `title`, `lang`, `dir`, `hidden`, `tabindex`, `contenteditable`, `inert`, `popover`)
+- [ ] `data-*` custom data attributes (`dataset` IDL)
+- [ ] `globalThis` (ECMA-262 §19.4.1)
+- [ ] `structuredClone` (WHATWG HTML §8.2.7)
+- [ ] `Proxy` + `Reflect` (ECMA-262 §10.5, §28.1)
+- [ ] `URL` + `URLSearchParams` (WHATWG URL §4)
+- [ ] Quirk mode classifier (WHATWG HTML §12.1)
+- [ ] `<noscript>` element (WHATWG HTML §4.6.7)
+- [ ] `<template>` content document-fragment construction (bump to active sprint)
+
 **Exit Criteria:**
 - Block + flex + grid layout: common patterns render correctly
 - Text is shaped and rendered correctly (basic Latin, CJK start)
@@ -179,6 +195,16 @@
 - Can navigate to real websites over HTTP/HTTPS
 - Images load and display
 - `taffy` was never in `Cargo.toml` — Gyre is custom from day one
+
+### Competitive parity additions (from M4.5 research, 2026-06-16)
+- [ ] HTTP/1.1 client (basic page fetching)
+- [ ] SOP enforcement (origin checks)
+- [ ] CORS (simple requests + preflight)
+- [ ] Cookie jar (basic session management)
+- [ ] WebAssembly (basic Module/Instance/Memory)
+- [ ] Fetch API (basic `fetch()`)
+- [ ] ARIA reflection (`role`, `aria-*`, `label`, `labelledby`)
+- [ ] Keyboard navigation (tab order, focus management, `focus-visible`)
 
 ---
 
@@ -273,3 +299,18 @@
 - [ ] Accessibility (screen reader support, ARIA)
 - [ ] Internationalisation (ICU integration)
 - [ ] v1.0 release
+
+### Competitive parity additions (from M4.5 research, 2026-06-16)
+- [ ] DevTools (Elements + Console + Network panels)
+- [ ] Error pages (HTTP errors, cert errors, network errors)
+- [ ] View-source
+- [ ] Headless mode (for automation/testing)
+- [ ] Installers (Linux .deb + .rpm, macOS .dmg, Windows .exe)
+- [ ] Auto-update (differential, background, signed)
+- [ ] Code signing (EV cert, Apple Developer ID)
+- [ ] Default browser registration
+- [ ] Crash reporting (opt-in)
+- [ ] Enterprise policy (ExtensionSettings, SafeBrowsing, proxy)
+- [ ] WebExtensions MV3 (tabs, storage, content_scripts, action, popup)
+- [ ] Extension store / gallery
+- [ ] Custom themes (background image, accent colour)

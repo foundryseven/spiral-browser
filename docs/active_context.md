@@ -34,6 +34,15 @@
 - Vortex skeleton, `spiral-filter`, `spiral-context` crate skeletons.
 - 3 ADRs recording cross-cutting M4.4 decisions.
 
+## External parity research landed (2026-06-16)
+
+- **Worktree:** `research/competitive-parity` (base: `audit/m4-window` @ `5f7b6a4`)
+- **Docs:** `docs/research/` — 18 files, 1,571 capability rows, 11 domains
+- **Key finding:** Top-20 competitive gaps are HTML tree-builder depth (adoption agency, active formatting elements, foster parenting, fragment parsing) + DOM IDL surfaces (NodeList, HTMLCollection, DOMTokenList, Attr, dataset, structuredClone, URL)
+- **Priority changes:** 19 new P2 sprint items added to GAP_ANALYSIS §6; 1 item re-ranked (#10 → P2 sprint item)
+- **SSOT deltas:** Delta 5 (19 new gaps), Delta 6 (1 re-ranking) appended to specs/GAP_ANALYSIS.md
+- **Open questions for user:** Phase 2 backlog overflow, top-20 bias toward HTML/DOM, HTTP/1.1 pull-forward, cookie jar pull-forward, DevTools scope, Flow engine verification
+
 ## SSOT restructure (in working tree, uncommitted 2026-06-16)
 
 Adopted from the Zeus repo pattern:
