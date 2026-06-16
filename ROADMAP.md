@@ -222,7 +222,7 @@
 - [ ] Floating URL bar
 - [ ] Autocomplete suggestions
 - [ ] Navigation buttons (back/forward/reload/home)
-- [ ] Settings panel; cookie jar; form submission
+- [ ] Settings panel; form submission
 
 ### Month 31-33 — GPU rendering
 - [ ] GPU rendering pipeline via Vello
@@ -301,7 +301,7 @@
 - [ ] v1.0 release
 
 ### Competitive parity additions (from M4.5 research, 2026-06-16)
-- [ ] DevTools (Elements + Console + Network panels)
+- [ ] DevTools (full: Elements + Console + Network + Performance + Memory + Security + Application panels)
 - [ ] Error pages (HTTP errors, cert errors, network errors)
 - [ ] View-source
 - [ ] Headless mode (for automation/testing)

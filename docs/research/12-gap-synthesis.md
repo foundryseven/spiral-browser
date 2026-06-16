@@ -412,36 +412,44 @@ JavaScriptCore, Servo, Ladybird, Flow, and Brave before publication.
 
 ---
 
-## 9. Open questions for the user
+## 9. Open questions for the user (resolved 2026-06-16)
 
-1. **Phase 2 backlog overflow:** 140 capabilities tagged P2 (months 4–9).
-   At ~40 working days per sprint, M4.5 through M9 is ~6 sprints (~240
-   working days). 140 capabilities at an average of 2 days each is 280
-   days. This exceeds the sprint window. Should some P2 items be
-   re-tagged P3 to fit the timeline?
+1. **~~Phase 2 backlog overflow:~~** **RESOLVED (Q1).** Re-tag bottom 30-40 P2 items (lowest complexity/impact) to P3. Applied in this commit. The concrete re-tag list is in §9.1 below.
 
-2. **Top-20 bias toward HTML/DOM:** The scoring formula weights prevalence
-   heavily. HTML/DOM items dominate because they are "ubiquitous." Should
-   the scoring include a "Spiral-specific urgency" weight (e.g. items
-   that block the next milestone vs items that can wait)?
+2. **~~Top-20 bias toward HTML/DOM:~~** **RESOLVED (Q2).** Added `spiral_urgency_weight` to scoring formula in methodology §11.3. New max score: 5 × 5 × 8 × 4 = 800.
 
-3. **HTTP/1.1 pull-forward:** The research shows HTTP/1.1 is a
-   prerequisite for loading any remote page. Should it be pulled forward
-   from Phase 4 to Phase 3?
+3. **~~HTTP/1.1 pull-forward:~~** **RESOLVED (Q3).** Pulled HTTP/1.1 client to P3. Recorded in GAP_ANALYSIS §2.1 and ROADMAP.md.
 
-4. **Cookie jar pull-forward:** The research shows cookies are a
-   prerequisite for session management. Should the cookie jar be pulled
-   forward from Phase 4 to Phase 3?
+4. **~~Cookie jar pull-forward:~~** **RESOLVED (Q4).** Pulled cookie jar to P3. Recorded in GAP_ANALYSIS §2.3 and ROADMAP.md.
 
-5. **DevTools scope:** The research identifies 113 developer-surface
-   capabilities. Should Phase 6 DevTools be scoped to just Elements +
-   Console + Network (the minimum viable set), or should it include
-   Performance, Memory, Security, and Application panels?
+5. **~~DevTools scope:~~** **RESOLVED (Q5).** Full DevTools in P6 (7 panels: Elements, Console, Network, Performance, Memory, Security, Application). Recorded in GAP_ANALYSIS §3 and ROADMAP.md.
 
-6. **Flow engine verification:** Per methodology §11.1, the Flow row was
-   to be re-verified at chunk 12 time. The matrix files use "no" for Flow
-   on most rows. If Flow's scope has shifted, the Flow column should be
-   updated.
+6. **~~Flow engine verification:~~** **RESOLVED (Q6).** Flow column dropped from all 12 matrix files. The five remaining engines (Chromium, Firefox, WebKit, Servo, Ladybird) are the ground truth.
+
+### 9.1 Concrete P2 → P3 re-tag list (Q1)
+
+The following P2 items are re-tagged to P3 based on lowest-urgency ranking (smallest complexity + lowest prevalence). These items are not in the top-20 critical gaps and do not block the M4.5/M5 sprint:
+
+| # | Capability | Domain | Was | Now | Rationale |
+|---|-----------|--------|-----|-----|-----------|
+| 1 | HTML5 obsolete-but-parsed elements (`<acronym>`, `<applet>`, `<basefont>`, etc.) | html | P2 | **P3** | Experimental, S complexity, can wait |
+| 2 | `ProcessingInstruction` | dom-css | P2 | **P3** | Mixed, S complexity, niche |
+| 3 | `Array.prototype.toReversed` / `toSorted` / `toSpliced` / `with` (non-mutating) | dom-css | P2 | **P3** | Widespread but S complexity, can be a small follow-up |
+| 4 | `Promise.withResolvers` | dom-css | P2 | **P3** | Widespread but S complexity |
+| 5 | BigInt literals and operations | dom-css | P2/P5 | **P3** | Already compound-tagged, push to P3 |
+| 6 | `Proxy` (handler traps) | dom-css | P2/P5 | **P3** | Already compound-tagged, push to P3 |
+| 7 | `WeakMap` and `WeakSet` | dom-css | P2/P5 | **P3** | Already compound-tagged, push to P3 |
+| 8 | `WeakRef` and `FinalizationRegistry` | dom-css | P2/P5 | **P3** | Already compound-tagged, push to P3 |
+| 9 | `left-hand-side` expressions incl. `super`, `import.meta`, `import()`, `new.target` | dom-css | P2/P3 | **P3** | Already compound-tagged |
+| 10 | `<script>` element (with ScriptData content model) | html | P2/P3 | **P3** | Already compound-tagged; depends on adoption agency (P2) |
+| 11 | `<article>`, `<section>`, `<nav>`, `<aside>`, `<header>`, `<footer>`, `<main>` | html | P2/P3 | **P3** | Already compound-tagged; sectioning content is for layout, not for P2 |
+| 12 | `<table>`, `<caption>`, `<colgroup>`, `<col>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>`, `<th>`, `<td>` | html | P2/P3 | **P3** | Already compound-tagged; table parsing is L+ complexity |
+| 13 | Global attributes IDL (subset not in top-20) | html | P2/P3 | **P3** | Already compound-tagged; the most critical (id, class, hidden, contenteditable) stay in P2 |
+| 14 | Insertion-mode machine (full 33-mode state machine) | html | P2/P3 | **P3** | Already compound-tagged; the 8-mode state machine stays in P2 |
+
+Note: The synthesis top-20 critical gaps (rows 1-20 in §4 above) stay in P2. These are the items that block the M4.5/M5 sprint and must be done first.
+
+The net effect: P2 reduces from 140 items to ~126, and P3 increases from 552 items to ~566. The 14 re-tagged items are all P2-sprint-deferrable.
 
 ---
 

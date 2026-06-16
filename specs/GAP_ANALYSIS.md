@@ -161,7 +161,7 @@ item re-ranked to P2 sprint item (Delta 6: `<template>` content). See
 
 | Item | Status | Notes |
 |------|--------|-------|
-| `spiral-network` HTTP client via `hyper` | `[~]` | Stub at `crates/spiral-network/src/lib.rs:24-74`. `get`/`post` return 200 with empty body. No actual hyper call. |
+| `spiral-network` HTTP client via `hyper` | `[~]` | Stub at `crates/spiral-network/src/lib.rs:24-74`. `get`/`post` return 200 with empty body. No actual hyper call. **Pulled forward to P3 (2026-06-16, see Delta 7).** |
 | `spiral-net` DNS resolver via `hickory-dns` | `[~]` | Stub at `crates/spiral-net/src/lib.rs:25-56`. `resolve` returns `["127.0.0.1"]`. No `hickory_resolver::TokioResolver` integration. |
 | `spiral-net` TLS via `rustls` | `[ ]` | `TlsConfig` struct exists (`spiral-net/src/lib.rs:8-17`) but unused. No `rustls::ClientConfig` glue. |
 | `spiral_net::Resolver` trait | `[ ]` | M4 deliverable; not done. |
@@ -169,7 +169,6 @@ item re-ranked to P2 sprint item (Delta 6: `<template>` content). See
 | `spiral_network::Client` trait | `[ ]` | M6 deliverable. |
 | Connection pooling | `[ ]` | |
 | Redirect policy | `[ ]` | |
-| Cookie jar | `[ ]` | |
 | HTTP/2 (h2, h2c) | `[ ]` | |
 | HTTP/3 (quinn) | `[ ]` | |
 | WebSockets | `[ ]` | |
@@ -194,7 +193,7 @@ item re-ranked to P2 sprint item (Delta 6: `<template>` content). See
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Cookie jar | `[ ]` | Not present. |
+| Cookie jar | `[ ]` | Not present. **Pulled forward to P3 (2026-06-16, see Delta 7).** |
 | LocalStorage | `[ ]` | |
 | SessionStorage | `[ ]` | |
 | IndexedDB | `[ ]` | |
@@ -233,7 +232,7 @@ item re-ranked to P2 sprint item (Delta 6: `<template>` content). See
 | Floating URL bar / Omnibox | `[ ]` | |
 | Navigation buttons (back/forward/reload/home) | `[ ]` | |
 | Tab context menu | `[ ]` | |
-| DevTools element inspector, console, network | `[ ]` | |
+| DevTools (full: Elements + Console + Network + Performance + Memory + Security + Application panels) | `[ ]` | P6. **Full scope confirmed (2026-06-16, see Delta 7).** Performance, Memory, Security, Application panels are all needed for v1.0. |
 | Tab Provenance Graph (innovations #12) | `[ ]` | M12+ novelty. |
 | Find-in-page | `[ ]` | |
 | Downloads UI / manager | `[ ]` | |
@@ -511,34 +510,17 @@ listed in `docs/active_context.md`.
 
 ### Questions added 2026-06-16 (competitive-parity research)
 
-5. **Phase 2 backlog overflow:** 140 capabilities tagged P2 (months 4–9).
-   At ~40 working days per sprint, M4.5 through M9 is ~6 sprints (~240
-   working days). 140 capabilities at an average of 2 days each is 280
-   days. This exceeds the sprint window. Should some P2 items be
-   re-tagged P3 to fit the timeline?
+5. **~~Phase 2 backlog overflow:~~** **RESOLVED 2026-06-16 (Q1).** Re-tag bottom 30-40 P2 items (lowest complexity/impact) to P3. See Delta 7.
 
-6. **Top-20 bias toward HTML/DOM:** The scoring formula weights prevalence
-   heavily. HTML/DOM items dominate because they are "ubiquitous." Should
-   the scoring include a "Spiral-specific urgency" weight (e.g. items
-   that block the next milestone vs items that can wait)?
+6. **~~Top-20 bias toward HTML/DOM:~~** **RESOLVED 2026-06-16 (Q2).** Added `spiral_urgency_weight` to scoring formula. See Delta 7 and methodology §11.3.
 
-7. **HTTP/1.1 pull-forward:** The research shows HTTP/1.1 is a
-   prerequisite for loading any remote page. Should it be pulled forward
-   from Phase 4 to Phase 3?
+7. **~~HTTP/1.1 pull-forward:~~** **RESOLVED 2026-06-16 (Q3).** Pulled HTTP/1.1 client to P3. See Delta 7.
 
-8. **Cookie jar pull-forward:** The research shows cookies are a
-   prerequisite for session management. Should the cookie jar be pulled
-   forward from Phase 4 to Phase 3?
+8. **~~Cookie jar pull-forward:~~** **RESOLVED 2026-06-16 (Q4).** Pulled cookie jar to P3. See Delta 7.
 
-9. **DevTools scope:** The research identifies 113 developer-surface
-   capabilities. Should Phase 6 DevTools be scoped to just Elements +
-   Console + Network (the minimum viable set), or should it include
-   Performance, Memory, Security, and Application panels?
+9. **~~DevTools scope:~~** **RESOLVED 2026-06-16 (Q5).** Full DevTools in P6 (7 panels). See Delta 7.
 
-10. **Flow engine verification:** Per methodology §11.1, the Flow row was
-    to be re-verified at chunk 12 time. The matrix files use "no" for Flow
-    on most rows. If Flow's scope has shifted, the Flow column should be
-    updated.
+10. **~~Flow engine verification:~~** **RESOLVED 2026-06-16 (Q6).** Flow column dropped entirely. See Delta 7.
 
 ---
 
@@ -656,4 +638,15 @@ state for traceability.
 | Gap | Was | Now | Evidence |
 |-----|-----|-----|----------|
 | **#10** `<template>` content fragment; DOCTYPE; insertBefore | P2 | **P2 sprint item** (bump from general P2 to active sprint) | `02-competitive-matrix-index.md` §6, rank 5. Ubiquitous, not-started, P2. Blocks Web Components, Shadow DOM, declarative templates. |
+
+### Delta 7 — 2026-06-16 (User decisions on synthesis open questions)
+
+| Gap | Was | Now | Evidence |
+|-----|-----|-----|----------|
+| `spiral-network` HTTP client via `hyper` (basic HTTP/1.1) | P4 | **P3** (pulled forward) | User decision on synthesis Q3. Without HTTP/1.1, Spiral cannot load any remote page. Session 2026-06-16. |
+| Cookie jar (basic session management) | P4 | **P3** (pulled forward) | User decision on synthesis Q4. Session management is a prerequisite for most web apps. Session 2026-06-16. |
+| DevTools (full: Elements + Console + Network + Performance + Memory + Security + Application) | P6 minimum-viable (3 panels) | **P6 full scope** (7 panels) | User decision on synthesis Q5. Performance, Memory, Security, Application panels are all needed for v1.0. Session 2026-06-16. |
+| Methodology §11.3 — urgency weight | (not present) | **Added** | User decision on synthesis Q2. New `spiral_urgency_weight` factor in scoring formula. Session 2026-06-16. |
+| Methodology §11.3 — Flow engine column | 6 engines (Chromium, Firefox, WebKit, Servo, Ladybird, Flow) | **5 engines** (Flow dropped) | User decision on synthesis Q6. Flow is no longer a credible independent engine. Dropped from all 12 matrix files. Session 2026-06-16. |
+| Phase 2 backlog re-tag | 140 P2 items | **~100 P2 items, ~40 re-tagged P3** | User decision on synthesis Q1. Bottom 30-40 P2 items (lowest complexity/impact) re-tagged to P3 to fit the ~6-sprint window. Session 2026-06-16. |
 

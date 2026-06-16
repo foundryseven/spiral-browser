@@ -40,8 +40,9 @@
 - **Docs:** `docs/research/` — 18 files, 1,571 capability rows, 11 domains
 - **Key finding:** Top-20 competitive gaps are HTML tree-builder depth (adoption agency, active formatting elements, foster parenting, fragment parsing) + DOM IDL surfaces (NodeList, HTMLCollection, DOMTokenList, Attr, dataset, structuredClone, URL)
 - **Priority changes:** 19 new P2 sprint items added to GAP_ANALYSIS §6; 1 item re-ranked (#10 → P2 sprint item)
-- **SSOT deltas:** Delta 5 (19 new gaps), Delta 6 (1 re-ranking) appended to specs/GAP_ANALYSIS.md
-- **Open questions for user:** Phase 2 backlog overflow, top-20 bias toward HTML/DOM, HTTP/1.1 pull-forward, cookie jar pull-forward, DevTools scope, Flow engine verification
+- **SSOT deltas:** Delta 5 (19 new gaps), Delta 6 (1 re-ranking), Delta 7 (6 user decisions) appended to specs/GAP_ANALYSIS.md
+- **User decisions (2026-06-16):** Q1 re-tag P2 backlog; Q2 add `spiral_urgency_weight` to scoring; Q3 HTTP/1.1 pulled to P3; Q4 cookie jar pulled to P3; Q5 full DevTools in P6; Q6 Flow column dropped (5 engines remain)
+- **Open questions remaining:** None from the synthesis; all 6 resolved
 
 ## SSOT restructure (in working tree, uncommitted 2026-06-16)
 

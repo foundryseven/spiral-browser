@@ -253,3 +253,28 @@ embedded surfaces are in scope per the locked decision above. The
 | 5 | Early-stage engine "no" coverage — `no-with-plan` / `no-without-plan` qualifier? | **No qualifier.** Blanket "no" is honest; the matrix cannot reliably guess intent. |
 | 6 | `@scope` and `::scroll-marker*` — chunk 1 or chunk 8? | **`@scope` stays in chunk 1** (CSS at-rule). **`::scroll-marker*` stays in chunk 1** if it's in a shipped spec (CSS Pseudo-Elements 4); defer to chunk 7 if draft-only. |
 | 7 | Houdini worklets split — `@property` in chunk 1, worklets in chunk 6/8? | **`@property` in chunk 1** (CSS registered custom properties). **Worklets** (paint, layout, animation) go in **chunk 6** (APIs & runtime). The current split is correct. |
+
+## 11.3 Locked decisions from chunk 13 review (2026-06-16)
+
+| # | Question | Decision |
+|---|----------|----------|
+| 1 | Phase 2 backlog has ~140 P2 items in ~6 sprints (~240 working days). Re-tag lowest-urgency P2 items to P3? | **Re-tag the bottom 30-40 P2 items (by complexity/impact) to P3** to fit the sprint window. Concrete candidates identified in `12-gap-synthesis.md` §7. Applied to GAP_ANALYSIS §7 and ROADMAP.md in this commit. |
+| 2 | Top-20 gaps are biased toward HTML/DOM (high prevalence). Add a 'Spiral-specific urgency' weight? | **Add Spiral-specific urgency weight** to the scoring formula. Items that block the next milestone (e.g. adoption agency blocks any real-world page) score higher. The weight is applied retroactively to the top-20 in `02-competitive-matrix-index.md` and forward to future re-scoring. |
+| 3 | HTTP/1.1 is currently Phase 4. Pull forward to Phase 3 (months 10-24)? | **Pull HTTP/1.1 client forward to P3.** Without it, Spiral cannot load any remote page. Recorded in GAP_ANALYSIS §2.1 and ROADMAP.md Phase 3. |
+| 4 | Cookie jar is currently Phase 4. Pull forward to Phase 3 (with HTTP/1.1)? | **Pull cookie jar forward to P3.** Session management is a prerequisite for most web apps. Recorded in GAP_ANALYSIS §2.3 and ROADMAP.md Phase 3. |
+| 5 | DevTools in P6. Minimum-viable (Elements + Console + Network) or full DevTools? | **Full DevTools in P6.** Performance, Memory, Security, Application panels are all needed for v1.0. The P6 timeline is long enough (months 61-84) to accommodate all panels. |
+| 6 | Flow engine verification. Drop or keep? | **Drop Flow column entirely.** The five remaining engines (Chromium, Firefox, WebKit, Servo, Ladybird) are the ground truth. The Flow column has been removed from all 12 matrix files; the index `02-competitive-matrix-index.md` and synthesis `12-gap-synthesis.md` have been updated to reflect the 5-engine scoring. |
+
+### Q2 scoring formula update (urgency weight)
+
+The new formula is `prevalence_weight × spiral_gap_weight × phase_urgency × spiral_urgency_weight` (max score = 5 × 5 × 8 × 4 = 800).
+
+`spiral_urgency_weight`:
+- 4: blocks the next milestone (e.g. adoption agency blocks any real-world page)
+- 3: blocks the current milestone (e.g. cookie jar blocks session management)
+- 2: blocks a future milestone (e.g. DevTools blocks 1.0)
+- 1: does not block any specific milestone (e.g. niche/experimental features)
+
+For the existing top-20 (all of which are HTML/DOM/JS foundations), the urgency weight is 4 (they all block the next milestone). The top-20 ordering is unchanged because the relative urgency is uniform within the group.
+
+For future re-scoring, the new weight is applied to every row. The top-20 will shift toward items that are both prevalent AND specifically block Spiral's next milestone, rather than items that are merely prevalent.

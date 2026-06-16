@@ -176,10 +176,7 @@ the current M4.5/M5 sprint would unblock the most downstream capability.
    the scoring include a "Spiral-specific urgency" weight (e.g. items
    that block the next milestone vs items that can wait)?
 
-3. **Flow engine verification:** Per methodology §11.1, the Flow row was
-   to be re-verified at chunk 12 time. The matrix files use "no" for Flow
-   on most rows. If Flow's scope has shifted (retired, merged, or
-   changed engine family), the Flow column should be updated.
+3. **~~Flow engine verification:~~** **RESOLVED 2026-06-16 (Q6).** Flow column dropped from all 12 matrix files. The five remaining engines (Chromium, Firefox, WebKit, Servo, Ladybird) are the ground truth.
 
 4. **"Do-not-touch" items:** Only 3 rows are marked `do-not-touch`. This
    seems low. Is the architecture-bet exclusion working as intended, or
