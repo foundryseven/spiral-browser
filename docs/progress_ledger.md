@@ -4360,5 +4360,27 @@ identified. Key findings:
   - `implementation_tracker.md:508` — Priority queue reflects Packet 2.1.1 shipped.
 - **Status:** Shipped Packet 2.1.1. **Next packet: 2.1.2 (Quirk mode classifier, WHATWG HTML §12.1)** — required for the parser to detect HTML-vs-quirks mode based on the document's DOCTYPE, which feeds into Packet 2.1.4 (template content construction) and Packet 2.2 (DOM collection types).
 
+## 2026-06-17 — Logo integration work committed to main (`e762d09`)
+
+- **What:** Committed the previously-uncommitted logo-integration work that the earlier ledger entry (2026-06-17 "Logo Integration") described but never landed as a git commit. This was a pre-flight gate before opening the `refactor/no-code-agentic` branch (user-mandated: existing in-flight work lands on main first).
+- **Commit:** `e762d09 feat(browser,imagedecoder,render): wire spiral-browser startup logo via spiral-imagedecoder (ADR 0006)` (13 files, +358/-142).
+- **Notes on shape:**
+  - ADR 0006 (`docs/decisions/0006-browser-image-decoder-dep.md`) was untracked and is now committed. The decision text references the `display_list.rs`, `audit-doc-drift.sh`, and `README.md` paths as `file://` URLs — these will render as broken links in GitHub markdown. Out of scope for this commit (would touch the ADR's prose); flagged for the `refactor/no-code-agentic` branch's doc-cleanup pass.
+  - Five files (`spiral-fmt/src/html/fragment.rs`, `tree.rs`, `tests/e2e.rs`, `spiral-imagedecoder/src/lib.rs`, `spiral-render/src/software.rs`) had pre-existing rustfmt drift on `main` HEAD (commit `5778a41`). `cargo fmt --all` reformatted them as part of getting `just verify` to pass. This is mechanical — no semantic change — but worth a separate `chore(fmt): rustfmt five pre-existing files on main` split if the user prefers cleaner history. (Default for now: rolled into the feat commit because the drift blocked the verify gate.)
+  - Stash `stash@{0}` (WIP on `bbdb558`, the adoption-agency WIP) was superseded by commit `ac5ab31 feat(fmt,dom): foster parenting (Packet 2.8.3)` and dropped after inspection.
+- **Wiring & Integration (from prior entry, confirmed by this commit):**
+  - `crates/spiral-browser/src/display_list.rs` — startup path now decodes the logo PNG via `spiral-imagedecoder` and emits `RenderOp::DrawImage`.
+  - `crates/spiral-render/src/software.rs` — `SoftwareRenderer::draw_image` consumes the op.
+  - `crates/spiral-paint/src/lib.rs` — `RenderOp::DrawImage` variant.
+  - `crates/spiral-imagedecoder/src/lib.rs` — `ImageDecoder::decode` Png path (existing API, new helper exposed).
+  - End-to-end surface: `cargo run --bin spiral-browser` → renders the bundled logo into `target/hello-world.png`.
+- **Tracker note:** the prior ledger entry claimed it ticked the tracker, but no Phase packet covers logo integration today. The work landed out-of-band of the Group → Phase → Step → Packet hierarchy. Acceptable for this pass (the work is shipped and gated), but a future packet should formalise the "Hello World startup page" as a tracked deliverable so future logo/icon work has a home.
+- **Verification:**
+  - `just verify` green: `cargo fmt --all -- --check` ✓, `cargo clippy --workspace --all-targets -- -D warnings` ✓, `cargo test --workspace` ✓ (24 + 4 in the affected crates, all pass), `cargo build --workspace` ✓.
+  - `./scripts/audit-orphan-exports.sh` → 0 findings.
+  - `./scripts/audit-doc-drift.sh` → 0 findings.
+- **SSOT updates (this entry only):** ledger entry appended, no tracker tick (none appropriate).
+- **Status:** Shipped to main as `e762d09`. Ready to fork `refactor/no-code-agentic` from `e762d09`.
+
 
 
