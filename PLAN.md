@@ -1,199 +1,275 @@
 # Spiral Browser — Implementation Plan
 
-**Project:** Spiral Browser
-**Language:** Rust
-**License:** MPL-2.0
-**Target Platforms:** Windows, macOS, Linux
-**Scope:** Full production browser (6–8 year roadmap)
+> **Project:** Spiral Browser
+> **Language:** Rust (edition 2021)
+> **License:** MPL-2.0
+> **Target platforms:** Windows, macOS, Linux
+> **Scope:** Full production browser, 6–8 year horizon
+> **Status:** Alpha. Phase 0 complete. Phase 1.5 (SSOT Restructure) shipped at `v0.0.0-bootstrap`. Phase 1 in flight.
 
 ---
 
-## 1. Project Vision
+## 1. Project vision
 
-Spiral is a fully independent web browser built from scratch in Rust. Not based on Chromium, WebKit, or Gecko. Features a custom rendering engine, custom layout engine, and the **Vortex** JavaScript engine — a from-scratch Rust JS engine with its own lexer, parser, AST, bytecode compiler, and interpreter. Zen-browser-inspired UI: vertical sidebar tabs, floating URL bar, and single-accent-colour theming.
+Spiral is a fully independent web browser, built from scratch in Rust. The entire web platform stack — HTML5 parser, CSS parser, layout engine, JavaScript engine, paint, GPU render, networking, IPC — is written in Spiral-native Rust. We do not depend on Chromium, WebKit, Gecko, or any browser-engine code (HTML5 parser, CSS parser, layout engine, JS engine, or otherwise). The three engines that bear the Spiral brand (Gyre, Vortex, Fmt) are fully in-house.
 
-### Engine Identity
+### Why?
 
-Spiral's stack has two custom-built engines that bear the Spiral brand:
+The web runs on a three-engine monoculture. The same vulnerabilities appear in three places. The same standards drift propagates to three billion users. The same architectural assumptions are baked into every browser you can install. The result is a brittle, opaque, surprisingly homogeneous web platform.
 
-| Engine | Crate | Role | Architecture |
-|--------|-------|------|--------------|
-| **Gyre** | `spiral-gyre` | Layout (block, flex, grid) | Fully in-house Rust. No Taffy. |
-| **Vortex** | `spiral-vortex` | JavaScript | From-scratch Rust JS engine. `rusty_v8` available behind `v8` feature for CI compliance testing only. |
+Spiral exists to be a fourth engine — different in architecture, auditable in code, and written in a memory-safe language. The aim is not to beat V8 on a benchmark. The aim is to prove that an independent, from-scratch browser is buildable in 2026, that the engineering is tractable, and that the result is a system the people who depend on it can actually inspect.
 
-Vortex is **not** a V8 wrapper. It is a ground-up Rust JavaScript engine with its own lexer, parser, AST, bytecode compiler, mark-sweep GC, and (future) baseline JIT — comparable in ambition to Ladybird's LibJS or QuickJS. Google's V8 (`rusty_v8`) is available only behind a `v8` Cargo feature flag for CI compliance testing: the test harness runs the same JS snippets through both Vortex and V8 and compares outputs.
+### Aims
 
-Everything else (HTML/CSS parser, paint, network, GPU) is written in Spiral-native Rust with thin upstream wrappers (e.g. hyper, hickory-dns, rustls, vello, wgpu). The two engines above — plus the from-spec HTML+CSS parser in `spiral-fmt` (which the docs/glossary calls **Fmt**) — are the parts of the stack that carry the Spiral brand.
+1. **Engine independence.** No browser-engine code vendored. Three branded engines (Gyre, Vortex, Fmt) plus two in-design branded subsystems (Filter, Context).
+2. **Memory safety end-to-end.** Safe Rust across the render path. The only `unsafe` is in audited dependencies and FFI shims with narrow surface.
+3. **From-spec implementations.** HTML5, CSS Syntax Level 3, CSS Display + Box Model — all cited inline.
+4. **Capability-typed page context.** A research-grade runtime (Filter + Context) that gates cross-origin and sensitive operations at compile time.
+5. **A working browser, eventually.** Phase 1 ships a render-only browser. Phase 9 ships a production browser.
+6. **Open source, MPL-2.0, day one.** Every commit, every decision, every metric — public.
 
-### Core Principles
-- **Independence:** No browser engine dependencies (Chromium/WebKit/Gecko)
-- **Open Source:** MPL-2.0 license, all dependencies permissive/open-source
-- **Security:** Per-platform sandboxing, memory-safe Rust
-- **Performance:** GPU-accelerated rendering, multi-process architecture
-- **Design:** Zen-browser-inspired clean UI, auto-hide chrome, accent colors
+### Non-aims
 
----
-
-## 2. Architecture Summary
-
-```
-┌─────────────────────────────────────────────────┐
-│                  Browser Process                 │
-│  (Tab management, IPC routing, UI chrome)        │
-├──────────┬──────────┬──────────┬────────────────┤
-│ Renderer │ Renderer │ Network  │ GPU            │
-│ Process  │ Process  │ Process  │ Process        │
-│ (per-tab)│ (per-tab)│ (HTTP)   │ (wgpu/vello)   │
-└──────────┴──────────┴──────────┴────────────────┘
-```
-
-- **Browser Process:** Main entry, spawns child processes, manages tabs, renders UI chrome
-- **Renderer Process:** One per tab, parses HTML/CSS, computes layout, builds display list
-- **Network Process:** HTTP client, DNS resolution, TLS, connection pooling
-- **GPU Process:** wgpu device management, Vello rendering, texture allocation
-
-**IPC:** Unix domain sockets (Linux/macOS), named pipes (Windows), tokio async, bincode serialization.
-
-**Sandboxing:** seccomp-bpf + Landlock (Linux), Seatbelt (macOS), Restricted Token + Job Object (Windows).
+- **Performance leadership.** We are not faster than V8. We are not aiming to be. We are aiming to be *correct*, *independent*, and *inspectable*.
+- **A privacy browser.** Privacy is a use case the capability types *enable*; we are not building it in the engine.
+- **A drop-in Chrome replacement.** Sites that depend on Chrome-only Web Platform features will not work. We track the standards, not the implementation shortcuts.
+- **A proprietary codebase.** Everything is public.
 
 ---
 
-## 3. Crate Structure
+## 2. Core principles
 
-```
-C:\Browser Project\
-├── Cargo.toml                    # Workspace root
-├── .github/workflows/ci.yml     # CI/CD
-├── resources/
-│   ├── icons/                    # App icons (ICO, ICNS, SVG)
-│   ├── fonts/                    # Bundled fonts
-│   ├── locales/                  # i18n translation files
-│   └── profiles/                 # Default profile templates
-├── tests/
-│   └── wpt/                      # Web Platform Tests integration
-├── benches/
-│   └── layout/                   # Layout engine benchmarks
-└── crates/
-    ├── spiral-core/              # Shared types, IPC protocol, config
-    ├── spiral-browser/           # Browser process (main entry, tab management)
-    ├── spiral-fmt/               # From-spec HTML5 tokeniser + tree builder, CSS parser
-    ├── spiral-css/               # Deprecated shim → spiral-fmt
-    ├── spiral-gyre/              # Gyre — custom layout engine (block, flex, grid)
-    ├── spiral-render/            # 2D GPU renderer (Vello + wgpu)
-    ├── spiral-vortex/            # Vortex — from-scratch JavaScript engine
-    ├── spiral-dom/               # DOM tree (Node, Element, Document)
-    ├── spiral-paint/             # Display list + compositing
-    ├── spiral-network/           # HTTP client (hyper + hickory-dns), wrapped
-    ├── spiral-ipc/               # IPC transport layer
-    ├── spiral-sandbox/           # Process sandboxing (Landlock/Seatbelt/JobObject)
-    ├── spiral-ui/                # Browser chrome (tabs, URL bar, controls)
-    ├── spiral-theme/             # Theme engine (Zen-style tokens)
-    ├── spiral-net/               # TLS + DNS resolution wrappers (rustls, hickory-dns)
-    ├── spiral-crypto/            # TLS primitives wrapper
-    ├── spiral-gpu/               # GPU abstraction (wgpu)
-    ├── spiral-imagedecoder/      # Image decoding (PNG, JPEG, WebP, AVIF)
-    ├── spiral-context/           # Capability-typed API (Bet 1)
-    └── spiral-filter/            # Compile-time HTML/CSS policy (Bet 3)
-```
+1. **Independence over performance.** A slower browser you can inspect beats a faster browser you cannot.
+2. **From-spec over upstream.** If the spec says so, we do what the spec says. If the spec is ambiguous, we file an issue.
+3. **Memory safety as architecture, not patch.** No `unsafe` in the engines. No `unsafe` in the parsers. `unsafe` only at the FFI boundary, with a safety comment per block.
+4. **Per-packet completeness.** A `pub` symbol is not done when it compiles; it is done when an external consumer uses it. The `audit-orphan-exports.sh` gate enforces this. See `docs/decisions/0006-cross-cutting-features.md`.
+5. **The brand belongs to the engine.** A new engine gets a name. A wire protocol does not.
+6. **Honest novelty claims.** Any claim of "novel", "first", "unique", "no prior art" is verified by a research agent before committing. The M4 audit methodology is the canonical standard.
 
 ---
 
-## 4. Crate Dependencies
+## 3. Engine identity — the Spiral brand
 
-```
-spiral-core        → (no deps, foundation)
-spiral-ipc         → spiral-core, tokio, serde, bincode
-spiral-dom         → spiral-core
-spiral-fmt         → spiral-dom  (from-spec HTML5 + CSS; no html5ever, no cssparser)
-spiral-css         → spiral-core, spiral-dom, spiral-fmt  (deprecated shim → spiral_fmt)
-spiral-gyre        → spiral-core, spiral-css, spiral-dom  (custom layout; no Taffy)
-spiral-paint       → spiral-core, spiral-dom, spiral-gyre
-spiral-render      → spiral-core, spiral-paint, vello, wgpu, spiral-gpu
-spiral-gpu         → spiral-core, wgpu
-spiral-vortex      → spiral-core, spiral-dom, rusty_v8 (optional, behind `v8` feature for CI oracle)
-spiral-network     → spiral-core, hyper, hickory-dns, rustls
-spiral-net         → spiral-core, rustls, hickory-dns (thin wrappers, no re-export)
-spiral-crypto      → spiral-core, rustls
-spiral-imagedecoder→ spiral-core, png, zune-jpeg, webp, ravif
-spiral-sandbox     → spiral-core, rustix (Landlock), caps (capabilities)
-spiral-context     → spiral-core  (capability-typed API)
-spiral-filter      → spiral-core  (compile-time policy)
-spiral-ui          → spiral-core, spiral-gpu, spiral-theme
-spiral-theme       → spiral-core, serde
-spiral-browser     → spiral-core, spiral-ipc, spiral-ui, spiral-theme
-```
+The brand belongs to the engines, not the wire. Each engine is fully in-house, written in safe Rust, and follows the relevant spec section-by-section.
 
----
+### Gyre — layout (`spiral-gyre`)
 
-## 5. IPC Protocol
+Gyre is Spiral's custom layout engine. It implements the CSS Display, Box Model, and (in Phase 2) Flexbox and Grid specs. The crate name reflects the spiral-gyre glyph in the brand mark: layout values flow inward toward a centre, like the arms of a spiral.
 
-### Message Types
+- **Phase 1:** box model + block layout.
+- **Phase 2:** flexbox (Packet 2.5.x), grid (Packet 2.6.x).
+- **Phase 4:** writing modes, Bidi.
+
+See `docs/decisions/0003-gyre-rename.md` and `docs/architecture/gyre/`.
+
+### Vortex — JavaScript (`spiral-vortex`)
+
+Vortex is Spiral's from-scratch JavaScript engine. The crate name reflects the rotation of evaluation: each call frame spins up, runs, spins down. Lexer → parser (Pratt) → AST → tree-walking interpreter (Phase 1) → bytecode VM (Phase 2) → baseline JIT (Phase 3).
+
+- **Phase 1:** tree-walking interpreter. Console, math, object, array, GC.
+- **Phase 2:** bytecode VM, ~5–10× faster. Closures, prototypes, classes.
+- **Phase 3:** Cranelift-based baseline JIT.
+- **Phase 4+:** optimisation, modules, async/await.
+
+`rusty_v8` is available behind a `v8` Cargo feature for CI compliance testing only — it is the "V8 oracle", not the production engine. The `JSRuntime` trait abstraction enables future engine swapping via feature flag.
+
+See `docs/decisions/0002-vortex-from-scratch.md` and `docs/architecture/vortex/`.
+
+### Fmt — HTML5 + CSS parsers (`spiral-fmt`)
+
+Fmt is Spiral's from-spec HTML5 and CSS parser. The crate name reflects the *Forge* brand: the place where raw bytes are hammered into structured form. Parser → tokens → AST → spec-compliant tree.
+
+- **HTML5:** 8 insertion modes (Initial, BeforeHtml, BeforeHead, InHead, AfterHead, InBody, AfterBody, AfterAfterBody). Adoption agency algorithm, active formatting elements, foster parenting, fragment parsing.
+- **CSS Syntax 3:** 8 modules — tokeniser, parser, the CSS Selectors spec, specificity, values, at-rules, declarations, attribute matchers.
+- **CSS Cascade:** user-agent / user / author / `!important` ordering. Specificity: inline > ID > class > element.
+
+`spiral-css` is a deprecated shim forwarding to `spiral_fmt::css::*` and providing a `CssParser` adapter. New code depends on `spiral-fmt` directly. The `deprecation` lint is set on the shim crate.
+
+See `docs/decisions/0001-css-parser-spiral-fmt.md` (the "Fork 1-B" decision) and `docs/architecture/fmt/`.
+
+### Filter — policy (`spiral-filter`)
+
+Filter is Spiral's compile-time HTML/CSS policy engine. It decides, at parse time and at request time, whether a request or selector is allowed. The brand is the *filter* of the spiralled paths through a browser: a sieve.
+
+- **Phase 1:** runtime policy (Packet 1.6.4, shipped).
+- **Phase 5:** compile-time policy via `const` evaluation.
+- **Phase 6:** content-security-policy integration, same-origin tracking.
+
+Filter is research-grade. The design is end-state, but the implementation is incremental.
+
+See `docs/decisions/0005-filter-runtime-design.md` and `docs/architecture/filter/`.
+
+### Context — capability types (`spiral-context`)
+
+Context is Spiral's capability-typed page context. The brand is the *context* in which a page runs: not the box, but the rules of the box. The shape:
 
 ```rust
-// Browser → Renderer
-enum BrowserToRenderer {
-    Navigate { url: String },
-    UpdateDOM { node_id: u64, operations: Vec<DomOp> },
-    Resize { width: f32, height: f32 },
-    InputEvent { event: InputEvent },
-    Reload,
-    Stop,
-}
-
-// Renderer → Browser
-enum RendererToBrowser {
-    DOMLoaded { title: String },
-    LoadProgress { progress: f32 },
-    NavigateComplete { url: String },
-    RequestNavigate { url: String },
-    ConsoleMessage { level: LogLevel, text: String },
+pub struct Context<'brand, Mode> {
+    mode: PhantomData<Mode>,
+    capabilities: CapabilitySet<'brand>,
 }
 ```
 
-### Transport
-- Linux/macOS: Unix domain sockets in `$XDG_RUNTIME_DIR/spiral/`
-- Windows: Named pipes `\\.\pipe\spiral-{pid}`
-- Serialization: bincode (length-prefixed)
-- Async runtime: tokio
+- **Phase 1:** skeleton + types (Packet 1.6.2, shipped).
+- **Phase 5:** capability inheritance, downgrade, leak detection.
+- **Phase 6+:** Vortex + DOM integration.
+
+Context is research-grade. It is the most novel part of the Spiral design — see the M4 audit methodology in `docs/audit-sprint-m4.md` and the novel claim verification rule in `AGENTS.md`.
+
+See `docs/architecture/context/`.
 
 ---
 
+## 4. Workspace structure — 20 crates
 
-## 6. Implementation Phases (pointer)
+```
+spiral-core         # shared types (BrowserConfig, TabId, IPCMessage, Error)
+spiral-ipc          # cross-process messaging (UDS / named pipes, bincode, tokio)
+spiral-dom          # DOM tree (Node, Element, Document; arena-allocated)
+spiral-fmt          # **Fmt** — HTML5 tokeniser + tree builder, CSS parser
+spiral-css          # Deprecated shim → spiral-fmt
+spiral-gyre         # **Gyre** — custom layout engine
+spiral-vortex       # **Vortex** — from-scratch JavaScript engine
+spiral-context      # **Context** — capability-typed page context
+spiral-filter       # **Filter** — compile-time HTML/CSS policy
+spiral-network      # HTTP client (hyper + hickory-dns)
+spiral-net          # TLS + DNS resolution wrappers (rustls, hickory-dns)
+spiral-crypto       # TLS primitives wrapper
+spiral-render       # Vello + wgpu render path
+spiral-paint        # Display list construction
+spiral-gpu          # wgpu integration
+spiral-imagedecoder # PNG / JPEG / WebP / AVIF
+spiral-sandbox      # OS sandbox profiles (Landlock / Seatbelt / Job Object)
+spiral-ui           # Browser chrome (sidebar tabs, floating URL bar)
+spiral-theme        # Zen-style design tokens
+spiral-browser      # Binary entry point
+```
 
-> **This section was rewritten 2026-06-16 during the SSOT restructure.**
->
-> The old "Month X" table that previously lived here has been removed.
-> Status, sequencing, and task breakdown are SSOT in
-> [`docs/implementation_tracker.md`](docs/implementation_tracker.md)
-> (Group → Phase → Step → Packet). The time-based Month / Sprint / Chunk
-> / Item vocabulary is retired.
->
-> The plan below is **architectural and strategic**: which subsystems
-> exist, what they own, and which cross-cutting decisions have been
-> taken. Implementation status is the tracker's job.
+### Dependency hierarchy (no crate depends "up")
 
-### Phase 0 — Foundation ✅ COMPLETE
-Crate workspace, IPC shell, hello-world render. See
-[`docs/implementation_tracker.md` § Phase 0](docs/implementation_tracker.md).
+```
+spiral-core  →  spiral-ipc  →  spiral-dom  →  spiral-fmt  (Fmt)
+                                     │        spiral-gyre  (Gyre)
+                                     │        spiral-vortex (Vortex)
+                                     │        spiral-context (Context)
+                                     │        spiral-filter  (Filter)
+                                     │
+                spiral-browser  ←  spiral-ui  ←  spiral-theme
+                                  spiral-network, spiral-net, spiral-crypto
+                                  spiral-render, spiral-paint, spiral-gpu
+                                  spiral-imagedecoder
+                                  spiral-sandbox
+```
 
-### Phase 1 — Engines Foundation 🔄 IN FLIGHT
-Vortex, spiral-fmt (HTML + CSS), Gyre (box model), spiral-filter.
-See [`docs/implementation_tracker.md` § Phase 1](docs/implementation_tracker.md).
+### Per-crate role
 
-### Phase 2+ — Forward-projected
-Engines depth (fragment parsing, DOM collections, dataset, structuredClone,
-URL), Networking, Presentation, Capability types runtime, Bytecode VM,
-Media + DRM, Persistent renderer, Hardening. See
-[`docs/implementation_tracker.md` § Phases 2–9](docs/implementation_tracker.md).
+| Crate | Role | Brand | Status |
+|-------|------|-------|--------|
+| `spiral-core` | Shared types (BrowserConfig, TabId, IPCMessage, Error) | — | ✅ Phase 0 |
+| `spiral-ipc` | Cross-process messaging. UDS / named pipes, bincode, tokio | — | ✅ Phase 0 |
+| `spiral-dom` | DOM tree, arena-allocated, parent/child by index | — | ✅ Phase 0 |
+| `spiral-fmt` | Fmt — HTML5 tokeniser + tree builder, CSS parser | **Fmt** | ✅ Phase 1 |
+| `spiral-css` | Deprecated shim → spiral-fmt | — | ✅ (deprecated) |
+| `spiral-gyre` | Gyre — box model + block (Phase 1), flex + grid (Phase 2) | **Gyre** | ✅ Phase 1 partial |
+| `spiral-vortex` | Vortex — tree-walking interpreter + mark-sweep GC | **Vortex** | ✅ Phase 1 first slice |
+| `spiral-context` | Context — `Context<'brand, Mode>`, `CapabilitySet<'brand>` | **Context** | ✅ Phase 1 skeleton |
+| `spiral-filter` | Filter — runtime policy engine | **Filter** | ✅ Phase 1 (Packet 1.6.4) |
+| `spiral-network` | HTTP client (hyper + hickory-dns) | — | ✅ Phase 1 |
+| `spiral-net` | TLS + DNS resolution wrappers | — | ✅ Phase 1 |
+| `spiral-crypto` | TLS primitives wrapper | — | ✅ Phase 1 |
+| `spiral-render` | Vello + wgpu render path | — | ✅ Phase 1 |
+| `spiral-paint` | Display list construction | — | ✅ Phase 1 |
+| `spiral-gpu` | wgpu integration | — | ✅ Phase 1 |
+| `spiral-imagedecoder` | PNG / JPEG / WebP / AVIF | — | ✅ Phase 1 |
+| `spiral-sandbox` | OS sandbox profiles | — | ✅ Phase 1 scaffolded |
+| `spiral-ui` | Browser chrome | — | ✅ Phase 1 |
+| `spiral-theme` | Zen-style design tokens | — | ✅ Phase 1 |
+| `spiral-browser` | Binary entry point | — | ✅ Phase 0 |
 
-### Exit criteria
-The Phase-by-Phase exit criteria are documented in
-[`docs/implementation_tracker.md`](docs/implementation_tracker.md) under
-each Phase's "Wiring & Integration" subsection.
+---
 
-### What "v0.1.0" means
-Per the release model in [`docs/agents/release.md`](docs/agents/release.md),
-v0.1.0 will be tagged when a Phase boundary is crossed with all packets
-closed. There is no calendar deadline. The semantic version follows the
-Phase → version mapping convention adopted 2026-06-16.
+## 5. IPC protocol
+
+Cross-process messaging is over length-prefixed bincode frames. The transport is platform-specific: Unix domain sockets on Linux/macOS, named pipes on Windows. The framing is shared.
+
+- **Frame:** `[u32 LE length][bincode payload]`
+- **Payload type:** `IPCMessage` (13 variants defined in `spiral-core`).
+- **Transport:** `tokio::net::UnixStream` / `tokio::net::windows::NamedPipeServer`, behind a `Transport` trait.
+- **Mock transport:** `MockTransport` for tests.
+
+See `crates/spiral-ipc/` for the implementation. Per AGENTS.md § Common Pitfalls: changing the `IPCMessage` enum breaks bincode, so any payload change requires a versioned variant.
+
+---
+
+## 6. Render pipeline
+
+The end-to-end pipeline from a network response to a frame on screen:
+
+```
+Network Response (HTML bytes)
+    → Fmt (HTML tokeniser + tree builder)            → DOM
+    → Fmt (CSS parser)                               → Stylesheet
+    → Style Resolution                               → Computed Styles
+    → Gyre (layout: block, flex, grid)               → Layout Tree
+    → Paint (display list construction)              → Display List
+    → Render (Vello + wgpu)                          → GPU texture
+    → Swap chain                                     → screen
+```
+
+Each stage runs in the renderer process. The browser process owns the tab manager, IPC router, UI chrome, and config manager. The network and GPU processes are siblings of the renderer.
+
+Full data flow and per-stage responsibilities: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+---
+
+## 7. Security model
+
+- **Process isolation:** one renderer per tab. Sandboxed via `spiral-sandbox` (Linux Landlock + seccomp-bpf, macOS Seatbelt, Windows restricted tokens).
+- **IPC framing:** u32-LE length prefix + bincode. Buffer-overflow checks at deserialisation.
+- **TLS:** rustls. No OpenSSL.
+- **Capability-typed context:** Phase 5+ integrates with Vortex and DOM to gate cross-origin and sensitive operations at compile time.
+- **Vulnerability disclosure:** private channels only. See [`SECURITY.md`](SECURITY.md).
+
+---
+
+## 8. Configuration
+
+`BrowserConfig` lives in `spiral-core`. It covers:
+
+- User agent string (the long-term aim is to be a "real" UA, not a Chromium clone).
+- Default search engine.
+- Per-site permissions (geolocation, notifications, etc.) — gated by Context in Phase 5+.
+- Theme (light, dark, system) — `spiral-theme`.
+- Per-process resource limits (renderer memory cap, network timeouts).
+
+---
+
+## 9. The implementation groups (high level)
+
+The full phase index is at [`ROADMAP.md`](ROADMAP.md). The status is at [`docs/implementation_tracker.md`](docs/implementation_tracker.md).
+
+| Group | What it ships |
+|-------|---------------|
+| **Engines** | Gyre, Vortex, Fmt, Filter, Context — the engines that bear the Spiral brand. |
+| **Networking** | spiral-network, spiral-crypto, spiral-ipc, spiral-sandbox — the wire-level plumbing. |
+| **Presentation** | spiral-render, spiral-ui, spiral-theme — the visual layer. |
+| **Cross-cutting** | spiral-core, spiral-browser (binary) — the foundation. |
+
+Each group has its own phases. The group/phase/step/packet vocabulary is canonical; see `AGENTS.md` § Workflow Discipline for the gating contract.
+
+---
+
+## 10. Where the work lives
+
+- **SSOT for status:** [`docs/implementation_tracker.md`](docs/implementation_tracker.md)
+- **SSOT for live state:** [`docs/active_context.md`](docs/active_context.md)
+- **Append-only change log:** [`docs/progress_ledger.md`](docs/progress_ledger.md)
+- **ADRs:** [`docs/decisions/`](docs/decisions/)
+- **Rule files:** [`.spiral/rules/`](.spiral/rules/)
+- **Role contracts:** [`docs/agents/`](docs/agents/)
+- **Architecture delta:** [`docs/system_architecture.md`](docs/system_architecture.md)
+- **Architecture (canonical):** [`ARCHITECTURE.md`](ARCHITECTURE.md)
+- **Phase index:** [`ROADMAP.md`](ROADMAP.md)
+- **This file:** [`PLAN.md`](PLAN.md)
+- **Front door:** [`README.md`](README.md)
+- **LLM cheatsheet:** [`CODEX.md`](CODEX.md)
