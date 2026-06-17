@@ -289,6 +289,35 @@ Phase 1.x leaks.
 
 ---
 
+## 5.1 Workflow Gates (cross-references)
+
+The rule files under [`.spiral/rules/`](../../.spiral/rules/)
+are the operative contract for "what tool, when". When
+you reach one of the moments below, the cited rule file's
+`MUST` line is what you follow. Do not invent a different
+command; the table is the routing.
+
+| Moment | MUST run | Rule file |
+|--------|----------|-----------|
+| Before adding any `Cargo.toml` dep | `cargo tree --workspace --edges normal -i <crate>` | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Crate Boundaries |
+| After promoting `pub(crate)` to `pub` | `./scripts/audit-orphan-exports.sh` | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Wiring |
+| After writing an ADR | `bin/spiral-context.sh` to re-surface SSOT | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Workflow Tools |
+| Before claiming any code change complete | `cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings` | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+| After editing any `.md` file | `./scripts/audit-doc-drift.sh` | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+| Mid-cycle on a single packet | `just test-fast <crate> [pattern]` | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Iteration speed |
+| After a `pub` API change in `<crate>` | `just test-with-deps <crate>` | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Iteration speed |
+| Before claiming a perf-related packet complete | `cargo bench --workspace` | [`.spiral/rules/performance.md`](../../.spiral/rules/performance.md) § Workflow Tools |
+| Before adding any `unsafe` block or `unsafe fn` | `cargo miri test -p <crate>` | [`.spiral/rules/unsafe-standards.md`](../../.spiral/rules/unsafe-standards.md) § Workflow Tools |
+| Before claiming an `unsafe`-touching packet complete | `./scripts/audit-orphan-exports.sh` | [`.spiral/rules/unsafe-standards.md`](../../.spiral/rules/unsafe-standards.md) § Workflow Tools |
+
+The full pre-commit / pre-PR sweep is the six-step
+Verification Checklist in §5 above; the table above is
+the per-moment routing table you consult *before* the
+sweep fires. If a moment is missing from the table, the
+rule file is the source of truth.
+
+---
+
 ## 6. Style & Conventions
 
 Spiral's style is set in `AGENTS.md` § Project Rules.

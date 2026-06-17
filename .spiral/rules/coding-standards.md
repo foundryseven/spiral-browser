@@ -83,8 +83,8 @@ specific keyword (e.g. a CSS property name) keep the spec spelling.
 - Doc comments on every `pub` item: `///` for one-line, `//!` for
   module-level. Use full sentences. Include an example where the
   API is non-obvious.
-- `// This does X because Y` over `// magic`. Future agents read
-  your comments.
+- `// This does X because Y` over `// magic`. Comments MUST be written
+  for future agents to read.
 - No `// ...` truncation or stub shortcuts. Write the full code
   or don't write it.
 

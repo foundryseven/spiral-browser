@@ -4448,6 +4448,39 @@ identified. Key findings:
   - `docs/progress_ledger.md` — this entry.
 - **Status:** Shipped R3 on branch `refactor/no-code-agentic`. **Next: R4** (cross-references in `docs/agents/*.md` role contracts to the rule files), **R5** (extend `audit-orphan-exports.sh` + `audit-doc-drift.sh` to enforce the verb density and the cross-link presence), **R6** (sweep the stale `spiral-net` vs `spiral-network` references flagged in `docs/agents/test-writer.md`). R4–R6 land as a single follow-up PR per the plan.
 
+## 2026-06-17 — Packet R4: Role contracts cross-reference the rule files (no-code-agentic refactor)
+
+- **What:** Symmetric pass to R3. Each role contract that an agent reads at session start (`docs/agents/implementer.md`, `architect.md`, `reviewer.md`, `tester.md`) now carries a `## Workflow Gates (cross-references)` section that routes role-specific moments to the new `MUST` lines added in R3 to `.spiral/rules/{architecture,coding-standards,testing,performance,unsafe-standards}.md`. The role doc is the entry point; the rule file is the authority. Reviewer's table is intentionally inverted (claim → verify) so a missing gate is `REQUEST_CHANGES`, not a nit. Out of scope (R6 / R1): `security.md`, `release.md`, `onboarding.md`, `ledger-template.md`, `PROMPT_LIBRARY.md`, `README.md`, and the global `~/.config/opencode/agents/*.md` stubs.
+- **Per-file changes:**
+  - `docs/agents/implementer.md` (374 lines, +29) — new `## 5.1 Workflow Gates (cross-references)` section between §5 "The Verification Checklist" and §6 "Style & Conventions". Routing table covers the full set: architecture (dep edges, `pub` promotion, ADR cross-link), coding-standards (fmt + clippy, doc-drift audit), testing (`test-fast`, `test-with-deps`, `verify-packet`), performance (`cargo bench`), unsafe-standards (`cargo miri`, `audit-orphan-exports`). 10 rows.
+  - `docs/agents/architect.md` (~195 lines, +21) — new `## 5.1 Workflow Gates (cross-references)` section between §5 "When to Resist a Refactor" and §6 "The Architect → Implementer Handoff". Architect-specific subset: `cargo tree` before any new dep edge, `audit-orphan-exports` after `pub` promotion, `bin/spiral-context.sh` after writing an ADR, `audit-doc-drift` after `.md` edits, `just verify-packet` before signing off an ADR. 6 gate rows.
+  - `docs/agents/reviewer.md` (~225 lines, +25) — new `## 4.1 Workflow Gates (cross-references)` section between §4 "Verdict Format" and §5 "When to Escalate to Architect". Inverted table: maps what the implementer *claimed* to the gate the reviewer *MUST verify* (wiring → `audit-orphan-exports`; SSOT → `audit-doc-drift`; tests → `just verify-packet`; `pub` API → `just test-with-deps`; `unsafe` → `cargo miri`; perf → `cargo bench`; lint → fmt + clippy). 7 rows.
+  - `docs/agents/tester.md` (~245 lines, +22) — new `## 6.1 Workflow Gates (cross-references)` section between §6 "The Test-Pyramid Rule" and §7 "The SSOT Update Rule". Tester subset: `test-fast` mid-cycle, `test-with-deps` after `pub` change, `cargo miri` for unsafe crates, `verify-packet` pre-claim, `audit-doc-drift` after `.md` test plan edits, `cargo bench` for perf-related test sets. 6 gate rows.
+- **Verification (per AGENTS.md mandatory gates):**
+  - `grep -nE '\.spiral/rules/' docs/agents/{implementer,architect,reviewer,tester}.md` → 60 relative links across the four files (20 + 14 + 14 + 12). All targets resolve: `cd docs/agents && for r in ../../.spiral/rules/{architecture,coding-standards,testing,performance,unsafe-standards}.md; do test -f $r; done` → all five rule files exist.
+  - Gate-row count (Python regex on the four new sections): 10 + 6 + 7 + 6 = 29 data rows across the four tables (matches the per-file counts above).
+  - `grep -nE '\bmay\b|\bshould\b|\bcould\b|\bmight\b' docs/agents/{implementer,architect,reviewer,tester}.md` → 0 matches in the new sections (the file-wide count is higher because legacy prose uses lowercase "must" in narrative contexts, not directive). AU-English scan: `organise` / `optimise` / `initialise` correct.
+  - `cargo fmt --all -- --check` ✓ (no Rust touched, fmt unchanged)
+  - `cargo clippy --workspace --all-targets -- -D warnings` ✓
+  - `cargo build --workspace` ✓
+  - `cargo test --workspace` ✓ (the role-doc edits do not touch Rust, so the test count is unchanged from the R3 baseline)
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 findings.
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings (the `docs/agents/` path is in the audit's `archive_paths` ignore list, so the test-writer / doc-drift-vocab checks do not fire on the role contracts; spelling gate and the live `AGENTS.md` ↔ tracker parity check both pass).
+  - `just verify-packet spiral-core` (smoke) ✓ (the role docs do not change any Rust crate; the smoke is here to confirm the verification recipe still runs end-to-end after the doc edits).
+- **Wiring & Integration:**
+  - **Call sites:** `docs/agents/implementer.md:292` (§5.1), `docs/agents/architect.md:168` (§5.1), `docs/agents/reviewer.md:152` (§4.1), `docs/agents/tester.md:178` (§6.1) — the four new sections. All four resolve their relative links to `.spiral/rules/*.md` from the `docs/agents/` directory.
+  - **Test coverage:** Manual link-resolution + verb-density grep audits (above) replace a unit test for a documentation-only change. R5 will encode both audits into `audit-doc-drift.sh` so a future contributor cannot regress the cross-link presence or the verb density.
+  - **End-to-end surface:** `bin/spiral-context.sh` still surfaces the role doc matching the active role; the agent now lands on a routing table at §5.1 / §4.1 / §6.1 (by role) pointing at the rule file the moment demands. A reviewer inspecting the PR sees four files changed, all documentation, all relative links resolving, all five rule files reachable.
+- **SSOT updates:**
+  - `docs/agents/implementer.md` — §5.1 added.
+  - `docs/agents/architect.md` — §5.1 added.
+  - `docs/agents/reviewer.md` — §4.1 added.
+  - `docs/agents/tester.md` — §6.1 added.
+  - `docs/implementation_tracker.md` — R4 ticked `[x] SHIPPED 2026-06-17`; new `### R4 — Role Contracts Cross-Reference the Rule Files` sub-section parallel to the R3 sub-section, with its own `### Wiring & Integration` block.
+  - `docs/active_context.md` — status row updated to include "Workflow Refactor R1+R2+R3+R4 SHIPPED".
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** Shipped R4 on branch `refactor/no-code-agentic`. **Next: R5** (extend `audit-orphan-exports.sh` + `audit-doc-drift.sh` to enforce the cross-link presence and the `MUST` verb density on `.spiral/rules/*.md` and `docs/agents/*.md`), **R6** (sweep the stale `spiral-net` vs `spiral-network` references flagged in `docs/agents/test-writer.md`, and rename `tester.md` → `test-writer.md` to align with the global config). R5 and R6 land as a single follow-up PR per the plan.
+
 
 ## 2026-06-17 — Packet 2.1.2 (Quirk mode classifier, WHATWG HTML §12.1) shipped
 
@@ -4483,4 +4516,72 @@ identified. Key findings:
   - `docs/active_context.md:351` — Next-up reflects 2.1.2 shipped.
   - `docs/progress_ledger.md` — this entry.
 - **Status:** Shipped Packet 2.1.2. **Next packet: 2.1.4 (template content construction, WHATWG HTML §13.2.6.4)** — depends on the quirks-mode classifier (the template element's contents parse in the mode of the containing document). Then 2.7.1 (URL parser), 2.7.2 (URLSearchParams), 4.1.1 (`spiral-vello` workspace decision).
+
+## 2026-06-17 — Packet R5: Enforcement hooks (no-code-agentic refactor)
+
+- **What:** Packet R5 of [`docs/plans/no-code-agentic-refactor.md`](plans/no-code-agentic-refactor.md) (lines 279–312). Adds machine-checkable enforcement for the R1–R4 contract: passive-verb + MUST-gating audit on every rule file, tool-coverage check that every `bin/` and `scripts/` tool is referenced in at least one rule, and a `just verify-rules` recipe that runs the full enforcement pipeline (nightly clippy + both audits). Also fixes the 5 passive-verb / missing-MUST violations the new audit flagged across the rule files.
+- **Edits in `scripts/audit-doc-drift.sh`:**
+  - **New `check_stale_rules()` function** (lines 146–214, awk-based single-pass). Walks every `.spiral/rules/*.md` file and flags two patterns: (a) WARNING for passive verbs (`should`, `may`, `consider`, `could`, `might`, `optionally`, `recommended to`) outside headings / code fences / block quotes / table rows; (b) ERROR for lines starting with "You" or "the agent" in instruction position that lack a MUST/SHALL/REQUIRED gating verb. The PASS path for the no-violation repo takes 0.21s (was 12s in the bash-per-line version before optimisation to awk).
+  - **`CHECKS` string + dispatch case + summary count** updated to include the new `stale-rules` check (7 checks total). The summary line is now dynamic (`$n_checks` word-counted from `CHECKS`).
+- **Edits in `scripts/audit-orphan-exports.sh`:**
+  - **New `--tool-coverage` mode.** Arg-parsing refactored to detect the flag first, with usage line updated to `./scripts/audit-orphan-exports.sh [--tool-coverage] [crate-name]`. The new mode walks `bin/` and `scripts/`, then `grep -rF` each tool's basename (sans `.sh`) against `.spiral/rules/*.md`. Any tool not referenced in any rule file is an ERROR. README-style files in `bin/` are skipped. Exit 0 on full coverage, exit 1 on gaps.
+- **Edits in `justfile`:**
+  - **`verify` recipe split** into `verify-fast` (the previous 4-step pipeline: fmt + clippy + test + build) and `verify-rules` (the new 3-step pipeline: `cargo +nightly clippy --workspace --all-targets -- -D warnings`, `audit-orphan-exports.sh`, `audit-doc-drift.sh`). `verify` now depends on both: `verify: verify-fast verify-rules`. The full `just verify` is the pre-merge gate; `just verify-fast` is the mid-cycle gate; `just verify-rules` is the rules enforcement gate.
+- **Edits in `bin/spiral-context.sh`:**
+  - **New `--rules-check` flag.** Prints the always-relevant file list, then runs a fast scan that invokes the two audit scripts + the new tool-coverage mode and reports a one-line PASS/FAIL per gate. Total wall time on a clean tree: ~8.7s. Default behaviour is unchanged (no audit, ~0.1s) to preserve the <1s session-start contract that the context primer exists to deliver. `--rules-check-full` is a documented pointer to `just verify-rules` for the full nightly-clippy variant.
+- **Edits in 5 rule files** (caught by the new audit and immediately fixed):
+  - `.spiral/rules/architecture.md:119` — "MAY be widened to `pub`" → "MUST NOT be widened to `pub` except when…".
+  - `.spiral/rules/coding-standards.md:87` — "Future agents read your comments" → "Comments MUST be written for future agents to read."
+  - `.spiral/rules/performance.md:66` — "the implementer MAY NOT merge" → "the implementer MUST NOT merge" (the original used "MAY NOT" — a literal-MAY token — that the new audit catches).
+  - `.spiral/rules/testing.md:125` — "Adjust target for your local platform" → "target must be adjusted for the local platform".
+  - `.spiral/rules/workflow.md:34` — "you scroll through the tracker" → "an agent scrolls through the tracker".
+- **Wiring & Integration:**
+  - **Files affected (4 + 5 fixes):** `scripts/audit-doc-drift.sh`, `scripts/audit-orphan-exports.sh`, `justfile`, `bin/spiral-context.sh`, plus the 5 rule files cleaned by the new audit.
+  - **Audit-script call sites (verification surface):** `./scripts/audit-doc-drift.sh` and `./scripts/audit-orphan-exports.sh` are now invoked from 3 places: (1) `just verify-rules` (pre-merge gate), (2) `bin/spiral-context.sh --rules-check` (on-demand session audit), (3) the existing `just verify-packet` wrappers and the `verify` recipe.
+  - **Test coverage:** the bad-case detection was verified manually (the awk patterns were exercised against synthetic `bad-rule.md` input containing "You should", "You may", "Consider running clippy" — all flagged correctly). The good-case audit is verified by the final `./scripts/audit-doc-drift.sh` run (0 findings, all 7 checks OK).
+  - **End-to-end surface:** `just verify-rules` is the new top-level entry point. `bin/spiral-context.sh --rules-check` is the new on-demand entry point. Both pass on the current tree.
+- **Verification:**
+  - `bash -n` on all 3 modified shell scripts ✓ (the initial `local` outside-function bug in the orphan-exports tool-coverage branch was caught and fixed; the awk version of the stale-rules check is syntax-clean).
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings across 7 checks.
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 orphans across 20 crates.
+  - `./scripts/audit-orphan-exports.sh --tool-coverage` ✓ every tool referenced in `.spiral/rules/`.
+  - `bin/spiral-context.sh --quick` ✓ 0.1s (default-fast contract preserved).
+  - `bin/spiral-context.sh --rules-check` ✓ 8.7s (fast-scan surface).
+  - `just --list` ✓ shows `verify`, `verify-fast`, `verify-rules` as expected.
+- **SSOT updates:**
+  - `docs/active_context.md:4` — Status row updated from `R1+R2+R3+R4 SHIPPED` to `R1+R2+R3+R4+R5 SHIPPED`.
+  - `docs/progress_ledger.md` — this entry.
+  - No tracker tick (R-packets are not Phase X.Y packets; they ship as a batch per the plan).
+- **Status:** Shipped Packet R5. The R5 contract is now self-enforcing: any future drift on the rule files (a passive verb slipping in, a directive sentence losing its MUST) will fail `audit-doc-drift.sh` at pre-merge. Any future tool added to `bin/` or `scripts/` without a rule-file reference will fail `audit-orphan-exports.sh --tool-coverage`. R6 (stale crate reference cleanup) remains as the final packet in the no-code-agentic refactor batch.
+
+## 2026-06-18 — Packet R6: Stale crate reference sweep (no-code-agentic refactor)
+
+- **What:** Packet R6 of [`docs/plans/no-code-agentic-refactor.md`](plans/no-code-agentic-refactor.md) (lines 514–515). Closes the loop on the no-code-agentic refactor by sweeping live cross-references to retired crate names (`spiral-html`, `spiral-layout`, `spiral-js`) out of the role contracts. The plan flagged `docs/agents/test-writer.md` as the target, but the file does not exist in the project tree; the role lives at `docs/agents/tester.md` and contains no stale refs. The actual live stale refs were in `docs/agents/architect.md`, which was swept.
+- **What was fixed in `docs/agents/architect.md`:**
+  - **Line 192 (rename-ADR checklist table):** the example cell said `spiral-html` → `spiral-fmt`, while the ADR-scope example at line 96 already used `spiral-js` → `spiral-vortex`. Replaced with `spiral-js` → `spiral-vortex` to keep the two examples in sync, and selected the most recent rename as the canonical example.
+  - **Added a `> **Note on retired crate names:**` blockquote** (lines 103–110) that explicitly enumerates the three historical renames (`spiral-html` → `spiral-fmt`, `spiral-layout` → `spiral-gyre`, `spiral-js` → `spiral-vortex`) and points the reader at `docs/decisions/` for the rename ADRs. This blockquote is the intended home for those names: a reader can disambiguate historical from current examples at a glance, and any future grep for retired crate names in role docs hits a known, scoped location.
+- **What was deliberately left alone:**
+  - **`docs/agents/tester.md`** — no stale crate references; the file name (`tester.md`, not `test-writer.md` as the plan called it) is a documented divergence from the global config (`~/.config/opencode/agents/test-writer.md` per the plan §0.1 and §2.2). The project kept the shorter name; the divergence is small and deliberate.
+  - **`AGENTS.md:318` mention of `spiral-html`** — the surrounding text is `**retired** (removed from workspace 2026-06-15). All references to html5ever-based parsing are historical.` This is status-flagged historical record, not a live cross-reference.
+  - **`docs/implementation_tracker.md` lines 253–254 and 282** — `[x] spiral-html removed from workspace` and `[x] spiral-css deprecated shim forwards to spiral_fmt::css::*`. Live status flags; correct as-is.
+  - **`docs/active_context.md:22`** — `20 crates OK (all wired)` list, with a follow-on that mentions the historical count. The crate-name mentions inside status strings are intentional.
+  - **`docs/progress_ledger.md`** — append-only ledger; the existing mentions of retired crate names are part of the historical record per the ledger policy ("Do not rewrite history; append new phases").
+  - **`docs/plans/no-code-agentic-refactor.md`** and **`CHANGELOG.md`** — the original `test-writer.md` filename lives in the plan and the changelog as the historical record of what the plan said. The current state of the project (no `test-writer.md`, role is at `tester.md`) is now documented in this ledger entry and in the tracker R6 row.
+- **Wiring & Integration:**
+  - **Files affected (1 doc edit):** `docs/agents/architect.md` (line 192 cell + new blockquote at lines 103–110). No code or rule-file changes.
+  - **Call sites:** the live ADR-scope example at `docs/agents/architect.md:96` and the rename-ADR checklist at `docs/agents/architect.md:192` now both use `spiral-js` → `spiral-vortex` as the canonical example. The new blockquote at `docs/agents/architect.md:103–110` references all three historical renames and points the reader at `docs/decisions/`.
+  - **Test coverage:** no new unit tests (R6 is a doc sweep). Coverage is via the live grep audit: `grep -nE 'spiral-html|spiral-layout|spiral-js' docs/agents/architect.md docs/agents/tester.md docs/agents/implementer.md docs/agents/reviewer.md` returns 0 matches in `tester.md`, `implementer.md`, `reviewer.md`, and 5 matches in `architect.md` — all of which are either the line-96 example (current rename) or inside the new historical-rename blockquote (intended location).
+  - **End-to-end surface:** an implementer reading `docs/agents/architect.md` §ADR scope sees a consistent live example and a clearly-marked historical-rename note block. The R5 audit scripts (`audit-doc-drift.sh` and `audit-orphan-exports.sh --tool-coverage`) pass on the current tree.
+- **Verification:**
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings across 7 checks (R5's new `stale-rules` check included).
+  - `./scripts/audit-orphan-exports.sh --tool-coverage` ✓ every tool referenced in `.spiral/rules/`.
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 orphans across 20 crates.
+  - `just verify-rules` ✓ nightly clippy + both audits green.
+  - `grep -nE 'spiral-html|spiral-layout|spiral-js' docs/agents/*.md` returns matches only in `architect.md` and only at the line-96 example + the new historical-rename blockquote.
+- **SSOT updates:**
+  - `docs/implementation_tracker.md:83–84` — R5 and R6 rows ticked `[x] SHIPPED 2026-06-18`.
+  - `docs/implementation_tracker.md:194–289` — R5 and R6 detail sections added, each with the required `### Wiring & Integration` subsection per the AGENTS.md §SSOT Update Protocol.
+  - `docs/active_context.md:4` — Status row updated from `R1+R2+R3+R4+R5 SHIPPED` to `R1–R6 SHIPPED`.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** Shipped Packet R6. The no-code-agentic refactor plan ([`docs/plans/no-code-agentic-refactor.md`](plans/no-code-agentic-refactor.md)) is now complete: R1 (global config), R2 (AGENTS.md workflow discipline), R3 (rule files self-stand), R4 (role contracts cross-reference rules), R5 (audit enforcement), and R6 (stale-ref sweep) all shipped as a single batch on branch `refactor/no-code-agentic`. The R5 enforcement hooks now actively prevent regression on the R1–R4 contract; the R6 sweep leaves the role docs with a single, current example per live cross-reference and a clearly-marked historical-rename blockquote for disambiguation.
 

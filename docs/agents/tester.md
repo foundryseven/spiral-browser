@@ -195,6 +195,31 @@ A failure to follow the pyramid is a code smell:
 
 ---
 
+## 6.1 Workflow Gates (cross-references)
+
+The rule files under [`.spiral/rules/`](../../.spiral/rules/)
+are the operative contract for "what tool, when". When
+you reach one of the moments below, the cited rule file's
+`MUST` line is what you follow. Do not invent a different
+command; the table is the routing.
+
+| Moment | MUST run | Rule file |
+|--------|----------|-----------|
+| Mid-cycle on a single packet | `just test-fast <crate> [pattern]` | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Iteration speed |
+| After a `pub` API change in `<crate>` | `just test-with-deps <crate>` (reverse-dep fan-out) | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Iteration speed |
+| Before claiming "tests pass" for any `unsafe` crate | `cargo miri test -p <crate>` (or `cargo miri setup && cargo miri test`) | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Advanced Verification |
+| Before claiming "tested" for a packet | `just verify-packet <crate>` | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Workflow Tools |
+| After editing any `.md` test plan or fixture doc | `./scripts/audit-doc-drift.sh` | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+| Before claiming a perf-related test set complete | `cargo bench --workspace` baseline diff | [`.spiral/rules/performance.md`](../../.spiral/rules/performance.md) § Workflow Tools |
+
+The full test protocol is the §4 Verification Protocol
+block above; the table above is the per-moment hook
+that runs *before* the protocol sweeps. If a moment is
+missing from the table, the rule file is the source of
+truth.
+
+---
+
 ## 7. The SSOT Update Rule
 
 When you add a test that exercises a new public

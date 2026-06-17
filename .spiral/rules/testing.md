@@ -122,7 +122,7 @@ For performance-critical or security-sensitive crates (such as `spiral-vortex` a
   ```bash
   RUSTFLAGS="-Zsanitizer=address" cargo test --target x86_64-apple-darwin
   ```
-  *(Note: Adjust target for your local platform as required; requires nightly compiler).*
+  *(Note: target must be adjusted for the local platform; requires nightly compiler).*
 
 ## What NOT to do
 

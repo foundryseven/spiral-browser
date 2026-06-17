@@ -116,7 +116,7 @@ The rule for re-exports:
   crate's own name (e.g. `v8` on `spiral-vortex`, not `enable_v8`).
 - Public surface is the `pub` items in `lib.rs`. Everything else is
   crate-internal and MUST remain private until promotion to `pub`.
-  A `pub(crate)` item MAY be widened to `pub` only when an external
+  A `pub(crate)` item MUST NOT be widened to `pub` except when an external
   consumer requires it, and the change MUST be verified by
   `./scripts/audit-orphan-exports.sh` after the next build.
 

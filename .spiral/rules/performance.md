@@ -63,7 +63,7 @@ for stable microbenchmarking:
 * **Regression Tolerance:** Any pull request introducing a
   degradation greater than **5%** on core engine microbenchmarks
   MUST be investigated. "Investigated" means a root-cause note
-  in the PR description; the implementer MAY NOT merge a > 5%
+  in the PR description; the implementer MUST NOT merge a > 5%
   regression without one.
 * **Baseline Comparison:** Automated PR workflows run `cargo bench`
   against the target branch (`main`) and compare statistical

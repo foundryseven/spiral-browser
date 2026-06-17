@@ -11,6 +11,7 @@
 #   bin/spiral-context.sh              # session start (no packet)
 #   bin/spiral-context.sh <packet-id>  # packet context
 #   bin/spiral-context.sh --quick      # only the always-relevant files
+#   bin/spiral-context.sh --rules-check # full rules enforcement (nightly clippy + audits)
 #
 # Output is plain text suitable for piping to `less` or
 # copy-pasting into a chat window. Exit code is always 0.
@@ -161,20 +162,86 @@ print_recent_tests() {
         || true
 }
 
-# ----- 6. Main ---------------------------------------------------------
+# ----- 6. Rules audit (fast scan, ~200ms) -------------------------------
+
+run_rules_audit() {
+    hr
+    printf "RULES ENFORCEMENT AUDIT (fast scan):\n"
+    hr
+
+    local ok=0
+
+    # 1. orphan exports — run silently, capture exit, show summary only.
+    local _orphan_out
+    _orphan_out=$(./scripts/audit-orphan-exports.sh 2>&1)
+    local _orphan_rc=$?
+    local _orphan_summary
+    _orphan_summary=$(printf '%s\n' "$_orphan_out" | tail -3)
+    printf "  audit-orphan-exports: "
+    if [[ $_orphan_rc -eq 0 ]]; then
+        printf "PASS\n"
+    else
+        printf "FAIL\n"
+        printf '%s\n' "$_orphan_summary" | sed 's/^/    /'
+        ok=1
+    fi
+
+    # 2. doc drift — show summary line only.
+    local _drift_out
+    _drift_out=$(./scripts/audit-doc-drift.sh 2>&1)
+    local _drift_rc=$?
+    printf "  audit-doc-drift:     "
+    if [[ $_drift_rc -eq 0 ]]; then
+        local _drift_summary
+        _drift_summary=$(printf '%s\n' "$_drift_out" | tail -1)
+        printf "PASS — %s\n" "$_drift_summary"
+    else
+        printf "FAIL\n"
+        printf '%s\n' "$_drift_out" | tail -10 | sed 's/^/    /'
+        ok=1
+    fi
+
+    # 3. tool coverage — every bin/scripts tool referenced in rules.
+    local _tc_out
+    _tc_out=$(./scripts/audit-orphan-exports.sh --tool-coverage 2>&1)
+    local _tc_rc=$?
+    printf "  tool-coverage:       "
+    if [[ $_tc_rc -eq 0 ]]; then
+        printf "PASS — every tool is referenced in .spiral/rules/\n"
+    else
+        printf "FAIL\n"
+        printf '%s\n' "$_tc_out" | sed 's/^/    /'
+        ok=1
+    fi
+
+    hr
+    if [[ $ok -eq 0 ]]; then
+        printf "RULES AUDIT: PASS (all enforcement gates green)\n"
+    else
+        printf "RULES AUDIT: ISSUES FOUND — review the FAIL lines above\n"
+    fi
+}
+
+# ----- 7. Main ---------------------------------------------------------
 
 case "${1:-}" in
     --quick|-q)
         print_always_relevant
         ;;
+    --rules-check)
+        print_always_relevant
+        run_rules_audit
+        printf "\nFor full rules enforcement including nightly clippy:\n  just verify-rules\n\n"
+        ;;
     --help|-h)
-        sed -n '2,30p' "$0"
+        sed -n '2,34p' "$0"
         ;;
     "")
         print_always_relevant
         print_recent_tests
         printf "\nTo get packet-specific context:\n  %s <packet-id>\n" "$0"
-        printf "Example: %s 2.1.2\n\n" "$0"
+        printf "Example: %s 2.1.2\n" "$0"
+        printf "To run the rules audit:           %s --rules-check\n\n" "$0"
         ;;
     *)
         print_always_relevant

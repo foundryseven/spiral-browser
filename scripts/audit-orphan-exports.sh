@@ -51,8 +51,14 @@ set -e
 
 # -- arg parsing ----------------------------------------------------------
 
+mode="crates"
+if [[ $# -gt 0 ]] && [[ "$1" == "--tool-coverage" ]]; then
+    mode="tool-coverage"
+    shift
+fi
+
 if [[ $# -gt 1 ]]; then
-    echo "usage: $0 [crate-name]" >&2
+    echo "usage: $0 [--tool-coverage] [crate-name]" >&2
     exit 2
 fi
 
@@ -91,6 +97,40 @@ if [[ $# -eq 1 ]]; then
     crates="$target"
 else
     crates="$all_crates"
+fi
+
+# -- tool-coverage check --------------------------------------------------
+
+if [[ "$mode" == "tool-coverage" ]]; then
+    _tools_dir="$repo_root/bin"
+    _scripts_dir="$repo_root/scripts"
+    _rules_dir="$repo_root/.spiral/rules"
+    _missing=0
+    _missing_list=""
+
+    _check_tool() {
+        _tpath="$1"
+        _tname=$(basename "$_tpath" .sh)
+        if [[ "$_tname" == "README" ]]; then return 0; fi
+        if ! grep -rFl "$_tname" "$_rules_dir"/*.md >/dev/null 2>&1; then
+            _missing_list="$_missing_list
+  - $_tpath (not referenced in any .spiral/rules/*.md)"
+            _missing=1
+        fi
+    }
+
+    for tf in "$_tools_dir"/* "$_scripts_dir"/*; do
+        [[ -f "$tf" ]] || continue
+        _check_tool "$tf"
+    done
+
+    if [[ $_missing -eq 1 ]]; then
+        echo "FAIL: tool-coverage: the following workflow scripts are not referenced in any rule file:"
+        printf '%s\n' "$_missing_list" | sed '/^$/d'
+        exit 1
+    fi
+    echo "OK: tool-coverage — every bin/ and scripts/ tool is referenced in .spiral/rules/."
+    exit 0
 fi
 
 # -- per-crate audit ------------------------------------------------------

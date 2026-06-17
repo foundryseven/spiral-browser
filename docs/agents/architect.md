@@ -100,6 +100,15 @@ architecture. Write them as `0001-vortex-rename.md`
 and `0002-vortex-from-scratch.md`. (This is exactly
 how the existing ADRs in the repo are split.)
 
+> **Note on retired crate names:** The example above
+> cites the `spiral-js` → `spiral-vortex` rename,
+> which is the most recent crate rename. Earlier
+> renames (`spiral-html` → `spiral-fmt`,
+> `spiral-layout` → `spiral-gyre`, `spiral-js` →
+> `spiral-vortex`) are historical; their ADRs remain
+> in `docs/decisions/`. Do not write new design
+> material that assumes the pre-rename names.
+
 ---
 
 ## 3. Boundary Design
@@ -162,6 +171,29 @@ are actually premature optimisation:
 If a refactor fails the "if we don't do this, what's
 the cost?" test, defer it. The active context and the
 ledger will catch it when it's actually load-bearing.
+
+---
+
+## 5.1 Workflow Gates (cross-references)
+
+The rule files under [`.spiral/rules/`](../../.spiral/rules/)
+are the operative contract for "what tool, when". When
+you reach one of the moments below, the cited rule file's
+`MUST` line is what you follow. Do not invent a different
+command; the table is the routing.
+
+| Moment | MUST run | Rule file |
+|--------|----------|-----------|
+| Before adding any `Cargo.toml` dep | `cargo tree --workspace --edges normal -i <crate>` | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Crate Boundaries |
+| After promoting `pub(crate)` to `pub` | `./scripts/audit-orphan-exports.sh` | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Wiring |
+| After writing an ADR | `bin/spiral-context.sh` to re-surface SSOT | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Workflow Tools |
+| After editing any `.md` file (ADR, ledger, etc.) | `./scripts/audit-doc-drift.sh` | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+| Before signing off an ADR | `just verify-packet <crate>` (for the crate the ADR touches) | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+| Before approving a rename ADR (e.g. `spiral-js` → `spiral-vortex`) | `./scripts/audit-orphan-exports.sh` (stale-ref guard) | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+
+The full set of MUST lines lives in
+[`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md);
+this table is the architect's subset.
 
 ---
 
