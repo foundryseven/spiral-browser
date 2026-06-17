@@ -24,6 +24,9 @@ do not override).
 | **Spec** | [`specs/GAP_ANALYSIS.md`](specs/GAP_ANALYSIS.md) (spec-only; status moved to tracker) |
 | **Roadmap** | [`ROADMAP.md`](ROADMAP.md) (one-page Group → Phase index) |
 | **Wiring audit script** | [`scripts/audit-orphan-exports.sh`](scripts/audit-orphan-exports.sh) |
+| **Doc-drift audit script** | [`scripts/audit-doc-drift.sh`](scripts/audit-doc-drift.sh) |
+| **Workflow scripts** | [`bin/`](bin/) (context primer, PR workflow — see `bin/README.md`) |
+| **Build recipes** | [`justfile`](justfile) (`just verify`, `just test-fast`, `just context`, etc.) |
 
 Read [`docs/implementation_tracker.md`](docs/implementation_tracker.md) **before
 starting any task**. It is the single source of truth for what is in flight,
@@ -80,19 +83,46 @@ forward-reference, not a multi-day refactor.
 
 ---
 
+## Workflow Tools (every session)
+
+These tools exist because the SSOT is large and re-loading it
+into working memory costs 15-20 minutes per fresh session.
+Adopted 2026-06-17; see `bin/README.md` for the design rationale.
+
+| Tool | When | Why |
+|------|------|-----|
+| `bin/spiral-context.sh` (or `just context`) | **Start of every session.** Run before reading any docs. | Prints the 5-7 most relevant files for the current packet (or the 6 always-relevant files if no packet). Replaces 6 manual file reads with one command. |
+| `just test-fast <crate> [pattern]` | **In-cycle iteration.** While writing tests and code for a single packet. | Skips the 30-60s `cargo test --workspace` overhead. Use the full workspace test for pre-commit only. |
+| `just test-with-deps <crate>` | **API-surface changes.** After changing a `pub` symbol in `spiral-foo`. | Computes the reverse-dep fan-out and runs all impacted crates. Catches breakage the unit test missed. |
+| `just verify-packet <crate>` | **Pre-commit.** After tests are green and before claiming complete. | Wraps `fmt + clippy + test + audit-orphan-exports` into one command, scoped to the crate you touched. |
+| `bin/spiral-pr.sh <packet-id>` | **End of session, when a PR is wanted.** Replaces manual `gh pr create` invocations. | Runs all pre-flight checks (fmt, clippy, test, both audits), pushes, opens a PR with a standardised body and reviewer checklist. `--dry-run` for preview, `--skip-tests` for hot fixes. |
+| `scripts/audit-orphan-exports.sh` | Pre-commit and pre-merge. | Catches `pub` symbols with no external consumer (wiring gaps). Exit 0 = clean. |
+| `scripts/audit-doc-drift.sh` | Pre-commit and pre-merge. | Catches SSOT inconsistencies (tracker out of sync with active context, AGENTS.md status row missing shipped packets, retired vocabulary). Exit 0 = clean. |
+
+The role contracts in `docs/agents/` (especially `implementer.md`)
+encode WHEN to invoke each tool. The `.spiral/rules/` directory
+holds the cross-cutting rules. Both pull from this table as the
+single source of truth for "what tool, when."
+
+---
+
 ## Quick Start
 
-1. Read `CODEX.md` for project overview
-2. Read `docs/system_architecture.md` for system design
-3. Read `docs/implementation_tracker.md` for current Phase and packets
-4. Read `docs/active_context.md` for live Phase state
-5. Skim `docs/glossary.md` so engine names make sense
-6. If picking up a numbered item, read the relevant ADR in `docs/decisions/`
-7. If the task is your first in the codebase, skim `docs/agents/onboarding.md`
+1. Run `bin/spiral-context.sh` (or `just context`) to see the
+   5-7 files most relevant to your current task. This replaces
+   steps 2-5 below and is the recommended entry point for every
+   fresh session.
+2. Read `CODEX.md` for project overview
+3. Read `docs/system_architecture.md` for system design
+4. Read `docs/implementation_tracker.md` for current Phase and packets
+5. Read `docs/active_context.md` for live Phase state
+6. Skim `docs/glossary.md` so engine names make sense
+7. If picking up a numbered item, read the relevant ADR in `docs/decisions/`
+8. If the task is your first in the codebase, skim `docs/agents/onboarding.md`
    then `docs/agents/<your-role>.md`
-8. Skim the relevant rule file in `.spiral/rules/`
-9. Run `cargo build` to verify your environment
-10. Run `cargo test` to verify tests pass
+9. Skim the relevant rule file in `.spiral/rules/`
+10. Run `cargo build` to verify your environment
+11. Run `cargo test` to verify tests pass
 
 ---
 

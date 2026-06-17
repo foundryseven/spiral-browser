@@ -13,6 +13,32 @@ implementer.
 
 ## 1. Pre-Flight Checklist
 
+**Always start with the context primer.** Before reading
+any docs manually, run:
+
+```bash
+bin/spiral-context.sh             # session start (no packet)
+bin/spiral-context.sh <packet-id> # picking up a specific packet
+# or equivalently:
+just context [<packet-id>]
+```
+
+This prints the 6 always-relevant files plus the
+packet-specific tracker line, Step header, architecture
+doc, pre-expanded block, and recent test files. It
+replaces the manual "read 6 files" sequence below with a
+single command. Skip the manual sequence **only if** the
+context script fails (e.g., no `bash` available); in that
+case fall through to the manual sequence.
+
+If you are picking up a specific packet and the context
+script output is sufficient (it surfaces the architecture
+doc, the expansion block, and any recent relevant tests),
+you do NOT need to re-read those files manually. Re-read
+only if the script's output is stale or missing.
+
+### Manual fallback (only when the script fails)
+
 Before touching any file, confirm you have read in this
 order:
 
@@ -159,9 +185,14 @@ Phase 1 Step 1.5 ledger entry for an example.
 After completing any task loop, the implementer must:
 
 1. **Append an entry to `docs/progress_ledger.md`.**
-   Use the existing entry format (date · agent · scope ·
-   summary). Match the style of recent entries; the
-   ledger is append-only.
+   **Use the canonical template at
+   [`docs/agents/ledger-template.md`](ledger-template.md).**
+   The template's seven fields (What · Files changed ·
+   Tests added · Wiring & Integration · Verification ·
+   SSOT updates · Status) are required. The reviewer
+   agent checks for these; missing any one is a blocker.
+   For mid-flight handoffs (not a completed packet),
+   use the HANDOVER entry format described in §7 instead.
 2. **Update `docs/active_context.md`** if Phase state,
    blockers, or "do not touch" zones changed. The
    status emoji and the `Last updated:` header must be
@@ -177,6 +208,11 @@ After completing any task loop, the implementer must:
    public type (see the Decision Protocol table in
    `AGENTS.md`). Link the ADR from the relevant Step
    in the tracker.
+5. **Run both audit scripts** before claiming
+   complete: `./scripts/audit-orphan-exports.sh` and
+   `./scripts/audit-doc-drift.sh`. Both must exit 0.
+   This is also enforced by `bin/spiral-pr.sh` and
+   `just verify-packet`.
 
 **Decision Protocol compliance check (mandatory):**
 
@@ -212,7 +248,7 @@ implementation, not in a follow-up commit.**
 ## 5. The Verification Checklist
 
 Before committing (when the user asks you to commit),
-or before claiming "complete":
+or before claiming "complete", run **all six**:
 
 ```bash
 cargo fmt --all -- --check
@@ -220,11 +256,30 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo build --workspace
 ./scripts/audit-orphan-exports.sh
+./scripts/audit-doc-drift.sh
 ```
 
-All five must pass. The verification protocol is
-listed in `AGENTS.md` § Wiring & Integration. The
-audit script is the ground truth for "wired or not".
+All six must pass. The verification protocol is
+listed in `AGENTS.md` § Wiring & Integration. The two
+audit scripts are the ground truth for "is my change
+both wired AND consistent with the SSOT?" —
+`audit-orphan-exports.sh` exit 1 means at least one
+`pub` symbol has no consumer and the change is not
+actually wired. `audit-doc-drift.sh` exit 1 means the
+SSOT (tracker, active context, AGENTS.md status row)
+is inconsistent with the actual state.
+
+**Faster scoped check during a packet:**
+
+```bash
+just verify-packet <crate>
+```
+
+This wraps `fmt + clippy + test + audit-orphan-exports`
+scoped to one crate. Use it for in-cycle checks;
+use the full sweep above for pre-commit / pre-PR. The
+PR script (`bin/spiral-pr.sh`) runs all six
+automatically before pushing — see §8.
 
 If the audit reports orphans in crates you did not
 touch, that is information, not a failure — the
@@ -275,3 +330,49 @@ leave a **HANDOVER** entry at the bottom of
 
 See the `HANDOVER: Phase 1 Step 1.5 mid-flight` entry
 dated 2026-06-16 for a worked example.
+
+For a **completed packet** (not a mid-flight handover),
+write the entry using [`docs/agents/ledger-template.md`](ledger-template.md)
+instead — the template's seven fields (What, Files
+changed, Tests added, Wiring & Integration, Verification,
+SSOT updates, Status) are the standard format the reviewer
+agent checks for. A HANDOVER-style entry for a shipped
+packet is a smell — the implementer ran out of time and
+fired a partial entry. Finish it before handing off.
+
+---
+
+## 8. The Session End Rule
+
+When the packet is green and the user wants a PR:
+
+```bash
+bin/spiral-pr.sh <packet-id>             # full flow
+bin/spiral-pr.sh --dry-run <packet-id>   # preview only
+bin/spiral-pr.sh --skip-tests <packet-id> # hot-fix escape
+```
+
+The PR script runs the full six-step verification
+(fmts, clippys, tests, both audits) before pushing,
+opens the PR with a standardised body and reviewer
+checklist, and tags it `agent-implemented`. It will
+refuse to push if any check fails — this is the
+"PRs always go out clean" guarantee.
+
+If the user does NOT want a PR (pure local iteration,
+or they're driving the merge themselves), skip the
+script and just commit. The PR script is a workflow
+helper, not a gate.
+
+**When the session is ending without a PR**, ensure:
+
+- The tracker packet checkbox is ticked.
+- The ledger entry follows the template in
+  `docs/agents/ledger-template.md`.
+- The active context "next up" advances.
+- Both audit scripts pass (or the session-end
+  warning has been acknowledged by the user).
+
+If any of those are incomplete, write a HANDOVER entry
+(see §7) instead of a normal ledger entry — the
+next session needs to know what's still pending.

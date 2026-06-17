@@ -22,6 +22,26 @@ background service, the test is co-generated:
 If a test passes without any code change, the test is hollow
 and must be rewritten.
 
+## Iteration speed
+
+During a single packet's TDFlow loop, do NOT run the full
+`cargo test --workspace` after every test edit. It costs
+30-60 seconds per run and most of the work is in one crate.
+
+Use `just test-fast <crate> [pattern]` for in-cycle work:
+
+```bash
+just test-fast spiral-fmt                  # all tests in one crate
+just test-fast spiral-fmt parse_fragment   # filtered by test name
+```
+
+For API-surface changes that fan out across reverse-dependencies,
+use `just test-with-deps <crate>` — it computes the
+reverse-dep set via `cargo metadata | jq` and runs each.
+
+The full `cargo test --workspace` is reserved for pre-commit
+verification and is enforced by `just verify` and `bin/spiral-pr.sh`.
+
 ## Test layout
 
 - **Unit tests** in the same file as the implementation, in a

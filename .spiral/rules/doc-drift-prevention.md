@@ -45,3 +45,9 @@ Before submitting or merging any Pull Request, ensure that:
    - `cargo fmt --all -- --check` runs cleanly.
    - `cargo clippy --workspace --all-targets -- -D warnings` runs cleanly.
    - `cargo test --workspace` runs cleanly.
+
+**All three are enforced automatically by `bin/spiral-pr.sh`**,
+which runs them as pre-flight checks before pushing. Use
+that script for the PR flow rather than running the checks
+manually — see `.spiral/rules/workflow.md` for the rule on
+when to invoke the workflow scripts.
