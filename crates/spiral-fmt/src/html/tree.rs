@@ -105,6 +105,14 @@ pub(crate) struct TreeBuilder {
     /// `<title>` (or `<script>`, etc.) and re-parenting it
     /// inside `<body>`.
     rawtext_depth: u32,
+    /// When [`Self::new_for_fragment`] creates a synthetic
+    /// context element (e.g. for a `<div>` or `<select>`
+    /// context), this records its NodeId so the caller can
+    /// extract the fragment nodes from the right place. For
+    /// body-context parses this is `None` (the synthetic body
+    /// is the context and the fragment lives as direct
+    /// children of body).
+    fragment_context_id: Option<spiral_dom::NodeId>,
 }
 
 impl TreeBuilder {
@@ -120,7 +128,113 @@ impl TreeBuilder {
             head_created: false,
             body_created: false,
             rawtext_depth: 0,
+            fragment_context_id: None,
         }
+    }
+
+    /// Create a tree builder pre-configured for the WHATWG HTML
+    /// §12.4 fragment parsing algorithm.
+    ///
+    /// `context_tag` is the lowercased tag name of the context
+    /// element (the element inside which the fragment is being
+    /// parsed). It determines:
+    ///
+    /// 1. The insertion mode the parser starts in.
+    /// 2. Whether the tokenizer's rawtext depth is bumped (for
+    ///    `title` / `textarea` / `style` / `script` / etc.).
+    ///
+    /// The builder pre-creates `<html><head><body>` wrappers,
+    /// pushes a synthetic copy of the context element onto the
+    /// stack (unless the context IS `<body>`, in which case we
+    /// reuse the body we just created), and sets the insertion
+    /// mode per the spec table. Subsequent token feeds go
+    /// through the regular insertion-mode machine.
+    pub(crate) fn new_for_fragment(context_tag: &str) -> Self {
+        let mut builder = Self {
+            dom: spiral_dom::Dom::new(),
+            stack: Vec::with_capacity(8),
+            active_formatting_elements: Vec::new(),
+            mode: InsertionMode::Initial,
+            html_created: false,
+            head_created: false,
+            body_created: false,
+            rawtext_depth: 0,
+            fragment_context_id: None,
+        };
+
+        // Step 4-6 of §12.4: create <html>, push <head>, push <body>.
+        // These never exist in the source; they exist solely to give
+        // the insertion-mode machine a legal open-elements stack to
+        // walk.
+        let _ = builder.create_html();
+        let _ = builder.create_head();
+        let _ = builder.create_body();
+
+        // Step 7-8: handle the context element.
+        if context_tag == "body" {
+            // The synthetic body IS the context. Push it onto the
+            // stack so `flush_implicit` and the token handlers see
+            // it as the current element.
+            let body_id = builder
+                .stack
+                .iter()
+                .rev()
+                .find(|&&id| builder.dom.get_tag(id) == Some("body"))
+                .copied();
+            if let Some(body_id) = body_id {
+                builder.stack.push(body_id);
+            }
+            builder.mode = InsertionMode::InBody;
+        } else {
+            // Push a synthetic copy of the context element onto the
+            // stack. The parser appends fragment content as children
+            // of this element.
+            let ctx_id = builder.dom.create_element(context_tag);
+            let body_id = builder
+                .stack
+                .iter()
+                .rev()
+                .find(|&&id| builder.dom.get_tag(id) == Some("body"))
+                .copied();
+            if let Some(body_id) = body_id {
+                builder
+                    .dom
+                    .append_child(body_id, ctx_id)
+                    .expect("append context element");
+            }
+            builder.stack.push(ctx_id);
+            builder.fragment_context_id = Some(ctx_id);
+
+            builder.mode = context_to_mode(context_tag);
+
+            // Step 8 / 9: rawtext-style context elements bump the
+            // rawtext depth so the parser keeps appending text to
+            // the context element regardless of the next token.
+            if is_rawtext_context(context_tag) {
+                builder.rawtext_depth += 1;
+            }
+        }
+
+        builder
+    }
+
+    /// Consume the builder and return the constructed DOM, after
+    /// the fragment parse finished. Differs from [`Self::finish`]
+    /// only in that the synthetic `<html><head><body>` wrappers
+    /// are kept intact so the caller can extract the fragment
+    /// nodes from the body element.
+    pub(crate) fn finish_for_fragment(mut self) -> spiral_dom::Dom {
+        let _ = self.flush_implicit();
+        self.dom
+    }
+
+    /// The NodeId of the synthetic context element that
+    /// [`Self::new_for_fragment`] pushed onto the open-elements
+    /// stack. Returns `None` for body-context parses (the
+    /// synthetic body IS the context, no extra element is
+    /// created).
+    pub(crate) fn fragment_context_id(&self) -> Option<spiral_dom::NodeId> {
+        self.fragment_context_id
     }
 
     /// Feed a token to the builder.
@@ -793,6 +907,14 @@ impl TreeBuilder {
                 } else if lower == "option" || lower == "optgroup" {
                     if self.stack_contains(&lower) {
                         self.pop_until(|tag| tag == lower);
+                        if self
+                            .stack
+                            .last()
+                            .map(|&id| self.dom.get_tag(id) == Some(lower.as_str()))
+                            .unwrap_or(false)
+                        {
+                            self.stack.pop();
+                        }
                     }
                 }
                 Ok(())
@@ -1634,6 +1756,45 @@ fn is_rawtext_element(tag: &str) -> bool {
             | "noembed"
             | "noframes"
             | "noscript"
+    )
+}
+
+/// Map a fragment-context element to its insertion mode per
+/// WHATWG HTML §12.4 step 8.
+///
+/// `tag` must already be lowercased.
+fn context_to_mode(tag: &str) -> InsertionMode {
+    match tag {
+        "select" => InsertionMode::InSelect,
+        "table" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th" | "caption" | "col"
+        | "colgroup" => InsertionMode::InTable,
+        _ => InsertionMode::InBody,
+    }
+}
+
+/// Whether a fragment-context tag name requires the tokenizer's
+/// rawtext state (so the parser keeps appending text to the
+/// context element regardless of the next token). This is the
+/// union of the RCDATA and RAWTEXT sets from §12.4 step 8
+/// (RCDATA: `title`, `textarea`) and step 9 (RAWTEXT:
+/// `style`, `script`, `xmp`, `iframe`, `noembed`, `noframes`).
+/// `noscript` and `plaintext` are deliberately omitted from
+/// the M4.4.1+ subset — they have spec-defined quirks (scripting
+/// toggle for `<noscript>`, no-end-tag for `<plaintext>`) that
+/// we do not implement.
+///
+/// `tag` must already be lowercased.
+fn is_rawtext_context(tag: &str) -> bool {
+    matches!(
+        tag,
+        "title"
+            | "textarea"
+            | "style"
+            | "script"
+            | "xmp"
+            | "iframe"
+            | "noembed"
+            | "noframes"
     )
 }
 

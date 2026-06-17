@@ -4319,4 +4319,46 @@ identified. Key findings:
   - `implementation_tracker.md:252` — Phase 2 header advanced to "Step 2.8 SHIPPED; Step 2.1 next".
 - **Status:** Shipped Packet 2.8.3. Step 2.8 (Adoption agency + AFE + foster parenting) is now complete. Step 2.1 (Fragment parsing algorithm, WHATWG HTML §12.4) is the recommended next packet per the SSOT ordering.
 
+## 2026-06-17 — Packet 2.1.1 (Fragment parsing algorithm) SHIPPED
+
+- **What:** Implemented the WHATWG HTML §12.4 HTML fragment parsing algorithm. This is the entry point for `Element.innerHTML = "..."`, `<template>` content document fragments, and the Vortex `Element.innerHTML` JS binding — three of the eight top-20 competitive gaps the research identified as P2 blockers. The algorithm parses a string of HTML inside the context of a given element, choosing the insertion mode based on the context element's tag name and switching the tokenizer to RAWTEXT/ScriptData for raw-text context elements.
+- **Files changed:**
+  - `crates/spiral-fmt/src/lib.rs:50-65` — new public `Fragment` struct: `pub dom: spiral_dom::Dom` + `pub nodes: Vec<NodeId>`.
+  - `crates/spiral-fmt/src/lib.rs:73-90` — new public entry point `spiral_fmt::parse_html_fragment(context: &Dom, context_id: NodeId, source: &str) -> Result<Fragment, FormatError>`.
+  - `crates/spiral-fmt/src/html/fragment.rs:1-150` — new `fragment` module with the `parse` function (sets up synthetic `<html><head><body>`, pushes the context element, switches the tokenizer's mode if required, runs the regular insertion-mode machine, then extracts the fragment's top-level nodes).
+  - `crates/spiral-fmt/src/html/tree.rs:126-208` — `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id`. The `new_for_fragment` constructor pre-creates the implicit wrappers, pushes a synthetic copy of the context element onto the stack, sets the insertion mode per the spec table, and bumps `rawtext_depth` for raw-text context tags.
+  - `crates/spiral-fmt/src/html/tree.rs:1933-1986` — two new helpers: `context_to_mode(tag)` (maps context tags to insertion modes per §12.4 step 8) and `is_rawtext_context(tag)` (per §12.4 steps 8-9, returns true for `title`, `textarea`, `style`, `script`, `xmp`, `iframe`, `noembed`, `noframes`).
+  - `crates/spiral-fmt/src/html/fragment.rs:111-128` — `context_to_tokeniser_mode(tag)` returns `(Mode, end_tag)` for raw-text / script-data contexts; the fragment parser calls `tokeniser.enter_raw_mode(mode, end_tag)` BEFORE the first `next_token()` so the tokenizer knows to treat `<` as text until it sees the matching end tag.
+  - `crates/spiral-fmt/src/html/tree.rs:907-918` — fixed existing InSelect `<option>` / `<optgroup>` end-tag handler to pop the option off the stack after `pop_until` (previously it left the option on top, causing the next `<option>` to become a child of the previous one — caught by `parse_fragment_context_select_accepts_options`).
+- **Tests added:** `crates/spiral-fmt/tests/fragment.rs:1-247` — 12 new e2e tests covering:
+  - `parse_fragment_context_body_div`: `<body>` context, parses two siblings correctly.
+  - `parse_fragment_context_div_with_bold_text`: `<div>` context, inline + trailing text.
+  - `parse_fragment_context_title_is_rawtext`: `<title>` context, the entire source becomes one text node.
+  - `parse_fragment_context_textarea_is_rawtext`: `<textarea>` context, same.
+  - `parse_fragment_context_select_accepts_options`: `<select>` context, both options are siblings of the synthetic select.
+  - `parse_fragment_context_table_accepts_caption`: `<table>` context, caption lands inside.
+  - `parse_fragment_context_tbody_accepts_tr`: `<tbody>` context, implies a second tbody (per InTable `<tr>` arm) and nests the tr.
+  - `parse_fragment_plain_text_only`: empty mixed text fragment.
+  - `parse_fragment_empty_input_yields_no_nodes`: zero nodes for empty input.
+  - `parse_fragment_malformed_html_is_lenient`: parser recovers from `<b>unclosed <i>`.
+  - `parse_fragment_context_body_keeps_unknown_tags_as_elements`: unknown custom tags survive.
+  - `parse_fragment_dom_is_independent_from_context_dom`: the Fragment owns its own DOM, distinct from the caller's.
+- **Wiring & Integration:**
+  - `spiral_fmt::parse_html_fragment` is the public entry point the tracker promises on line 302: "`spiral-fmt::html::parse_html_fragment(ctx, html)` consumed by `spiral-dom` setters and by Vortex `Element.innerHTML` setter."
+  - Within the workspace today, the integration tests in `crates/spiral-fmt/tests/fragment.rs` are the consumer (12 call sites covering the spec's context-element-to-mode table). The orphan-export audit script considers integration tests valid consumers (see `scripts/audit-orphan-exports.sh:35-37`).
+  - Downstream wiring is queued in Step 2.2 (DOM collection types + global attributes, including the `innerHTML` setter IDL) and Packet 2.1.4 (template content document-fragment construction). Those will turn `parse_html_fragment` into a real `Element.innerHTML` and `<template>.content` surface.
+  - End-to-end surface today: `parse_html_fragment(&dom, ctx_id, "<b>x</b>").nodes` returns a list of NodeIds into a self-contained Fragment DOM that callers can either inspect directly or transplant via `frag.dom.append_child(parent, id)`.
+- **Verification:**
+  - `cargo test -p spiral-fmt` → 149 tests pass (88 e2e + 46 unit + 3 integration + 12 fragment), 0 failures.
+  - `cargo test --workspace` → 66/66 binaries pass, 0 failures (one new binary from `tests/fragment.rs`).
+  - `cargo clippy --workspace --all-targets -- -D warnings` → clean.
+  - `./scripts/audit-orphan-exports.sh` → 0 findings, 20/20 crates wired; spiral-fmt has 19 symbols (was 18).
+  - `./scripts/audit-doc-drift.sh` → 0 findings.
+- **SSOT updates:**
+  - `implementation_tracker.md:264` — Packet 2.1.1 ticked, links to `parse_html_fragment` / `Fragment` / `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id`.
+  - `implementation_tracker.md:259` — Phase 2 header advances: "Step 2.8 SHIPPED ✅; Step 2.1 in flight — Packet 2.1.1 ✅".
+  - `implementation_tracker.md:508` — Priority queue reflects Packet 2.1.1 shipped.
+- **Status:** Shipped Packet 2.1.1. **Next packet: 2.1.2 (Quirk mode classifier, WHATWG HTML §12.1)** — required for the parser to detect HTML-vs-quirks mode based on the document's DOCTYPE, which feeds into Packet 2.1.4 (template content construction) and Packet 2.2 (DOM collection types).
+
+
 

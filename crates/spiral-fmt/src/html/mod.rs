@@ -12,7 +12,23 @@
 //! The implementation is the M4.4.1 minimum-viable subset of
 //! the WHATWG HTML5 spec. See the module-level docs on
 //! [`tokeniser`] and [`tree`] for the precise scope.
+//!
+//! The [`fragment`] module implements the WHATWG HTML §12.4
+//! HTML fragment parsing algorithm. It is the entry point for
+//! `Element.innerHTML = "..."`, `<template>` content document
+//! fragments, and the Vortex `Element.innerHTML` JS binding.
+//! The fragment algorithm differs from the document parsing
+//! algorithm in two important ways:
+//!
+//! 1. The insertion mode used is determined by the **context
+//!    element's tag** rather than by the parser's natural
+//!    progression through `Initial → BeforeHtml → ... → InBody`.
+//! 2. The fragment is parsed inside a synthetic `<html><head><body>`
+//!    wrapper so the parser's stack-management logic can run
+//!    unchanged, but only the children of the synthetic context
+//!    element are returned to the caller.
 
+pub mod fragment;
 pub mod tokeniser;
 pub mod tree;
 

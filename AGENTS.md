@@ -10,7 +10,7 @@ do not override).
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1 — Engines Foundation 🔄 IN FLIGHT (Step 1.6 Vortex GC rewrite; packets 1.6.1-1.6.5 SHIPPED, packets 1.6.6-1.6.8 retired to Step 2.8; packets 2.8.1-2.8.3 SHIPPED — Step 2.8 closed) |
+| **Phase** | Phase 1 — Engines Foundation 🔄 IN FLIGHT (Step 1.6 Vortex GC rewrite; packets 1.6.1-1.6.5 SHIPPED, packets 1.6.6-1.6.8 retired to Step 2.8; packets 2.8.1 SHIPPED, 2.8.2 SHIPPED, 2.8.3 SHIPPED; Packet 2.1.1 SHIPPED) |
 | **Phase 1.5 SSOT Restructure** | ✅ SHIPPED at `v0.0.0-bootstrap` (2026-06-16) |
 | **Active state** | [`docs/active_context.md`](docs/active_context.md) (live pointer) |
 | **Status SSOT** | [`docs/implementation_tracker.md`](docs/implementation_tracker.md) (Group → Phase → Step → Packet) |

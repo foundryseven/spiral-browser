@@ -249,7 +249,7 @@ reading.** No feature work in this Phase; pure structural.
 
 ---
 
-## Phase 2 — Engines Depth 🔄 IN FLIGHT (Step 2.8 SHIPPED; packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅; Step 2.1 next)
+## Phase 2 — Engines Depth 🔄 IN FLIGHT (Step 2.8 SHIPPED ✅; Step 2.1 in flight — Packet 2.1.1 ✅)
 
 The top-20 competitive gaps identified in `docs/research/` (worktree
 `research/competitive-parity` @ 2026-06-16). Each gap becomes one Step.
@@ -261,7 +261,7 @@ Owner: spiral-fmt (HTML), spiral-dom, spiral-vortex (JS stdlib). P0–P3
 priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 
 ### Step 2.1 — Fragment parsing algorithm
-- [ ] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
+- [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). *Shipped 2026-06-17; see `spiral_fmt::parse_html_fragment` in `crates/spiral-fmt/src/lib.rs:73`, the `Fragment` struct at `crates/spiral-fmt/src/lib.rs:50-65`, the fragment module at `crates/spiral-fmt/src/html/fragment.rs`, and `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id` in `crates/spiral-fmt/src/html/tree.rs:126-208`.*
 - [ ] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
 - [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
 - [ ] **Packet 2.1.4** — `<template>` content document-fragment construction.
@@ -502,13 +502,14 @@ The CI gates. Not a feature Phase.
 The next 8 unchecked packets across all phases, in recommended order:
 
 1. **Packet 1.6.5 (M4.5 Item 13)** — Gyre box model + margins.
-2. **Packet 2.8.1** — Adoption agency algorithm (WHATWG HTML §12.2.6.1).
-3. **Packet 2.8.2** — Active formatting elements list (WHATWG HTML §12.2.6.1).
-4. **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1).
-5. **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4).
-6. **Packet 2.7.1** — `URL` parser (WHATWG URL §4).
-7. **Packet 2.7.2** — `URLSearchParams` IDL.
-8. **Packet 4.1.1** — `spiral-vello` workspace member decision (ADR required).
+2. **Packet 2.8.1** — Adoption agency algorithm (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
+3. **Packet 2.8.2** — Active formatting elements list (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
+4. **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
+5. **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). ✅ SHIPPED 2026-06-17.
+6. **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
+7. **Packet 2.7.1** — `URL` parser (WHATWG URL §4).
+8. **Packet 2.7.2** — `URLSearchParams` IDL.
+9. **Packet 4.1.1** — `spiral-vello` workspace member decision (ADR required).
 
 If you are picking up one of these, **read the linked architecture doc
 first** (`docs/architecture/fmt.md`, `vortex.md`, `gyre.md`, `net.md`),

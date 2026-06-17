@@ -47,6 +47,54 @@ pub fn parse_html(source: &str) -> Result<spiral_dom::Dom, FormatError> {
     html::parse(source)
 }
 
+/// The output of [`parse_html_fragment`]: a self-contained DOM
+/// plus the top-level node IDs that the fragment algorithm
+/// produced.
+///
+/// WHATWG HTML §12.4 "HTML fragment parsing algorithm" returns a
+/// list of nodes. In Spiral, those nodes live in a small DOM
+/// that the caller can either inspect in place or transplant
+/// into another DOM.
+///
+/// The DOM is owned by the Fragment — dropping the Fragment
+/// drops the DOM and its nodes.
+pub struct Fragment {
+    /// The DOM containing the implicit `<html><head><body>`
+    /// wrappers and the parsed nodes. Owned by the Fragment.
+    pub dom: spiral_dom::Dom,
+    /// Top-level parsed nodes, in source order.
+    ///
+    /// For most contexts these are the children of the synthetic
+    /// body / context element. The caller can read their tags
+    /// and attributes via `dom.get_tag(id)` / `dom.get_attributes(id)`,
+    /// or move them into another DOM with `dom.append_child`.
+    pub nodes: Vec<spiral_dom::NodeId>,
+}
+
+/// Parse an HTML fragment using the WHATWG HTML §12.4 algorithm.
+///
+/// `context` is the DOM that supplies the context element. The
+/// fragment algorithm reads `context_id`'s tag name to decide
+/// which insertion mode to start with (see the table in the
+/// module docs of [`html::fragment`]).
+///
+/// The returned [`Fragment`] owns its own DOM, separate from
+/// `context`. The caller can either keep them separate (e.g. to
+/// validate the fragment before insertion) or call
+/// `frag.dom.append_child(parent, id)` to transplant each node
+/// into the caller's DOM.
+///
+/// Required for `Element.innerHTML = "..."`, the `<template>`
+/// element's content document fragment, and the Vortex
+/// `Element.innerHTML` JS binding.
+pub fn parse_html_fragment(
+    context: &spiral_dom::Dom,
+    context_id: spiral_dom::NodeId,
+    source: &str,
+) -> Result<Fragment, FormatError> {
+    html::fragment::parse(context, context_id, source)
+}
+
 /// Parse `source` as a CSS stylesheet.
 ///
 /// M4.4.1 ships a from-spec CSS Syntax Level 3 parser. The

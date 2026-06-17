@@ -1,9 +1,9 @@
 # Active Context
 
 **Last updated:** 2026-06-17
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 next · Doc-drift prevention and wiring audit fully green (0 findings)
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅ · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
-*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 next)*
+*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packet 2.1.1 ✅)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 **Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
@@ -127,12 +127,10 @@ The top-20 competitive gaps identified by the research are foundational P2 work 
 **Packet 2.8.3 — Foster parenting (WHATWG HTML §12.2.6.1)**. ✅ SHIPPED 2026-06-17 — see `foster_parent` / `foster_parent_text` / `reset_table_mode` and the `InTable` / `InTableBody` / `InRow` / `InCell` / `InSelect` mode arms in `crates/spiral-fmt/src/html/tree.rs:545-585, 770-840, 880-905, 1400-1580`. New `spiral_dom::Dom::insert_child` API in `crates/spiral-dom/src/lib.rs:127-160`.
 
 **Step 2.1 — Fragment parsing (Phase 2):**
-- [ ] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
-- [ ] **Packet 2.1.2** — DOM collection types: `NodeList`, `HTMLCollection`, `DOMTokenList`, `Attr`, `NamedNodeMap`, `DocumentType`.
-- [ ] **Packet 2.1.3** — Global attributes IDL (id, class, style, title, lang, dir, hidden, tabindex, contenteditable, inert, popover).
-- [ ] **Packet 2.1.4** — `data-*` custom data attributes (dataset IDL).
-- [ ] **Packet 2.1.5** — `globalThis` (ECMA-262 §19.4.1).
-- [ ] **Packet 2.1.6** — `structuredClone` (WHATWG HTML §8.2.7).
+- [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content. ✅ SHIPPED 2026-06-17.
+- [ ] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). Required for `<table>` in quirks-mode and CSS box-model differences.
+- [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
+- [ ] **Packet 2.1.4** — `<template>` content document-fragment construction.
 - [ ] **Packet 2.1.7** — `URL` + `URLSearchParams` (WHATWG URL §4).
 
 **Step 2.2 — Quirk + template:**
@@ -348,12 +346,12 @@ any shipped browser:
 ## Next up — Step 2.1 (Fragment parsing)
 
 Step 2.8 (AAA + AFE + foster parenting) shipped 2026-06-17 — see the
-ledger entry. The next step is **Step 2.1 (Fragment parsing, WHATWG
-HTML §12.4)**, beginning with **Packet 2.1.1** (the fragment
-parsing algorithm itself, required for `innerHTML`,
-`insertAdjacentHTML`, and `<template>` content). Packets 2.1.2-2.1.5
-(DOM collections, global attributes, `data-*`, `globalThis`) round
-out the step.
+ledger entry. Packet 2.1.1 (fragment parsing algorithm, WHATWG
+HTML §12.4) shipped 2026-06-17 — see the same ledger. **Next up:
+Packet 2.1.2 — Quirk mode classifier (WHATWG HTML §12.1)**.
+Quirk mode detection inspects the document's DOCTYPE and turns on
+quirks-mode behaviour for `<table>` and CSS box-model differences.
+Packet 2.1.3 (`<noscript>`) and 2.1.4 (`<template>` content) follow.
 
 ## Completed (packets shipped)
 
