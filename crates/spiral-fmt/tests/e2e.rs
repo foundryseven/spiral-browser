@@ -593,3 +593,111 @@ fn css_parse_value_colour_lengths_percentages() {
     assert!(matches!(decls[1].value, Value::Length(10.0)));
     assert!(matches!(decls[2].value, Value::Percentage(50.0)));
 }
+
+#[test]
+fn parse_siblings_nesting() {
+    let dom = parse_html("<p>first</p><a>second</a>").expect("parse");
+    let mut p_has_children = false;
+    let mut root_has_a = false;
+    for (id, _) in dom.descendants(dom.root) {
+        if dom.get_tag(id) == Some("p") {
+            let children = dom.get_children(id).expect("p children");
+            for &c in &children {
+                if dom.get_tag(c) == Some("a") {
+                    panic!("<a> should not be a child of <p>");
+                }
+            }
+            p_has_children = !children.is_empty();
+        }
+        if dom.get_tag(id) == Some("a") {
+            let parent = dom.get_parent(id).expect("a parent");
+            if dom.get_tag(parent) == Some("body") {
+                root_has_a = true;
+            }
+        }
+    }
+    assert!(p_has_children);
+    assert!(root_has_a);
+}
+
+#[test]
+fn parse_aaa_misnested_formatting_tags() {
+    let dom = parse_html("<b>bold <i>bold-italic</b> italic</i>").expect("parse");
+    let body_id = dom
+        .descendants(dom.root)
+        .find(|&(id, _)| dom.get_tag(id) == Some("body"))
+        .map(|(id, _)| id)
+        .expect("body");
+
+    let body_children = dom.get_children(body_id).expect("body children");
+    assert_eq!(
+        body_children.len(),
+        2,
+        "body should have exactly 2 children: <b> and <i>"
+    );
+
+    let first_child = body_children[0];
+    assert_eq!(dom.get_tag(first_child), Some("b"));
+
+    let second_child = body_children[1];
+    assert_eq!(dom.get_tag(second_child), Some("i"));
+
+    let b_children = dom.get_children(first_child).expect("b children");
+    assert_eq!(b_children.len(), 2);
+    assert!(dom.get_text(b_children[0]).map(|t| t.content.as_str()) == Some("bold "));
+    assert_eq!(dom.get_tag(b_children[1]), Some("i"));
+
+    let i1_children = dom.get_children(b_children[1]).expect("i1 children");
+    assert_eq!(i1_children.len(), 1);
+    assert!(dom.get_text(i1_children[0]).map(|t| t.content.as_str()) == Some("bold-italic"));
+
+    let i2_children = dom.get_children(second_child).expect("i2 children");
+    assert_eq!(i2_children.len(), 1);
+    assert!(dom.get_text(i2_children[0]).map(|t| t.content.as_str()) == Some(" italic"));
+}
+
+#[test]
+fn parse_afe_noahs_ark_clause() {
+    let dom = parse_html("<b><b><b><b>x</b></b></b></b>").expect("parse");
+    assert!(!dom.get_children(dom.root).unwrap().is_empty());
+}
+
+#[test]
+fn parse_aaa_with_furthest_block() {
+    let dom = parse_html("<b>bold <p>paragraph</b> tail</p>").expect("parse");
+    let body_id = dom
+        .descendants(dom.root)
+        .find(|&(id, _)| dom.get_tag(id) == Some("body"))
+        .map(|(id, _)| id)
+        .expect("body");
+
+    let body_children = dom.get_children(body_id).expect("body children");
+    assert_eq!(
+        body_children.len(),
+        2,
+        "body should have exactly 2 children: <b> and <p>"
+    );
+
+    let first_child = body_children[0];
+    assert_eq!(dom.get_tag(first_child), Some("b"));
+
+    let second_child = body_children[1];
+    assert_eq!(dom.get_tag(second_child), Some("p"));
+
+    let b_children = dom.get_children(first_child).expect("b children");
+    assert_eq!(b_children.len(), 1);
+    assert!(dom.get_text(b_children[0]).map(|t| t.content.as_str()) == Some("bold "));
+
+    let p_children = dom.get_children(second_child).expect("p children");
+    assert_eq!(p_children.len(), 2);
+    assert_eq!(dom.get_tag(p_children[0]), Some("b"));
+    assert!(dom.get_text(p_children[1]).map(|t| t.content.as_str()) == Some(" tail"));
+
+    let inner_b_children = dom.get_children(p_children[0]).expect("inner b children");
+    assert_eq!(inner_b_children.len(), 1);
+    assert!(
+        dom.get_text(inner_b_children[0])
+            .map(|t| t.content.as_str())
+            == Some("paragraph")
+    );
+}

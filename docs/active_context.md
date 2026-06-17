@@ -1,9 +1,9 @@
 # Active Context
 
-**Last updated:** 2026-06-16
-**Status:** 🟢 Phase 1 Step 1.6 Packets 1.6.1–1.6.4 SHIPPED · Developer guidelines enhanced (performance, unsafe standards, WPT blueprints) · Doc-drift prevention and wiring audit fully green (0 findings)
-Current phase: Phase 1 — Engines Foundation 🔄 IN FLIGHT
-*(Phase 1 Steps 1.1–1.5 done; Step 1.6 in flight; packets 1.6.1 ✅, 1.6.2 ✅, 1.6.3 ✅, 1.6.4 ✅, 1.6.5 ☐, 1.6.6–1.6.8 ☐)*
+**Last updated:** 2026-06-17
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 in flight (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ☐) · Doc-drift prevention and wiring audit fully green (0 findings)
+Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
+*(Phase 1 Steps 1.1–1.6 done; Step 2.8 in flight; packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ☐)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 **Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
@@ -116,24 +116,15 @@ the live count (64 test binaries, 0 failing, verified
 All Phase 1+ skeleton crates have been wired with surface
 integration tests to maintain a clean workspace.
 
-## What needs picking (Phase 1.6+)
-
-### In-flight Phase 1.6 packets
-
-- **Packet 1.6.5** — Gyre box model + margins
-  (first Gyre layout work; no Taffy).
-- **Packet 1.6.2** — Vortex first functional slice
-  (lexer → parser → AST → console.log interpreter).
-  Entry point: `vortex_eval(script: &str) -> Result<JsValue, VortexError>`.
-- (1.6.1, 1.6.3, 1.6.4 SHIPPED — see the tracker.)
+## What needs picking (Phase 2+)
 
 ### Recommended next packets (from competitive-parity research, 2026-06-16)
 
-The top-20 competitive gaps identified by the research are foundational P2 work that must land during the Phase 1.6+ window. Pick in this order:
+The top-20 competitive gaps identified by the research are foundational P2 work that must land during the Phase 2 window. Pick in this order:
 
-**Packet 1.6.6 — Adoption agency algorithm (WHATWG HTML §12.2.6.1)** [retired to Step 2.8 / Packet 2.8.1]. Required for correct rendering of real-world HTML.
-**Packet 1.6.7 — Active formatting elements list (WHATWG HTML §12.2.6.1)** [retired to Step 2.8 / Packet 2.8.2]. Required by adoption agency.
-**Packet 1.6.8 — Foster parenting (WHATWG HTML §12.2.6.1)** [retired to Step 2.8 / Packet 2.8.3]. Required for correct table parsing.
+**Packet 2.8.1 — Adoption agency algorithm (WHATWG HTML §12.2.6.1)**. ✅ SHIPPED 2026-06-17 — see `tree::run_adoption_agency_algorithm` in `crates/spiral-fmt/src/html/tree.rs:894`.
+**Packet 2.8.2 — Active formatting elements list (WHATWG HTML §12.2.6.1)**. ✅ SHIPPED 2026-06-17 — see `TreeBuilder::active_formatting_elements` and reconstructor in `crates/spiral-fmt/src/html/tree.rs:71-825`.
+**Packet 2.8.3 — Foster parenting (WHATWG HTML §12.2.6.1)**. ☐ Next up — required for correct table parsing.
 
 **Step 2.1 — Fragment parsing (Phase 2):**
 - [ ] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
@@ -354,16 +345,9 @@ any shipped browser:
 
 ---
 
-## Next up — Packet 1.6.5 (Gyre box model + margins)
+## Next up — Packet 2.8.3 (Foster parenting)
 
-Gyre box model is the next packet (Step 1.6, packet 1.6.5). Gyre is
-Spiral's layout engine (custom, no Taffy). Box model and margins are the
-foundation: content-box sizing, margin collapse, content/width/height
-utilities. This is first real Gyre work; see `docs/architecture/gyre.md`.
-
-Wire into `spiral-browser` binary to close the last Phase 1+ skeleton
-orphans. `./scripts/audit-orphan-exports.sh` should drop to 0 candidates
-after this packet.
+The next step is Packet 2.8.3 (Foster parenting, WHATWG HTML §12.2.6.1). This is the last packet in the Step 2.8 suite and is required for correct table parsing (in particular for `<table>` reparents into misnested rows/cells). It builds on the AFE list and adoption agency algorithm shipped in Packets 2.8.2 and 2.8.1 (2026-06-17).
 
 ## Completed (packets shipped)
 
@@ -388,7 +372,7 @@ after this packet.
   restructure. `AGENTS.md` Current Status row, `docs/` canonical
   layout, `CODEX.md`, `build`/`clean`/`test`/`release` shell
   scripts. Shipped at `v0.0.0-bootstrap`.
-- **Step 1.6 (Packets 1.6.1–1.6.4):**
+- **Step 1.6 (Packets 1.6.1–1.6.5):**
   Packet 1.6.1 — Vortex GC rewrite (`OriginArena`, `TaggedCell`,
   `GcKey`, mark-sweep). 22 tests.
   Packet 1.6.2 — Vortex first functional slice (lexer, parser,
@@ -398,6 +382,7 @@ after this packet.
   `BrowserConfig`. Gate: `cargo run -- hello -P untrusted`
   segfaults with -EACCES.
   Packet 1.6.4 — `spiral-network` HTTP/1.1 stub.
+  Packet 1.6.5 — Gyre box model + margins (first Gyre layout work; width, margin, padding, border geometry, vertical block flow, margin collapse, and CSS selector matching/style resolution). 6 layout tests.
 - **Design pass (2026-06-14):** four architectural bets, three
   new crates, process model and ad policy decisions — all signed
   off.

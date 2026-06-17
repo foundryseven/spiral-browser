@@ -51,6 +51,15 @@ pub(crate) enum InsertionMode {
     AfterAfterBody,
 }
 
+/// Represents an entry in the list of active formatting elements.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ActiveElement {
+    /// A normal DOM node tracked for formatting.
+    Element(spiral_dom::NodeId),
+    /// A marker boundary (e.g. from table cells or buttons).
+    Marker,
+}
+
 /// A tree builder that consumes tokens and produces a DOM.
 pub(crate) struct TreeBuilder {
     /// The DOM being built. The root (NodeId 0) is always the
@@ -60,6 +69,8 @@ pub(crate) struct TreeBuilder {
     /// "current" element (the one that receives the next text
     /// or child element).
     stack: Vec<spiral_dom::NodeId>,
+    /// List of active formatting elements (AFE).
+    active_formatting_elements: Vec<ActiveElement>,
     /// Current insertion mode.
     mode: InsertionMode,
     /// Whether the implicit `<html>` has been created.
@@ -84,6 +95,7 @@ impl TreeBuilder {
         Self {
             dom: spiral_dom::Dom::new(),
             stack: Vec::with_capacity(8),
+            active_formatting_elements: Vec::new(),
             mode: InsertionMode::Initial,
             html_created: false,
             head_created: false,
@@ -256,18 +268,44 @@ impl TreeBuilder {
                 return self.handle_start_tag(name, attributes, position, tokeniser);
             }
             InsertionMode::InBody => {
+                if lower == "button" {
+                    if self.node_in_scope_by_tag("button") {
+                        self.handle_end_tag("button", position, tokeniser)?;
+                    }
+                    self.reconstruct_active_formatting_elements()?;
+                    let _id = self.create_element("button")?;
+                    self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    self.active_formatting_elements.push(ActiveElement::Marker);
+                    return Ok(());
+                }
+
                 // Block-level elements: close any open `<p>` first.
                 if is_block_level(&lower) && self.stack_contains("p") {
                     self.pop_until(|tag| tag == "p");
+                    if self.stack_contains("p") {
+                        self.stack.pop();
+                    }
                 }
+
                 // Self-closing void elements: don't push onto stack.
                 if is_void(&lower) {
+                    self.reconstruct_active_formatting_elements()?;
                     self.create_element(&lower)?;
                     self.apply_attributes_to_current(attributes, position, tokeniser)?;
                     // Pop the void element immediately.
                     self.stack.pop();
                     return Ok(());
                 }
+
+                if is_formatting_element(&lower) {
+                    self.reconstruct_active_formatting_elements()?;
+                    let id = self.create_element(&lower)?;
+                    self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    self.push_active_formatting_element(id);
+                    return Ok(());
+                }
+
+                self.reconstruct_active_formatting_elements()?;
                 self.create_element(&lower)?;
                 self.apply_attributes_to_current(attributes, position, tokeniser)?;
                 Ok(())
@@ -318,11 +356,27 @@ impl TreeBuilder {
             InsertionMode::InHead => {
                 if lower == "head" {
                     self.pop_until(|tag| tag == "head");
+                    if self
+                        .stack
+                        .last()
+                        .map(|&id| self.dom.get_tag(id) == Some("head"))
+                        .unwrap_or(false)
+                    {
+                        self.stack.pop();
+                    }
                     self.mode = InsertionMode::AfterHead;
                     return Ok(());
                 }
                 if lower == "body" || lower == "html" || lower == "br" {
                     self.pop_until(|tag| tag == "head");
+                    if self
+                        .stack
+                        .last()
+                        .map(|&id| self.dom.get_tag(id) == Some("head"))
+                        .unwrap_or(false)
+                    {
+                        self.stack.pop();
+                    }
                     self.mode = InsertionMode::AfterHead;
                     return self.handle_end_tag(name, _position, _tokeniser);
                 }
@@ -336,6 +390,14 @@ impl TreeBuilder {
                 // real children.
                 if is_rawtext_element(&lower) {
                     self.pop_until(|tag| tag == lower);
+                    if self
+                        .stack
+                        .last()
+                        .map(|&id| self.dom.get_tag(id) == Some(&lower))
+                        .unwrap_or(false)
+                    {
+                        self.stack.pop();
+                    }
                     return Ok(());
                 }
                 // Ignore any other end tag inside head.
@@ -363,9 +425,34 @@ impl TreeBuilder {
                     self.mode = InsertionMode::AfterBody;
                     return Ok(());
                 }
+                if lower == "button" {
+                    self.pop_until(|tag| tag == "button");
+                    if self
+                        .stack
+                        .last()
+                        .map(|&id| self.dom.get_tag(id) == Some("button"))
+                        .unwrap_or(false)
+                    {
+                        self.stack.pop();
+                    }
+                    self.clear_up_to_last_marker();
+                    return Ok(());
+                }
+                if is_formatting_element(&lower) {
+                    self.run_adoption_agency_algorithm(&lower)?;
+                    return Ok(());
+                }
                 // Pop elements until we find one matching the end
                 // tag. If none, ignore.
                 self.pop_until(|tag| tag == lower);
+                if self
+                    .stack
+                    .last()
+                    .map(|&id| self.dom.get_tag(id) == Some(&lower))
+                    .unwrap_or(false)
+                {
+                    self.stack.pop();
+                }
                 Ok(())
             }
             InsertionMode::AfterBody => {
@@ -444,6 +531,14 @@ impl TreeBuilder {
                 }
                 // Non-whitespace: close head, transition to body.
                 self.pop_until(|tag| tag == "head");
+                if self
+                    .stack
+                    .last()
+                    .map(|&id| self.dom.get_tag(id) == Some("head"))
+                    .unwrap_or(false)
+                {
+                    self.stack.pop();
+                }
                 self.create_body()?;
                 self.mode = InsertionMode::InBody;
                 return self.handle_character(text, tokeniser);
@@ -457,6 +552,9 @@ impl TreeBuilder {
                 return self.handle_character(text, tokeniser);
             }
             InsertionMode::InBody | InsertionMode::AfterBody | InsertionMode::AfterAfterBody => {
+                if self.mode == InsertionMode::InBody {
+                    self.reconstruct_active_formatting_elements()?;
+                }
                 self.append_text_to_current(text, tokeniser)
             }
         }
@@ -650,6 +748,359 @@ impl TreeBuilder {
         // Deprecated in favour of `Dom::set_quirks_mode`.
         // Kept as a no-op shim so the file remains self-contained.
     }
+
+    fn push_active_formatting_element(&mut self, node_id: spiral_dom::NodeId) {
+        let tag = match self.dom.get_tag(node_id) {
+            Some(t) => t.to_string(),
+            None => return,
+        };
+        let attrs = self
+            .dom
+            .get_attributes(node_id)
+            .map(|attrs| attrs.to_vec())
+            .unwrap_or_default();
+
+        let mut identical_indices = Vec::new();
+        for (i, entry) in self.active_formatting_elements.iter().enumerate().rev() {
+            match entry {
+                ActiveElement::Marker => break,
+                ActiveElement::Element(id) => {
+                    if self.dom.get_tag(*id) == Some(&tag) {
+                        let entry_attrs = self.dom.get_attributes(*id);
+                        if entry_attrs.map(|a| a == attrs).unwrap_or(false) {
+                            identical_indices.push(i);
+                        }
+                    }
+                }
+            }
+        }
+
+        if identical_indices.len() >= 3 {
+            let oldest_idx = *identical_indices.last().unwrap();
+            self.active_formatting_elements.remove(oldest_idx);
+        }
+
+        self.active_formatting_elements
+            .push(ActiveElement::Element(node_id));
+    }
+
+    fn node_in_scope(&self, node_id: spiral_dom::NodeId) -> bool {
+        let idx = match self.stack.iter().position(|&x| x == node_id) {
+            Some(i) => i,
+            None => return false,
+        };
+        for &stack_id in &self.stack[idx..] {
+            if let Some(tag) = self.dom.get_tag(stack_id) {
+                if matches!(tag, "html" | "table" | "td" | "th" | "button" | "caption")
+                    && stack_id != node_id
+                {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    fn node_in_scope_by_tag(&self, tag: &str) -> bool {
+        let node_id = match self
+            .stack
+            .iter()
+            .rev()
+            .find(|&&id| self.dom.get_tag(id) == Some(tag))
+        {
+            Some(&id) => id,
+            None => return false,
+        };
+        self.node_in_scope(node_id)
+    }
+
+    fn clear_up_to_last_marker(&mut self) {
+        while let Some(entry) = self.active_formatting_elements.pop() {
+            if matches!(entry, ActiveElement::Marker) {
+                break;
+            }
+        }
+    }
+
+    fn reconstruct_active_formatting_elements(&mut self) -> Result<(), FormatError> {
+        if self.active_formatting_elements.is_empty() {
+            return Ok(());
+        }
+
+        let last_entry = *self.active_formatting_elements.last().unwrap();
+        match last_entry {
+            ActiveElement::Marker => return Ok(()),
+            ActiveElement::Element(id) => {
+                if self.stack.contains(&id) {
+                    return Ok(());
+                }
+            }
+        }
+
+        let mut index = self.active_formatting_elements.len() - 1;
+        loop {
+            if index == 0 {
+                break;
+            }
+            let prev = self.active_formatting_elements[index - 1];
+            match prev {
+                ActiveElement::Marker => break,
+                ActiveElement::Element(id) => {
+                    if self.stack.contains(&id) {
+                        break;
+                    }
+                }
+            }
+            index -= 1;
+        }
+
+        let mut start_index = index;
+        if let ActiveElement::Element(id) = self.active_formatting_elements[start_index] {
+            if self.stack.contains(&id) {
+                start_index += 1;
+            }
+        }
+
+        for i in start_index..self.active_formatting_elements.len() {
+            let entry = self.active_formatting_elements[i];
+            if let ActiveElement::Element(old_id) = entry {
+                let tag = self.dom.get_tag(old_id).unwrap().to_string();
+                let attrs = self
+                    .dom
+                    .get_attributes(old_id)
+                    .map(|attrs| attrs.to_vec())
+                    .unwrap_or_default();
+
+                let clone_id = self.dom.create_element(&tag);
+                for attr in attrs {
+                    self.dom
+                        .set_attribute(clone_id, &attr.0, &attr.1)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                }
+
+                let parent = *self.stack.last().unwrap_or(&self.dom.root);
+                self.dom
+                    .append_child(parent, clone_id)
+                    .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+
+                self.active_formatting_elements[i] = ActiveElement::Element(clone_id);
+                self.stack.push(clone_id);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn run_adoption_agency_algorithm(&mut self, subject: &str) -> Result<(), FormatError> {
+        let mut outer_loop_counter = 0;
+
+        while outer_loop_counter < 8 {
+            outer_loop_counter += 1;
+
+            let mut formatting_element_idx = None;
+            for (idx, entry) in self.active_formatting_elements.iter().enumerate().rev() {
+                match entry {
+                    ActiveElement::Marker => break,
+                    ActiveElement::Element(id) => {
+                        if self.dom.get_tag(*id) == Some(subject) {
+                            formatting_element_idx = Some(idx);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            let formatting_element_idx = match formatting_element_idx {
+                None => {
+                    self.pop_until(|tag| tag == subject);
+                    return Ok(());
+                }
+                Some(idx) => idx,
+            };
+
+            let formatting_element = match self.active_formatting_elements[formatting_element_idx] {
+                ActiveElement::Element(id) => id,
+                _ => unreachable!(),
+            };
+
+            if !self.stack.contains(&formatting_element) {
+                self.active_formatting_elements
+                    .remove(formatting_element_idx);
+                return Ok(());
+            }
+
+            if !self.node_in_scope(formatting_element) {
+                return Ok(());
+            }
+
+            let afe_stack_idx = self
+                .stack
+                .iter()
+                .position(|&x| x == formatting_element)
+                .unwrap();
+            let mut furthest_block = None;
+            for &element_id in &self.stack[afe_stack_idx + 1..] {
+                if let Some(tag) = self.dom.get_tag(element_id) {
+                    if is_special(tag) {
+                        furthest_block = Some(element_id);
+                        break;
+                    }
+                }
+            }
+
+            let furthest_block = match furthest_block {
+                None => {
+                    while let Some(pop_id) = self.stack.pop() {
+                        if pop_id == formatting_element {
+                            break;
+                        }
+                    }
+                    if let Some(afe_idx) = self
+                        .active_formatting_elements
+                        .iter()
+                        .position(|&x| x == ActiveElement::Element(formatting_element))
+                    {
+                        self.active_formatting_elements.remove(afe_idx);
+                    }
+                    return Ok(());
+                }
+                Some(fb) => fb,
+            };
+
+            let common_ancestor = self.stack[afe_stack_idx - 1];
+
+            let mut bookmark = self
+                .active_formatting_elements
+                .iter()
+                .position(|&x| x == ActiveElement::Element(formatting_element))
+                .unwrap();
+
+            let mut last_node = furthest_block;
+            let mut node = furthest_block;
+            let mut inner_loop_counter = 0;
+
+            let mut index = self.stack.iter().position(|&x| x == node).unwrap();
+            while inner_loop_counter < 3 {
+                inner_loop_counter += 1;
+                index -= 1;
+                node = self.stack[index];
+
+                let node_afe_pos = self
+                    .active_formatting_elements
+                    .iter()
+                    .position(|&x| x == ActiveElement::Element(node));
+                if node_afe_pos.is_none() {
+                    self.stack.remove(index);
+                    continue;
+                }
+
+                if node == formatting_element {
+                    break;
+                }
+
+                let node_afe_idx = node_afe_pos.unwrap();
+                if last_node == furthest_block {
+                    bookmark = node_afe_idx + 1;
+                }
+
+                let clone_id = {
+                    let tag = self.dom.get_tag(node).unwrap().to_string();
+                    let attrs = self
+                        .dom
+                        .get_attributes(node)
+                        .map(|attrs| attrs.to_vec())
+                        .unwrap_or_default();
+                    let cid = self.dom.create_element(&tag);
+                    for attr in attrs {
+                        self.dom
+                            .set_attribute(cid, &attr.0, &attr.1)
+                            .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                    }
+                    cid
+                };
+
+                self.active_formatting_elements[node_afe_idx] = ActiveElement::Element(clone_id);
+                self.stack[index] = clone_id;
+                node = clone_id;
+
+                if let Some(parent) = self.dom.get_parent(last_node) {
+                    self.dom
+                        .remove_child(parent, last_node)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                }
+                self.dom
+                    .append_child(node, last_node)
+                    .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+
+                last_node = node;
+            }
+
+            if let Some(parent) = self.dom.get_parent(last_node) {
+                self.dom
+                    .remove_child(parent, last_node)
+                    .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+            }
+            self.dom
+                .append_child(common_ancestor, last_node)
+                .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+
+            let clone_id = {
+                let tag = self.dom.get_tag(formatting_element).unwrap().to_string();
+                let attrs = self
+                    .dom
+                    .get_attributes(formatting_element)
+                    .map(|attrs| attrs.to_vec())
+                    .unwrap_or_default();
+                let cid = self.dom.create_element(&tag);
+                for attr in attrs {
+                    self.dom
+                        .set_attribute(cid, &attr.0, &attr.1)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                }
+                cid
+            };
+
+            if let Some(children) = self.dom.get_children(furthest_block) {
+                for child in children {
+                    self.dom
+                        .remove_child(furthest_block, child)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                    self.dom
+                        .append_child(clone_id, child)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                }
+            }
+
+            self.dom
+                .append_child(furthest_block, clone_id)
+                .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+
+            if let Some(pos) = self
+                .active_formatting_elements
+                .iter()
+                .position(|&x| x == ActiveElement::Element(formatting_element))
+            {
+                self.active_formatting_elements.remove(pos);
+            }
+            if bookmark > self.active_formatting_elements.len() {
+                bookmark = self.active_formatting_elements.len();
+            }
+            self.active_formatting_elements
+                .insert(bookmark, ActiveElement::Element(clone_id));
+
+            if let Some(pos) = self.stack.iter().position(|&x| x == formatting_element) {
+                self.stack.remove(pos);
+            }
+            let fb_stack_idx = self
+                .stack
+                .iter()
+                .position(|&x| x == furthest_block)
+                .unwrap();
+            self.stack.insert(fb_stack_idx + 1, clone_id);
+        }
+
+        Ok(())
+    }
 }
 
 /// Whether a tag name is one of the raw-text / script-data
@@ -741,5 +1192,114 @@ fn is_block_level(tag: &str) -> bool {
             | "section"
             | "table"
             | "ul"
+    )
+}
+
+/// Whether a tag is a formatting element.
+fn is_formatting_element(tag: &str) -> bool {
+    matches!(
+        tag,
+        "a" | "b"
+            | "big"
+            | "code"
+            | "em"
+            | "font"
+            | "i"
+            | "nobr"
+            | "s"
+            | "small"
+            | "strike"
+            | "strong"
+            | "tt"
+            | "u"
+    )
+}
+
+/// Whether a tag belongs to the "special" category in WHATWG HTML.
+fn is_special(tag: &str) -> bool {
+    matches!(
+        tag,
+        "address"
+            | "applet"
+            | "area"
+            | "article"
+            | "aside"
+            | "base"
+            | "basefont"
+            | "bgsound"
+            | "blockquote"
+            | "body"
+            | "br"
+            | "button"
+            | "caption"
+            | "center"
+            | "col"
+            | "colgroup"
+            | "dd"
+            | "details"
+            | "dir"
+            | "div"
+            | "dl"
+            | "dt"
+            | "embed"
+            | "fieldset"
+            | "figcaption"
+            | "figure"
+            | "footer"
+            | "form"
+            | "frame"
+            | "frameset"
+            | "h1"
+            | "h2"
+            | "h3"
+            | "h4"
+            | "h5"
+            | "h6"
+            | "head"
+            | "header"
+            | "hgroup"
+            | "hr"
+            | "html"
+            | "iframe"
+            | "img"
+            | "input"
+            | "keygen"
+            | "li"
+            | "link"
+            | "listing"
+            | "main"
+            | "marquee"
+            | "menu"
+            | "meta"
+            | "nav"
+            | "noembed"
+            | "noframes"
+            | "noscript"
+            | "object"
+            | "ol"
+            | "p"
+            | "param"
+            | "plaintext"
+            | "pre"
+            | "script"
+            | "section"
+            | "select"
+            | "source"
+            | "style"
+            | "summary"
+            | "table"
+            | "tbody"
+            | "td"
+            | "template"
+            | "textarea"
+            | "tfoot"
+            | "th"
+            | "thead"
+            | "title"
+            | "tr"
+            | "track"
+            | "ul"
+            | "wbr"
+            | "xmp"
     )
 }

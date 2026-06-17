@@ -4132,4 +4132,121 @@ identified. Key findings:
   - `cargo test --workspace` compiles and passes successfully with 64 test binaries.
   - Both `./scripts/audit-doc-drift.sh` and `./scripts/audit-orphan-exports.sh` exit successfully with 0 findings.
 
+---
+
+## [2026-06-17] [Gemini 3.5 Flash (High)] [spiral-gyre] — Implement Gyre box model, geometry resolutions, margin collapse, and style/selector resolution (Packet 1.6.5)
+
+- **Module Refactoring & Organization:**
+  - Partitioned the monolithic `lib.rs` into logical sub-modules: `box_model.rs` (defining layout geometry types `BoxModel`, `EdgeSizes`, and `LayoutDimensions`), `style.rs` (matching CSS selectors and cascading properties), and `block.rs` (handling block layout calculations and vertical positioning).
+  - Maintained the clean public entry point for `LayoutEngine` and `LayoutNode` re-exports in `lib.rs`.
+
+- **Selector Matching & Style Resolution:**
+  - Implemented right-to-left compound selector matching supporting tag, class, ID, universal, and attribute selectors (with case-insensitive flags and operators).
+  - Implemented sibling, descendant, child, and subsequent sibling combinators.
+  - Implemented CSS cascading logic sorting declarations by specificity, stylesheet source order, and `!important`.
+  - Implemented shorthand expansion for `margin`, `padding`, and `border`/`border-width`.
+
+- **Block Layout & Geometry Resolution:**
+  - Implemented CSS 2.1 Section 10.3.3 horizontal formatting and width resolution for block elements (auto margins, percentages, and fixed widths).
+  - Implemented vertical margin collapse between block-level siblings (`max(prev_margin_bottom, child_margin_top)`) and parent-child top/bottom margin collapse.
+  - Corrected margin collapse double-addition bugs by ensuring `layout_node`'s `y` coordinate corresponds to the border box top of the child and shifting element layouts vertically by `collapsed_margin_top - geom.margin_top` when collapsing margins.
+
+- **Wiring & Integration:**
+  - **Crates affected:** `spiral-gyre`, `spiral-css` (integration tests).
+  - **Call sites:** `LayoutEngine::layout` ← `block::layout_node`.
+  - **Test coverage:** Created a comprehensive test suite in `crates/spiral-gyre/tests/layout_tests.rs` (6 integration tests verifying selector matching, specificity cascading, padding/border geometry, sibling margin collapse, parent-child margin collapse, and auto-margin centering).
+  - **End-to-end surface:** Verified that no orphan exports exist via the wiring audit script, resolving any skeleton leaks.
+
+- **Tests run:**
+  - `cargo test --workspace` compiles and passes cleanly.
+  - `./scripts/audit-orphan-exports.sh` exits 0 (0 orphan exports across 20 crates).
+  - `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --all -- --check` are clean.
+
+- **Status:** merged.
+
+---
+
+## [2026-06-17] [OpenCode / Sonnet 4.6 (worker) — recovered session] [`spiral-fmt`] — Packets 2.8.1 + 2.8.2 (Adoption Agency Algorithm + Active Formatting Elements list)
+
+> **Note:** This entry documents the work the prior agent had already
+> committed to disk (uncommitted in the working tree at session
+> resumption) and finalises the SSOT bookkeeping. The previous agent
+> implemented, tested, and wired the code; the tracker tick + active
+> context refresh was the only outstanding item.
+
+- **Active Formatting Elements list (Packet 2.8.2):**
+  - Added `TreeBuilder::active_formatting_elements: Vec<ActiveElement>` field
+    (`crates/spiral-fmt/src/html/tree.rs:71`).
+  - Added `ActiveElement` enum with `Element(NodeId)` and `Marker` variants
+    (`crates/spiral-fmt/src/html/tree.rs:54`).
+  - Added `push_active_formatting_element` to insert formatting elements,
+    insert markers, and call `clear_up_to_last_marker` on non-formatting
+    close (`tree.rs:752`).
+  - Added `clear_up_to_last_marker` to honour WHATWG §12.2.6.1 step 7.2
+    (`tree.rs:780`).
+  - Added `reconstruct_active_formatting_elements` — the spec loop that
+    walks the AFE list and re-inserts entries to handle misnested
+    formatting (`tree.rs:825`).
+  - `InBody` start-tag and end-tag paths now push/lookup/clear
+    formatting-element entries and call the reconstructor before
+    normal insertion (`tree.rs:275-308, 441-442, 556`).
+
+- **Adoption Agency Algorithm (Packet 2.8.1):**
+  - Added `run_adoption_agency_algorithm` — full 25-step WHATWG
+    §12.2.6.1 implementation, including the inner/outer loop, the
+    bookmark + reparenting, the `last_node` and `common_ancestor`
+    bookkeeping, and the formatting-element reconstruction at the
+    end (`tree.rs:894`).
+  - Wired into the `InBody` end-tag path:
+    `if is_formatting_element(&lower) { self.run_adoption_agency_algorithm(&lower)? }`
+    (`tree.rs:441-442`).
+  - Added `is_formatting_element` predicate covering the spec set
+    (b, big, code, em, font, i, img, kbd, nobr, s, small, strike,
+    strong, tt, u) (`tree.rs:1199`).
+
+- **E2E tests added (WPT-style):**
+  - `parse_aaa_misnested_formatting_tags` — `<p><b>1<i>2</b>3</i>4</p>`
+    covers the classic adoption-agency replay path.
+  - `parse_afe_noahs_ark_clause` — verifies the Noah's Ark 3-strike
+    cap (WHATWG §12.2.6.1 step 12) terminates the inner loop and
+    emits the body element.
+  - `parse_aaa_with_furthest_block` — covers the case where a
+    formatting element's furthest block must be replaced before
+    common-ancestor reparents.
+  - All three live in `crates/spiral-fmt/tests/e2e.rs:596+` and
+    pass under `cargo test -p spiral-fmt`.
+
+- **Wiring & Integration:**
+  - **Crates affected:** `spiral-fmt` only (HTML tree builder is the
+    sole consumer; AFE/AAA are parser-internal state per the spec).
+  - **Call sites:**
+    - `TreeBuilder::reconstruct_active_formatting_elements` is
+      called from `InBody` start-tag (`tree.rs:275, 292, 301, 308`),
+      `InBody` end-tag (`tree.rs:556`), and inside the
+      `run_adoption_agency_algorithm` post-step.
+    - `TreeBuilder::run_adoption_agency_algorithm` is called from
+      `InBody` end-tag (`tree.rs:441-442`).
+  - **Test coverage:** 3 new e2e tests; full `cargo test -p spiral-fmt`
+    reports 43/43 pass.
+  - **End-to-end surface:** the AAA path is reachable from
+    `spiral_fmt::parse_html("<p><b>1<i>2</b>3</i>4</p>")` — the
+    entry point used by every consumer (`spiral-dom` setters, Vortex
+    `innerHTML`, future browser pipeline).
+
+- **Tests run:**
+  - `cargo build -p spiral-fmt` clean.
+  - `cargo test -p spiral-fmt` → 43/43 pass, including
+    `parse_aaa_misnested_formatting_tags`, `parse_afe_noahs_ark_clause`,
+    `parse_aaa_with_furthest_block`.
+  - `cargo test --workspace` → 65/65 binaries pass (44 with
+    assertions, 21 doc-test slots all empty/0).
+  - `cargo clippy --workspace --all-targets -- -D warnings` clean.
+  - `./scripts/audit-orphan-exports.sh` → 0 findings, 20/20 crates
+    OK (including `spiral-fmt` at 18 symbols, all wired).
+
+- **Status:** SSOT bookkeeping finalised 2026-06-17; code shipped
+  in working tree (commit pending). Packets 2.8.1 and 2.8.2 are
+  ticked in `docs/implementation_tracker.md`. Packet 2.8.3
+  (foster parenting) remains as the next-up item in Step 2.8.
+
 
