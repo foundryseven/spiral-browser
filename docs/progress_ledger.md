@@ -4642,3 +4642,30 @@ identified. Key findings:
   - `docs/progress_ledger.md` — this entry.
 - **Status:** Plan §4 acceptance fully satisfied (7/7 items verified green; item 2 reconciled by plan update). The branch is ready to merge. The next-session implementer runs `bin/spiral-pr.sh R6` to push and open the PR.
 
+## 2026-06-18 — Post-merge doc sync: README, CODEX, bin/README
+
+- **What:** After the R1–R8 merge landed on `main` (`e3f0932`), three root-level docs were stale relative to the new workflow contract: a contributor or new session following them would not know about `bin/spiral-context.sh --rules-check`, `just verify-rules`, or the 11-job CI pipeline. Updated three docs to reflect the shipped state.
+- **Files changed (3):**
+  - **`README.md`** — added a `## Workflow` section with a canonical table of every workflow tool and its trigger. Added a `## Project Documents` table consolidating the previous scattered list. Updated the `## Status` paragraph to reflect the current Phase 2.1.2 packet (the previous text said "Phase 1 Step 1.6" which was the in-flight step at the time of the last README edit, 2026-06-17). Added a forward reference to the R1–R8 refactor.
+  - **`CODEX.md`** — added a `## Workflow Tools` section listing the canonical surface and pointing at `AGENTS.md` § Workflow Discipline. Replaced the partial `## Repository Structure` block with the complete 20-crate list (matches the canonical `Cargo.toml` workspace).
+  - **`bin/README.md`** — added a `## Flags` table documenting the `spiral-context.sh --quick`, `--rules-check`, `<packet-id>`, `spiral-pr.sh --dry-run`, and `--skip-tests` flags. The original `## Scripts` table was already correct.
+- **What was deliberately left alone:**
+  - **`spiral-layout` mention in `CODEX.md:174`** — this is the `docs/decisions/0003-gyre-rename.md` ADR line, which describes the rename. Per the R6 sweep decision rule, historical references in ADR pointers are kept.
+  - **`spiral-html` and `html5ever` mentions in `README.md` and `CODEX.md`** — these are part of the "Important removals (2026-06-15)" status block, which is intentional historical record. They are not live cross-references; they are the project's record of what was retired.
+  - **`BUILD.md`, `TESTING.md`, `ERRORS.md`, `CONTRIBUTING.md`, `PLAN.md`, `ROADMAP.md`** — checked for stale crate refs (none found) and for missing tool references. None of them mention workflow tools because they are about their respective narrow topics (build, test, errors, contribution, plan, roadmap). Adding workflow tools to all of them would scatter the canonical table. The README's `## Workflow` section is the single source of truth; the other docs link to it via the `README.md → Quickstart → Workflow` path.
+- **Wiring & Integration:**
+  - **Files affected (3):** `README.md` (new `## Workflow` + `## Project Documents` sections), `CODEX.md` (new `## Workflow Tools` section + complete crate list), `bin/README.md` (new `## Flags` table).
+  - **Call sites:** the `## Workflow` table in `README.md:27–44` is the canonical pointer; every other doc that needs the workflow contract can link to it.
+  - **Test coverage:** no new tests (doc-only change). Verification is by reading the docs and confirming the cross-references work.
+  - **End-to-end surface:** a new contributor following the README's Quickstart lands on `cargo build` → `cargo test` → `cargo clippy` → `cargo fmt`, then sees the `## Workflow` table and learns about `bin/spiral-context.sh`, `just verify`, and `bin/spiral-pr.sh`. A new LLM agent following `AGENTS.md` § Workflow Discipline lands on the same surface via the `bin/` and `justfile` references in the table.
+- **Verification (pre-push):**
+  - `grep -nE 'spiral-html|spiral-layout|spiral-js' README.md CODEX.md bin/README.md` ✓ no live cross-references (only intentional historical mentions in status blocks and ADR pointers).
+  - `just verify-fast` ✓ all green.
+  - `just verify-rules` ✓ nightly clippy + both audits green.
+- **SSOT updates:**
+  - `README.md` — `## Status` updated, `## Workflow` and `## Project Documents` added.
+  - `CODEX.md` — `## Workflow Tools` added, `## Repository Structure` completed.
+  - `bin/README.md` — `## Flags` table added.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** Post-merge doc sync shipped. The R1–R8 refactor is now consistently documented in the root-level docs a new contributor or LLM agent will see. The `## Workflow` table in `README.md` is the canonical surface; `bin/README.md`'s flag table and `CODEX.md`'s workflow-tools section support it.
+

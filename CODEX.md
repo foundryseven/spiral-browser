@@ -8,17 +8,74 @@
 - **Scope:** Independent browser (not Chromium/WebKit/Gecko)
 - **Status (SSOT):** [`docs/implementation_tracker.md`](docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 - **Active state:** [`docs/active_context.md`](docs/active_context.md)
+- **Workflow contract:** [`AGENTS.md`](AGENTS.md) § Workflow Discipline + [`.spiral/rules/`](.spiral/rules/)
+
+## Workflow Tools (canonical surface)
+- **Session start:** `bin/spiral-context.sh` (or `just context`) — prints the 5–7 most relevant files. Replaces 6 manual reads.
+- **Pre-commit gate:** `just verify-fast` (fmt + clippy + test + build).
+- **Pre-merge + CI nightly gate:** `just verify-rules` (nightly clippy + both audit scripts).
+- **End-to-end canonical gate:** `just verify` (= `verify-fast` + `verify-rules`).
+- **PR workflow:** `bin/spiral-pr.sh <packet-id>` (runs pre-flight checks, pushes, opens PR). Do not invoke `gh pr create` directly.
+- **Audit scripts:**
+  - `./scripts/audit-orphan-exports.sh` — `pub` symbols with no external consumer (exit 1 = blocker).
+  - `./scripts/audit-orphan-exports.sh --tool-coverage` — `bin/` and `scripts/` tools not named in a rule file (exit 1 = blocker).
+  - `./scripts/audit-doc-drift.sh` — SSOT doc inconsistencies (stale crate refs, retired vocabulary, R5 rule-file contract).
+
+See [`AGENTS.md`](AGENTS.md) § Workflow Discipline for the full list of mandatory gates.
 
 ## Repository Structure
 ```
 ├── Cargo.toml              # Workspace root (20 members)
-├── AGENTS.md               # LLM instructions
+├── AGENTS.md               # LLM instructions (canonical workflow contract)
 ├── ARCHITECTURE.md         # System design (canonical)
 ├── PLAN.md                 # Implementation plan
 ├── ROADMAP.md              # Phase index
 ├── TESTING.md              # Test guide
 ├── BUILD.md                # Build instructions
-├── ERRORS.md               # Common errors
+├── ERRORS.md               # Common errors and fixes
+├── CONTRIBUTING.md         # Contribution process
+├── CHANGELOG.md            # Release history
+├── SECURITY.md             # Vulnerability disclosure
+├── LICENSE                 # MPL-2.0 licence terms
+├── .spiral/rules/          # Rule files (architecture, coding-standards, performance, testing, unsafe-standards, workflow, doc-drift-prevention)
+├── bin/                    # Workflow scripts (spiral-context.sh, spiral-pr.sh)
+├── scripts/                # Build-time tooling (audit scripts)
+├── docs/                   # SSOT (tracker, ledger, active context, plans, ADRs, role contracts)
+│   ├── active_context.md
+│   ├── implementation_tracker.md
+│   ├── progress_ledger.md
+│   ├── agents/             # Role contracts
+│   ├── decisions/          # ADRs
+│   ├── architecture/       # Per-subsystem stubs
+│   ├── plans/              # Multi-step refactor plans
+│   ├── glossary.md
+│   ├── system_architecture.md
+│   └── archives/           # Historical artefacts (do not edit)
+├── specs/                  # Spec-only documents (status moved to tracker)
+├── resources/              # Static assets (icons, fonts)
+├── crates/                 # 20-crate workspace
+│   ├── spiral-core/        # Shared types
+│   ├── spiral-ipc/         # Cross-process messaging
+│   ├── spiral-dom/         # DOM tree
+│   ├── spiral-fmt/         # HTML5 tokeniser + tree builder, CSS parser (from-spec; no html5ever, no cssparser)
+│   ├── spiral-css/         # Deprecated shim → spiral-fmt
+│   ├── spiral-gyre/        # Gyre — custom layout
+│   ├── spiral-vortex/      # Vortex — from-scratch JS
+│   ├── spiral-context/     # Capability types
+│   ├── spiral-filter/      # Compile-time policy
+│   ├── spiral-network/     # HTTP / DNS / TLS
+│   ├── spiral-net/         # Low-level networking
+│   ├── spiral-crypto/      # Crypto primitives
+│   ├── spiral-render/      # Vello-based renderer
+│   ├── spiral-paint/       # Display list construction
+│   ├── spiral-gpu/         # wgpu integration
+│   ├── spiral-imagedecoder/# Image codecs
+│   ├── spiral-sandbox/     # OS sandbox profiles
+│   ├── spiral-ui/          # Browser chrome
+│   ├── spiral-theme/       # Design tokens
+│   └── spiral-browser/     # Binary surface (entry point)
+└── .github/workflows/      # 11-job CI pipeline (ci.yml)
+```mon errors
 ├── CODEX.md                # This file
 ├── CONTRIBUTING.md         # Contribution guide
 ├── crates/                 # 20 Rust crates
