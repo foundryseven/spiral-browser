@@ -4382,6 +4382,39 @@ identified. Key findings:
 - **SSOT updates (this entry only):** ledger entry appended, no tracker tick (none appropriate).
 - **Status:** Shipped to main as `e762d09`. Ready to fork `refactor/no-code-agentic` from `e762d09`.
 
+## 2026-06-17 — Packet R2: Project AGENTS.md rewrite (no-code-agentic refactor)
+
+- **What:** Packet R2 of [`docs/plans/no-code-agentic-refactor.md`](plans/no-code-agentic-refactor.md) (lines 225–242). Rewrites the repo-root `AGENTS.md` to lead with the no-code-agentic workflow discipline, points at `.spiral/rules/workflow.md` as the source of truth for "what tool, when", and demotes the 11-step "Quick Start" read sequence to a manual-fallback subsection.
+- **Edits in `AGENTS.md`:**
+  - **New top-of-file section: "Workflow Discipline (Compulsory)"** (lines 9–60). Statement that the user is no-code-agentic and the agent drives the workflow. Compulsory-gates table mirroring `.spiral/rules/workflow.md`. Prohibited-behaviour list (no manual re-loads of the SSOT, no skipping `just verify-packet`, no manual `gh pr create`, no contradicting the rules). Cross-references to the rule file, the role contracts, and the origin plan.
+  - **Workflow Tools table rewritten** (lines 139–163). Each "When" column now starts with `**MUST run ...**` so the row reads as a directive, not a suggestion. Header row also reworded to "When (MUST run)" so the directive nature is unambiguous.
+  - **Quick Start compressed to a 3-step agent-led sequence** (lines 165–178): (1) run `bin/spiral-context.sh [<packet-id>]`, (2) read the 5–7 surfaced files, (3) follow the relevant rule in `.spiral/rules/`. The original 11-step on-ramp is preserved verbatim as a `### Manual fallback` subsection (only invoked if `bin/spiral-context.sh` is broken).
+  - **New "R2 Cross-Reference" footer** (lines 501–517). Lists the six atomic packets (R1–R6) and confirms they ship as a single batch on branch `refactor/no-code-agentic`.
+- **Wiring & Integration:**
+  - **Crate affected:** none — this packet is a docs-only change. The workflow gates it adds bind the agent's behaviour, not Rust symbols, so the orphan-export and test-with-deps audits are not applicable.
+  - **Call sites for the new directives:** `.spiral/rules/workflow.md` (the rule file the Workflow Discipline section cross-references and points the role docs at). The new "Mandatory gates" table mirrors `workflow.md` Session Start / Mid-cycle / API-change / Pre-commit / End-of-session rows verbatim.
+  - **Test coverage:** none added — markdown rewrite is verified by `just verify` (cargo fmt/clippy/test/build all unaffected and remain green) plus `./scripts/audit-doc-drift.sh` (the audit must accept the new "Workflow Discipline" section without flagging it as drift).
+  - **End-to-end surface:** the next agent session that opens on this branch will see the new top-of-file section before any other content. That is the surface R2 is delivered on — there is no Rust binary, no fixture, no test invocation to point at.
+- **Out-of-scope (deferred to companion packets, not in this commit):**
+  - R1 — global config rewrite under `~/.config/opencode/*`.
+  - R3 — reword `.spiral/rules/*.md` so each file is self-standing without leaning on this `AGENTS.md` section. R2 only adds a cross-reference; R3 is the substantive rewording pass.
+  - R4 — update `docs/agents/*.md` role contracts to cross-reference the rule files.
+  - R5 — extend `scripts/audit-orphan-exports.sh` and `scripts/audit-doc-drift.sh` to enforce R1–R4 (e.g. gate on `MUST` verb presence in workflow tables; reject stale rule copies).
+  - R6 — fix stale crate references in `docs/agents/test-writer.md` (flagged during plan drafting).
+- **Verification:**
+  - `cargo fmt --all -- --check` ✓ (no Rust touched; trivially green).
+  - `cargo clippy --workspace --all-targets -- -D warnings` ✓ (no Rust touched).
+  - `cargo build --workspace` ✓ (no Rust touched).
+  - `cargo test --workspace` ✓ (no tests touched).
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 findings (no `pub` symbols touched).
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings (the audit accepts the new section).
+  - `just verify` ✓ end-to-end (the R2 verification gate).
+- **SSOT updates:**
+  - `AGENTS.md` — rewritten per the R2 spec; net +93 lines (424 → 517). All pre-existing sections (Current Status, Model Routing, SSOT Update Protocol, Decision Protocol, Project Rules, Commit Messages, Wiring & Integration, Testing, Novelty Claims, Working on Specific Crates, Debugging, Common Pitfalls, File Templates, Communication Between Models) preserved verbatim.
+  - `docs/progress_ledger.md` — this entry.
+  - `docs/implementation_tracker.md` — no tick (R2 is a workflow-tooling refactor, not a Phase X.Y packet; it lives under the plan, not the tracker, per the plan header at `docs/plans/no-code-agentic-refactor.md:7-9`).
+- **Status:** Shipped R2 on branch `refactor/no-code-agentic`. **Next: R3 (`.spiral/rules/*.md` rewording)** so each rule file is self-standing, then R4 (role-doc cross-references), R5 (audit-script enforcement), R6 (stale-crate fixes). All six ship as a single PR.
+
 ## 2026-06-17 — Packet R3: Five rule files self-stand (no-code-agentic refactor)
 
 - **What:** Reworded the five "operative contract" rule files (`.spiral/rules/architecture.md`, `coding-standards.md`, `performance.md`, `testing.md`, `unsafe-standards.md`) so each one reads standalone: a `> **Read first.**` blockquote cross-linking to `AGENTS.md` and `workflow.md`, a `## Workflow Tools (mandatory)` table of `MUST run` commands scoped to that file's domain, and directive-verb rewording throughout the body. Passive verbs (`may`, `should`, `could`, `might`, `is recommended to`) are eliminated in favour of `MUST` / `MUST NOT` / `MUST RUN` so a reviewer reading any one rule file gets a self-contained contract. The workflow and doc-drift-prevention rule files were already gated under R2 and are out of scope for R3.
@@ -4416,4 +4449,38 @@ identified. Key findings:
 - **Status:** Shipped R3 on branch `refactor/no-code-agentic`. **Next: R4** (cross-references in `docs/agents/*.md` role contracts to the rule files), **R5** (extend `audit-orphan-exports.sh` + `audit-doc-drift.sh` to enforce the verb density and the cross-link presence), **R6** (sweep the stale `spiral-net` vs `spiral-network` references flagged in `docs/agents/test-writer.md`). R4–R6 land as a single follow-up PR per the plan.
 
 
+## 2026-06-17 — Packet 2.1.2 (Quirk mode classifier, WHATWG HTML §12.1) shipped
+
+- **What:** Implemented the §13.2.2.5 / §12.1 quirks-mode classifier end-to-end: the tokeniser now emits `Token::Doctype { mode: DoctypeMode, … }` carrying a 3-state enum (`Quirks` / `LimitedQuirks` / `NoQuirks`), the tree builder gates `set_quirks_mode` on insertion mode (`Initial` or `BeforeHtml`) per §13.2.2.6.0 step 4 (and transitions to `BeforeHtml` after consuming the DOCTYPE), and the DOM exposes `Dom::quirks_mode()` for end-to-end consumption. `Document::quirks_mode` now defaults to `true` (the spec-mandated "no DOCTYPE → quirks" default). Also fixed a tokeniser bug in the DOCTYPE PUBLIC+SYSTEM parsing — the previous implementation read only the public id and ignored the trailing system id; the new `read_quoted_string` helper handles the full triple (public id + optional system id), correctly classifying Forms/Transitional/Strict/Frameset HTML 4.01 DTDs.
+- **Crate shape:**
+  - `crates/spiral-fmt/src/token.rs` — new `DoctypeMode` enum (`pub(crate)`); `Token::Doctype.quirks: bool` replaced with `mode: DoctypeMode`.
+  - `crates/spiral-fmt/src/html/tokeniser.rs` — full `classify_doctype_quirks(name, public_id, system_id) -> DoctypeMode` per §13.2.2.5, with the no-quirks / limited-quirks / quirks triple tables (HTML 4.01 Strict/Transitional/Frameset, XHTML 1.0 Transitional/Frameset, and the IETF / Netscape / Microsoft / W3C pre-HTML4 sets). Bare `<!DOCTYPE html>` is treated as no-quirks per the modern WHATWG reading (all shipped browsers; billions of pages depend on it). `read_quoted_string` helper handles PUBLIC/SYSTEM quoted-id consumption.
+  - `crates/spiral-fmt/src/html/tree.rs` — `handle_doctype` gated on `InsertionMode::Initial | BeforeHtml`, transitions to `BeforeHtml` after consumption, stores the parsed mode on the builder (`doctype_mode`) for future packets.
+  - `crates/spiral-dom/src/lib.rs` — new `Dom::quirks_mode(&self) -> bool` getter; `Document::quirks_mode` defaults to `true`.
+- **Tests:**
+  - `crates/spiral-fmt/tests/quirks.rs` (new, 10 tests) — covers the bare HTML5 form, missing name, unknown name, no DOCTYPE, case-insensitive name match, HTML 4.01 Strict/Transitional/Frameset PUBLIC triples, unknown public id with `html` name, and the default-quirks regression guard. All 10 pass.
+  - `crates/spiral-fmt/src/html/tokeniser.rs` (9 new unit tests) — exercises `classify_doctype_quirks` directly on the three triple sets plus the no-name and missing-public-id edge cases.
+  - `crates/spiral-fmt/tests/e2e.rs` — two existing quirks tests migrated from internal `Node::Document(d).quirks_mode` to the public `dom.quirks_mode()` getter.
+- **Wiring & Integration:**
+  - **Call sites:** `TreeBuilder::handle_doctype` at `crates/spiral-fmt/src/html/tree.rs:309` consumes the new `DoctypeMode` and applies it via `Dom::set_quirks_mode` when the parser is in `Initial` or `BeforeHtml`.
+  - **Token surface:** `Token::Doctype { mode, … }` at `crates/spiral-fmt/src/token.rs:61`; classified by `classify_doctype_quirks` at `crates/spiral-fmt/src/html/tokeniser.rs:1284`.
+  - **DOM surface:** `Dom::quirks_mode()` at `crates/spiral-dom/src/lib.rs:188` — public, callable from any consumer crate.
+  - **End-to-end:** the new `tests/quirks.rs` integration tests run `spiral_fmt::parse_html(...).quirks_mode()` end-to-end. The full workspace test (`just test-with-deps spiral-fmt`) and reverse-dep fan-out (`spiral-css`) both pass.
+- **Verification:**
+  - `cargo fmt --all -- --check` ✓
+  - `cargo clippy --workspace --all-targets -- -D warnings` ✓
+  - `cargo build --workspace` ✓
+  - `cargo test --workspace` ✓ (10 new + 9 unit + existing 88 tokeniser + 46 e2e, all pass)
+  - `just verify-packet spiral-fmt` ✓
+  - `just verify-packet spiral-dom` ✓
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 findings.
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings.
+  - `just verify` ✓ end-to-end.
+- **SSOT updates:**
+  - `docs/implementation_tracker.md:265` — Packet 2.1.2 ticked `[x]`.
+  - `docs/implementation_tracker.md:530` — Next-up list reflects Packet 2.1.2 shipped.
+  - `docs/active_context.md:131` — Packet 2.1.2 ticked.
+  - `docs/active_context.md:351` — Next-up reflects 2.1.2 shipped.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** Shipped Packet 2.1.2. **Next packet: 2.1.4 (template content construction, WHATWG HTML §13.2.6.4)** — depends on the quirks-mode classifier (the template element's contents parse in the mode of the containing document). Then 2.7.1 (URL parser), 2.7.2 (URLSearchParams), 4.1.1 (`spiral-vello` workspace decision).
 

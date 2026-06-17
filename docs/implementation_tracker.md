@@ -312,14 +312,7 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 
 ### Step 2.1 — Fragment parsing algorithm
 - [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). *Shipped 2026-06-17; see `spiral_fmt::parse_html_fragment` in `crates/spiral-fmt/src/lib.rs:73`, the `Fragment` struct at `crates/spiral-fmt/src/lib.rs:50-65`, the fragment module at `crates/spiral-fmt/src/html/fragment.rs`, and `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id` in `crates/spiral-fmt/src/html/tree.rs:126-208`.*
-- [ ] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
-  - **Spec:** WHATWG HTML §13.2.2.5 "Parsing the DOCTYPE", §12.1 "Quirks mode".
-  - **Crates affected:** `spiral-fmt` (tokeniser already emits `Token::Doctype { quirks: bool }` at `crates/spiral-fmt/src/html/tokeniser.rs:716-752`), `spiral-dom` (already exposes `Dom::set_quirks_mode` at `crates/spiral-dom/src/lib.rs:183`).
-  - **Call sites expected:** `crates/spiral-fmt/src/html/tree.rs` should call `self.dom.set_quirks_mode(token.quirks)` when a `Token::Doctype` is fed; ideally gate by `if self.mode == InsertionMode::BeforeHtml` and the token has quirks == true.
-  - **Tests expected:** `crates/spiral-fmt/tests/quirks.rs` (new file) — `parse_doctype_unknown_triggers_quirks`, `parse_doctype_html5_no_quirks`, `parse_doctype_missing_triggers_quirks`, `parse_no_doctype_triggers_quirks`.
-  - **End-to-end surface:** `parse_html("<!DOCTYPE html><p>x")` → `result.quirks_mode == false`; `parse_html("<!DOCTYPE foo>")` → `result.quirks_mode == true`. Verifiable in tests.
-  - **ADR required:** NO (extends an existing mechanism, no dep swap).
-  - **Architecture doc:** `docs/architecture/fmt.md`.
+- [x] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). *Shipped 2026-06-17; see `classify_doctype_quirks(name, public_id, system_id) -> DoctypeMode` at `crates/spiral-fmt/src/html/tokeniser.rs:1284`, the `DoctypeMode` enum at `crates/spiral-fmt/src/token.rs:97`, the tree-builder gate at `crates/spiral-fmt/src/html/tree.rs:309`, the `read_quoted_string` helper at `crates/spiral-fmt/src/html/tokeniser.rs:710`, the public `Dom::quirks_mode()` getter at `crates/spiral-dom/src/lib.rs:188`, and the new integration test file `crates/spiral-fmt/tests/quirks.rs` (10 tests, all passing).*
 - [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
   - **Spec:** WHATWG HTML §4.6.7 + §13 tree-builder handling. The tokeniser already lists `noscript` in `is_rawtext_element` at `crates/spiral-fmt/src/html/tree.rs:1718-1732`; the tree builder needs a dedicated `InHead` arm.
   - **Crates affected:** `spiral-fmt`.
@@ -577,7 +570,7 @@ The next 8 unchecked packets across all phases, in recommended order:
 3. **Packet 2.8.2** — Active formatting elements list (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
 4. **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
 5. **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). ✅ SHIPPED 2026-06-17.
-6. **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
+6. **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). ✅ SHIPPED 2026-06-17.
 7. **Packet 2.7.1** — `URL` parser (WHATWG URL §4).
 8. **Packet 2.7.2** — `URLSearchParams` IDL.
 9. **Packet 4.1.1** — `spiral-vello` workspace member decision (ADR required).

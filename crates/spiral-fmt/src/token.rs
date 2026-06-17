@@ -57,8 +57,8 @@ pub(crate) enum Token {
         public_id: Option<String>,
         /// System identifier, if any.
         system_id: Option<String>,
-        /// `true` if the parser detected quirks mode from this DOCTYPE.
-        quirks: bool,
+        /// Mode the parser derived from this DOCTYPE per §13.2.2.5.
+        mode: DoctypeMode,
         /// Source position of the opening `<!`.
         position: Position,
     },
@@ -77,5 +77,43 @@ impl Token {
             | Token::Doctype { position, .. } => *position,
             Token::Character(_) | Token::Eof => Position::start(),
         }
+    }
+}
+
+/// Mode derived from a DOCTYPE token per WHATWG HTML §13.2.2.5.
+///
+/// The HTML spec defines three modes the document can be in
+/// based on its DOCTYPE:
+/// - `Quirks` — the parser detected one of the quirks-mode
+///   triples; CSS uses the quirks box model and `<table>` is
+///   auto-inserted into the body.
+/// - `LimitedQuirks` — the parser detected one of the
+///   limited-quirks triples; CSS does not use quirks mode but
+///   a small set of behaviours (e.g. attribute parsing for
+///   `<br>`) follow the quirks path.
+/// - `NoQuirks` — the parser saw a no-quirks DOCTYPE (typically
+///   `<!DOCTYPE html>`); standard CSS and DOM behaviour.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DoctypeMode {
+    /// Full quirks mode.
+    Quirks,
+    /// Limited quirks mode (HTML 4.01 Transitional and similar).
+    LimitedQuirks,
+    /// No quirks mode (HTML5 and HTML 4.01 Strict).
+    NoQuirks,
+}
+
+impl DoctypeMode {
+    /// `true` when the mode enables full CSS quirks.
+    pub(crate) fn is_quirks(self) -> bool {
+        matches!(self, DoctypeMode::Quirks)
+    }
+
+    /// `true` when the document should be considered "in some
+    /// form of quirks" (full or limited). Used by consumers that
+    /// care about the 2-way split.
+    #[allow(dead_code)]
+    pub(crate) fn is_some_quirks(self) -> bool {
+        !matches!(self, DoctypeMode::NoQuirks)
     }
 }
