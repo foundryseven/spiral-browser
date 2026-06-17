@@ -1,7 +1,7 @@
 # Active Context
 
 **Last updated:** 2026-06-17
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅ · Doc-drift prevention and wiring audit fully green (0 findings)
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅ · **Workflow Refactor R1+R2+R3 SHIPPED** · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
 *(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packet 2.1.1 ✅)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)

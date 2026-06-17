@@ -66,6 +66,56 @@ the cross-cutting work that does not fit any one subsystem.
 
 ---
 
+## Workflow Refactor (no-code-agentic)
+
+Self-contained six-packet refactor of the agent's operating contract.
+Branches from `main` at `80281af`. Lives on `refactor/no-code-agentic`.
+Not part of Group → Phase → Step → Packet hierarchy; tracked here as its
+own deliverable per
+[`docs/plans/no-code-agentic-refactor.md`](../plans/no-code-agentic-refactor.md).
+
+| Packet | Title | Status |
+|--------|-------|--------|
+| **R1** | Global config rewrite (`~/.config/opencode/*`) — strip Spiral-specific rules from the global AGENTS.md into the project tree | [x] SHIPPED 2026-06-17 (commits in `e50bd47`..`78001dc`) |
+| **R2** | AGENTS.md rewrite — add `## Workflow Discipline (Compulsory)` and the `MUST` directive verbs to the workflow table | [x] SHIPPED 2026-06-17 (commit `5778a41`) |
+| **R3** | Five rule files self-stand — add `MUST` / `MUST NOT` / `MUST RUN` gates to `architecture.md`, `coding-standards.md`, `performance.md`, `testing.md`, `unsafe-standards.md`; each file MUST cross-link to `AGENTS.md` and `workflow.md` | [x] SHIPPED 2026-06-17 (this commit) |
+| **R4** | Role contracts (`docs/agents/*.md`) cross-reference the rule files | [ ] not started |
+| **R5** | Audit scripts (`audit-orphan-exports.sh`, `audit-doc-drift.sh`) enforce R1–R4 — gate on "MUST" verb presence, reject stale rule copies | [ ] not started |
+| **R6** | Stale crate reference sweep across `docs/agents/*.md` (currently flagged in `docs/agents/test-writer.md`) | [ ] not started |
+
+### R3 — Self-Standing Rule Files
+
+The five "operative contract" rule files MUST each carry:
+1. A `> **Read first.**` blockquote pointing to `AGENTS.md` and
+   `.spiral/rules/workflow.md` for the workflow gate table.
+2. A `## Workflow Tools (mandatory)` table listing the
+   crate/section-specific `MUST run` commands.
+3. `MUST` / `MUST NOT` / `MUST RUN` verbs in the body (replacing
+   `should`, `may`, `is recommended to`, `is considered to`).
+
+Affected files: `.spiral/rules/architecture.md`,
+`coding-standards.md`, `performance.md`, `testing.md`,
+`unsafe-standards.md`. The `workflow.md` and
+`doc-drift-prevention.md` rule files were already gated under R2
+and are out of scope for R3.
+
+### Wiring & Integration
+
+- **Call sites:** `.spiral/rules/architecture.md:1`,
+  `coding-standards.md:1`, `performance.md:1`, `testing.md:1`,
+  `unsafe-standards.md:1` each open with the new `> **Read first.**`
+  blockquote. Cross-references to `AGENTS.md` and `workflow.md`
+  resolve at file-relative paths.
+- **Test coverage:** Manual grep audit: 0 remaining `may`, `should`,
+  `could`, `might` in the 5 target files. `MUST`/`MUST NOT`
+  verb density ≥ 3 per file (verified by `grep -cE
+  "\bMUST\b|\bMUST NOT\b|\bMUST RUN\b"`).
+- **End-to-end surface:** Reviewer reads any rule file in
+  isolation and lands on a clear workflow gate (the table at the
+  top) plus a body using only `MUST` / `MUST NOT` verbs.
+
+---
+
 ## Phases
 
 A Phase is a major delivery milestone. One Phase = one shipped

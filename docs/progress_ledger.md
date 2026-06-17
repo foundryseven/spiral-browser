@@ -4382,5 +4382,38 @@ identified. Key findings:
 - **SSOT updates (this entry only):** ledger entry appended, no tracker tick (none appropriate).
 - **Status:** Shipped to main as `e762d09`. Ready to fork `refactor/no-code-agentic` from `e762d09`.
 
+## 2026-06-17 — Packet R3: Five rule files self-stand (no-code-agentic refactor)
+
+- **What:** Reworded the five "operative contract" rule files (`.spiral/rules/architecture.md`, `coding-standards.md`, `performance.md`, `testing.md`, `unsafe-standards.md`) so each one reads standalone: a `> **Read first.**` blockquote cross-linking to `AGENTS.md` and `workflow.md`, a `## Workflow Tools (mandatory)` table of `MUST run` commands scoped to that file's domain, and directive-verb rewording throughout the body. Passive verbs (`may`, `should`, `could`, `might`, `is recommended to`) are eliminated in favour of `MUST` / `MUST NOT` / `MUST RUN` so a reviewer reading any one rule file gets a self-contained contract. The workflow and doc-drift-prevention rule files were already gated under R2 and are out of scope for R3.
+- **Per-file changes:**
+  - `architecture.md` (130 lines, +38) — new `cargo tree` gate before adding a dep edge; tightened the re-export rule (`MUST NOT re-export from spiral-core to wrap a type`); added the `Workflow Tools (mandatory)` table.
+  - `coding-standards.md` (78 lines, +28) — added the `> **Read first.**` blockquote and the `Workflow Tools (mandatory)` table (fmt + clippy + audit-doc-drift); rewrote the Language and Locale bullets to use `MUST` and link to `audit-doc-drift.sh`.
+  - `performance.md` (rewritten, 87 lines) — added the blockquote, the workflow table (cargo bench, criterion baseline), tightened all §1–§3 prose to `MUST`; explicit "must have a Criterion target" rule for any perf-related claim.
+  - `testing.md` (181 lines, +52) — added the blockquote and workflow table (`test-fast`, `test-with-deps`, `verify-packet`, both audits, `cargo miri` for unsafe crates); TDFlow steps converted to `MUST`; `pub` symbol coverage rule tied to `audit-orphan-exports.sh`; "What NOT to do" preamble explicitly forbids the listed patterns.
+  - `unsafe-standards.md` (rewritten, 89 lines) — added the blockquote and workflow table (`cargo miri`, `audit-orphan-exports.sh`, `verify-packet`, registry update); tightened §1 to demand the `// SAFETY:` comment be specific (a reviewer MUST reject generic comments); added the `docs/security/unsafe_registry.md` cross-reference and the "same commit as the unsafe block" rule; added `pub unsafe fn` ADR requirement.
+- **Verification (per AGENTS.md mandatory gates):**
+  - `grep -cE "\bMUST\b|\bMUST NOT\b|\bMUST RUN\b" .spiral/rules/*.md` → architecture 8, coding-standards 3, performance 8, testing 8, unsafe-standards 14.
+  - `grep -nE "\bmay\b|\bshould\b|\bcould\b|\bmight\b" .spiral/rules/{architecture,coding-standards,performance,testing,unsafe-standards}.md` → no matches. All passive verbs eliminated in the 5 target files.
+  - `cargo fmt --all -- --check` ✓
+  - `cargo clippy --workspace --all-targets -- -D warnings` ✓
+  - `cargo build --workspace` ✓
+  - `cargo test --workspace` ✓ (the rule-file edits do not touch Rust, so the test count is unchanged from the prior baseline)
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 findings.
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings (the rule files were not in the audit's ignore list; spelling gate passes — `organise` / `optimise` / `analyse` are correct AU spelling).
+- **Wiring & Integration:**
+  - **Call sites:** Each of the five rule files opens at `:1` with the new `> **Read first.**` blockquote and at `:8..12` with the `## Workflow Tools (mandatory)` table. The cross-references to `AGENTS.md` (file-relative `../AGENTS.md`) and `workflow.md` (sibling reference) resolve at the workspace root.
+  - **Test coverage:** Manual grep audit (above) replaces a unit test for a documentation-only change. R5 will encode this audit into `audit-doc-drift.sh` so a future contributor cannot regress the verb density.
+  - **End-to-end surface:** A reviewer opening any of the five rule files in isolation lands on (1) the `MUST run` table for that domain, (2) a body using only `MUST` / `MUST NOT` verbs, and (3) clear cross-links to the two files that hold the global workflow gate (AGENTS.md and workflow.md).
+- **SSOT updates:**
+  - `.spiral/rules/architecture.md` — rewritten per R3 (adds `cargo tree` gate, MUST verbs).
+  - `.spiral/rules/coding-standards.md` — rewritten per R3 (adds workflow table, MUST verbs).
+  - `.spiral/rules/performance.md` — rewritten per R3 (adds Criterion baseline gate, MUST verbs).
+  - `.spiral/rules/testing.md` — extended with workflow table + MUST verbs.
+  - `.spiral/rules/unsafe-standards.md` — rewritten per R3 (adds `cargo miri` gate, registry same-commit rule, MUST verbs).
+  - `docs/implementation_tracker.md` — new `## Workflow Refactor (no-code-agentic)` section; R1/R2/R3 ticked `[x]`, R4/R5/R6 still `[ ]`.
+  - `docs/active_context.md` — Status row updated to include "Workflow Refactor R1+R2+R3 SHIPPED".
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** Shipped R3 on branch `refactor/no-code-agentic`. **Next: R4** (cross-references in `docs/agents/*.md` role contracts to the rule files), **R5** (extend `audit-orphan-exports.sh` + `audit-doc-drift.sh` to enforce the verb density and the cross-link presence), **R6** (sweep the stale `spiral-net` vs `spiral-network` references flagged in `docs/agents/test-writer.md`). R4–R6 land as a single follow-up PR per the plan.
+
 
 
