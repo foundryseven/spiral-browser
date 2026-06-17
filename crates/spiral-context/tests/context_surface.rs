@@ -1,7 +1,8 @@
 //! Integration tests for the `spiral-context` public surface.
 
 use spiral_context::{
-    Brand, CapabilitySet, ClockCap, Context, ContextOps, DomCap, FsCap, InProcess, NetCap, Origin, RngCap,
+    Brand, CapabilitySet, ClockCap, Context, ContextOps, DomCap, FsCap, InProcess, NetCap, Origin,
+    RngCap,
 };
 
 #[test]
