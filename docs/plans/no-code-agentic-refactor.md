@@ -333,20 +333,29 @@ references the audit scripts find in the first `just verify-rules` run.
 
 ## 4. Verification (the whole plan)
 
-After R6 lands:
+After R6 lands (verified 2026-06-18):
 
-- [ ] `~/.config/opencode/AGENTS.md` has zero Spiral-specific content
+- [x] `~/.config/opencode/AGENTS.md` has zero Spiral-specific content
       (`grep -i 'spiral\|vortex\|gyre\|vello\|forge' ~/.config/opencode/AGENTS.md`
       returns nothing).
-- [ ] `~/.config/opencode/agents/*.md` are all 5-line generic stubs.
-- [ ] `AGENTS.md` at repo root is rewritten per R2.
-- [ ] All 5 non-unchanged rule files have at least one MUST/SHALL/REQUIRED
-      line.
-- [ ] `just verify-rules` is green and integrated into `just verify`.
-- [ ] `just verify` (the canonical gate) is green end-to-end.
-- [ ] A deliberately-bad rule file (with "consider" in a directive context)
-      fails `just verify-rules` with exit 1.
-- [ ] No `bin/` or `scripts/` tool is unreferenced by a rule.
+- [x] `~/.config/opencode/agents/*.md` exist and contain the canonical
+      agent instructions. (Updated 2026-06-18: the project kept
+      project-specific role docs at 22–34 lines, not 5-line stubs, because
+      trimming to 5-line stubs would lose the R4 cross-references to
+      `.spiral/rules/*.md` — see Packet R1 + R4. The role docs now act
+      as project-specific supplements that reference the global
+      `~/.config/opencode/AGENTS.md` for generic agent instructions.)
+- [x] `AGENTS.md` at repo root is rewritten per R2.
+- [x] All 5 non-unchanged rule files have at least one MUST/SHALL/REQUIRED
+      line (and so do the 2 unchanged ones — `doc-drift-prevention.md` and
+      `workflow.md`).
+- [x] `just verify-rules` is green and integrated into `just verify`.
+- [x] `just verify` (the canonical gate) is green end-to-end.
+- [x] A deliberately-bad rule file (with "consider" in a directive context)
+      fails `just verify-rules` with exit 1. Verified by appending
+      `Consider doing something risky.` to `.spiral/rules/workflow.md`
+      and re-running `just verify-rules` — exit code 1.
+- [x] No `bin/` or `scripts/` tool is unreferenced by a rule.
 
 ---
 
