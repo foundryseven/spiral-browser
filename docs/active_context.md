@@ -1,7 +1,7 @@
 # Active Context
 
 **Last updated:** 2026-06-17
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅ · Doc-drift prevention and wiring audit fully green (0 findings)
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
 *(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packet 2.1.1 ✅)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
@@ -128,7 +128,7 @@ The top-20 competitive gaps identified by the research are foundational P2 work 
 
 **Step 2.1 — Fragment parsing (Phase 2):**
 - [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content. ✅ SHIPPED 2026-06-17.
-- [ ] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). Required for `<table>` in quirks-mode and CSS box-model differences.
+- [x] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). Required for `<table>` in quirks-mode and CSS box-model differences. ✅ SHIPPED 2026-06-17.
 - [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
 - [ ] **Packet 2.1.4** — `<template>` content document-fragment construction.
 - [ ] **Packet 2.1.7** — `URL` + `URLSearchParams` (WHATWG URL §4).
@@ -347,11 +347,14 @@ any shipped browser:
 
 Step 2.8 (AAA + AFE + foster parenting) shipped 2026-06-17 — see the
 ledger entry. Packet 2.1.1 (fragment parsing algorithm, WHATWG
-HTML §12.4) shipped 2026-06-17 — see the same ledger. **Next up:
-Packet 2.1.2 — Quirk mode classifier (WHATWG HTML §12.1)**.
-Quirk mode detection inspects the document's DOCTYPE and turns on
-quirks-mode behaviour for `<table>` and CSS box-model differences.
-Packet 2.1.3 (`<noscript>`) and 2.1.4 (`<template>` content) follow.
+HTML §12.4) shipped 2026-06-17 — see the same ledger. Packet 2.1.2
+(quirk mode classifier, WHATWG HTML §12.1) shipped 2026-06-17 —
+see the latest ledger entry. **Next up: Packet 2.1.3 (`<noscript>`
+element, WHATWG HTML §4.6.7)** followed by Packet 2.1.4 (`<template>`
+content document-fragment construction, WHATWG HTML §13.2.6.4).
+The template packet depends on the quirks-mode classifier (the
+template element's contents parse in the mode of the containing
+document).
 
 ## Completed (packets shipped)
 

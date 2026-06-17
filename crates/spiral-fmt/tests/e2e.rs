@@ -119,21 +119,19 @@ fn parse_implicit_html_head_body() {
 #[test]
 fn parse_quirks_mode_for_unknown_doctype() {
     let dom = parse_html("<!DOCTYPE weird><html><head></head><body></body></html>").expect("parse");
-    let doc = match dom.get_node(dom.root) {
-        Some(spiral_dom::Node::Document(d)) => d,
-        other => panic!("expected Document at root, got {other:?}"),
-    };
-    assert!(doc.quirks_mode, "unknown DOCTYPE must trigger quirks mode");
+    assert!(
+        dom.quirks_mode(),
+        "unknown DOCTYPE must trigger quirks mode"
+    );
 }
 
 #[test]
 fn parse_no_quirks_for_html5_doctype() {
     let dom = parse_html("<!DOCTYPE html><html><head></head><body></body></html>").expect("parse");
-    let doc = match dom.get_node(dom.root) {
-        Some(spiral_dom::Node::Document(d)) => d,
-        other => panic!("expected Document at root, got {other:?}"),
-    };
-    assert!(!doc.quirks_mode, "<!DOCTYPE html> must not trigger quirks");
+    assert!(
+        !dom.quirks_mode(),
+        "<!DOCTYPE html> must not trigger quirks"
+    );
 }
 
 #[test]

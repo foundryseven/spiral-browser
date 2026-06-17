@@ -7,14 +7,33 @@ paths:
 
 # Coding Standards
 
+> **Read first.** This file is the operative contract for Rust
+> style, locale, and Markdown/TOML conventions. The companion
+> workflow gate table lives in [`AGENTS.md`](../AGENTS.md) and
+> the gate-level detail lives in
+> [`.spiral/rules/workflow.md`](workflow.md). Where this file and
+> `AGENTS.md` disagree, this file wins for style-specific
+> questions; `workflow.md` wins for "what tool, when".
+
+## Workflow Tools (mandatory)
+
+| Moment | MUST run | Why |
+|--------|----------|-----|
+| Before claiming any code change complete | `cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings` | Enforces 4-space indent, line length, and lint policy in this file. |
+| After editing any `.md` file (ledger, ADRs, plans, rule files) | `./scripts/audit-doc-drift.sh` | Catches Australian-vs-American spelling regressions (this file's first rule). |
+| Before merging a cross-crate change | `just verify-packet <crate>` | Wraps fmt + clippy + test + audit into one scoped command. |
+
 ## Language and Locale
 
 - All code, comments, docstrings, commit messages, and Markdown
-  files in **English**, **Australian spelling**.
-- "initialise", "optimise", "colour", "behaviour", "programme"
-  (noun), "centre", "analyse", "organisation".
-- "z" → "s" for verbs (`realise`, `organise`).
-- No "color", "initialize", "behavior" in code or comments.
+  files MUST be in **English**, **Australian spelling**.
+- Use "initialise", "optimise", "colour", "behaviour",
+  "programme" (noun), "centre", "analyse", "organisation".
+- Use "z" → "s" for verbs (`realise`, `organise`).
+- A code or comment containing "color", "initialize", or
+  "behavior" MUST be rewritten before commit; the spelling audit
+  in `./scripts/audit-doc-drift.sh` exits non-zero on American
+  spellings under `**/*.md`.
 
 The single exception: third-party API schemas that require a
 specific keyword (e.g. a CSS property name) keep the spec spelling.
@@ -64,8 +83,8 @@ specific keyword (e.g. a CSS property name) keep the spec spelling.
 - Doc comments on every `pub` item: `///` for one-line, `//!` for
   module-level. Use full sentences. Include an example where the
   API is non-obvious.
-- `// This does X because Y` over `// magic`. Future agents read
-  your comments.
+- `// This does X because Y` over `// magic`. Comments MUST be written
+  for future agents to read.
 - No `// ...` truncation or stub shortcuts. Write the full code
   or don't write it.
 

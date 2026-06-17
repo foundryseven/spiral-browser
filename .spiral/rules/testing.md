@@ -5,22 +5,41 @@ paths:
 
 # Testing Standards
 
+> **Read first.** This file is the operative contract for
+> test-driven development, test layout, and coverage targets.
+> The companion workflow gate table lives in
+> [`AGENTS.md`](../AGENTS.md) and the gate-level detail lives in
+> [`.spiral/rules/workflow.md`](workflow.md). Where this file and
+> `AGENTS.md` disagree, this file wins for test-specific questions;
+> `workflow.md` wins for "what tool, when".
+
+## Workflow Tools (mandatory)
+
+| Moment | MUST run | Why |
+|--------|----------|-----|
+| Mid-cycle, single packet | `just test-fast <crate> [pattern]` | Skips 30-60s `cargo test --workspace` overhead while writing tests. |
+| After a `pub` API change in `spiral-foo` | `just test-with-deps <crate>` | Computes reverse-dep fan-out via `cargo metadata \| jq` and runs each impacted crate. |
+| Before claiming a packet complete | `just verify-packet <crate>` | Wraps fmt + clippy + test + audit-orphan-exports into one scoped command. |
+| Pre-commit / pre-merge | `./scripts/audit-orphan-exports.sh` and `./scripts/audit-doc-drift.sh` | Both MUST exit 0; exit 1 is a build break. |
+| When claiming "tests pass" for any `unsafe` crate | `cargo miri test -p <crate>` | Confirms no UB in unsafe paths. |
+
 ## Test-Driven Flow (TDFlow)
 
 When implementing a new feature, layout block, parser, or
 background service, the test is co-generated:
 
-1. **Write the failing test first.** The test must assert real
-   behaviour, not a placeholder.
-2. **Run the test** and confirm it fails for the right reason
-   (the API does not exist yet, or the assertion is unmet).
-3. **Write the minimum code to make the test pass.**
-4. **Run the test again.** Confirm green.
-5. **Refactor** while keeping the test green.
-6. **Add more tests** for edge cases the first test missed.
+1. The implementer MUST write the failing test first. The test
+   MUST assert real behaviour, not a placeholder.
+2. The implementer MUST run the test and confirm it fails for the
+   right reason (the API does not exist yet, or the assertion is
+   unmet).
+3. Write the minimum code to make the test pass.
+4. Run the test again. Confirm green.
+5. Refactor while keeping the test green.
+6. Add more tests for edge cases the first test missed.
 
 If a test passes without any code change, the test is hollow
-and must be rewritten.
+and MUST be rewritten before the packet can land.
 
 ## Iteration speed
 
@@ -63,8 +82,10 @@ verification and is enforced by `just verify` and `bin/spiral-pr.sh`.
 
 ## Test coverage
 
-- Every `pub` function in `lib.rs` must have at least one
-  external test (unit or integration).
+- Every `pub` function in `lib.rs` MUST have at least one external
+  test (unit or integration). A `pub` symbol with no external
+  consumer is an orphan export and is flagged by
+  `./scripts/audit-orphan-exports.sh`.
 - Branch coverage target: ≥80% on core modules
   (`spiral-fmt`, `spiral-vortex`, `spiral-dom`).
 - The audit script (`./scripts/audit-orphan-exports.sh`) is
@@ -101,9 +122,12 @@ For performance-critical or security-sensitive crates (such as `spiral-vortex` a
   ```bash
   RUSTFLAGS="-Zsanitizer=address" cargo test --target x86_64-apple-darwin
   ```
-  *(Note: Adjust target for your local platform as required; requires nightly compiler).*
+  *(Note: target must be adjusted for the local platform; requires nightly compiler).*
 
 ## What NOT to do
+
+The following patterns are forbidden; the implementer MUST rewrite
+or remove the offending test before commit:
 
 - `assert!(true)` — hollow.
 - `#[ignore]` without a reason. If the test is broken, fix it.

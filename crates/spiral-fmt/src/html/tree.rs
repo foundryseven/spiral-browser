@@ -25,7 +25,7 @@
 
 use crate::cursor::Position;
 use crate::error::FormatError;
-use crate::token::Token;
+use crate::token::{DoctypeMode, Token};
 
 /// Insertion mode the tree builder is currently in. Per WHATWG
 /// HTML §12.2.4.1 the parser transitions between these states as
@@ -104,6 +104,10 @@ pub(crate) struct TreeBuilder {
     /// `<title>` (or `<script>`, etc.) and re-parenting it
     /// inside `<body>`.
     rawtext_depth: u32,
+    /// Mode derived from the document's DOCTYPE per §13.2.2.5.
+    /// Defaults to `Quirks` (the absence of a DOCTYPE is the
+    /// most common case on the modern web and yields quirks).
+    doctype_mode: DoctypeMode,
     /// When [`Self::new_for_fragment`] creates a synthetic
     /// context element (e.g. for a `<div>` or `<select>`
     /// context), this records its NodeId so the caller can
@@ -127,6 +131,7 @@ impl TreeBuilder {
             head_created: false,
             body_created: false,
             rawtext_depth: 0,
+            doctype_mode: DoctypeMode::Quirks,
             fragment_context_id: None,
         }
     }
@@ -158,6 +163,7 @@ impl TreeBuilder {
             head_created: false,
             body_created: false,
             rawtext_depth: 0,
+            doctype_mode: DoctypeMode::Quirks,
             fragment_context_id: None,
         };
 
@@ -256,10 +262,10 @@ impl TreeBuilder {
             }
             Token::Doctype {
                 name,
-                quirks,
+                mode,
                 position,
                 ..
-            } => self.handle_doctype(name.as_deref(), *quirks, *position),
+            } => self.handle_doctype(name.as_deref(), *mode, *position),
             Token::StartTag {
                 name,
                 attributes,
@@ -302,10 +308,35 @@ impl TreeBuilder {
     fn handle_doctype(
         &mut self,
         name: Option<&str>,
-        quirks: bool,
+        mode: DoctypeMode,
         _position: Position,
     ) -> Result<(), FormatError> {
-        self.dom.set_quirks_mode(quirks);
+        // Per WHATWG HTML §13.2.2.6.1 "in body" — but the actual
+        // rules for a DOCTYPE token are simpler: §13.2.2.6.1
+        // covers the InBody case (parse error, ignore) and
+        // §13.2.2.6.0 ("Initial") covers the first-token case.
+        // In the Initial insertion mode the parser records the
+        // quirks-mode flag derived from the DOCTYPE and then
+        // switches to the BeforeHtml insertion mode. We treat
+        // both `Initial` and `BeforeHtml` as legitimate "this
+        // DOCTYPE is the document's DOCTYPE" positions; a
+        // DOCTYPE seen in any other insertion mode is a parse
+        // error per the spec and must NOT change the document's
+        // quirks mode.
+        if matches!(
+            self.mode,
+            InsertionMode::Initial | InsertionMode::BeforeHtml
+        ) {
+            // Both `NoQuirks` and `LimitedQuirks` map to
+            // `quirks_mode == false` on the DOM. The distinction
+            // is preserved on the builder for future packets
+            // (e.g. 2.1.4 template content) that need it.
+            self.doctype_mode = mode;
+            self.dom.set_quirks_mode(mode.is_quirks());
+            // Per §13.2.2.6.0 step 4: "Switch to the before html
+            // insertion mode" after consuming the DOCTYPE.
+            self.mode = InsertionMode::BeforeHtml;
+        }
         let _ = name; // Recorded for completeness in a future audit pass.
         Ok(())
     }

@@ -58,7 +58,7 @@
 #   check-name          DRIFT (K finding(s)):
 #                          - <file>:<line>: <message>
 #
-#   OK: 0 doc-drift findings across 6 check(s).
+#   OK: 0 doc-drift findings across N check(s).
 #   FAIL: K doc-drift finding(s) across M check(s):
 #     - check-name
 #
@@ -141,7 +141,78 @@ $1:$2: $3"
 # Each check_* function appends to FINDINGS (file:line: message)
 # and returns the number of new findings via FINDING_COUNT.
 
-CHECKS="status dep-graph vocab counts spec-only tracker"
+CHECKS="status dep-graph vocab counts spec-only tracker stale-rules"
+
+check_stale_rules() {
+    # Each .spiral/rules/*.md file must not contain passive
+    # verbs in directive contexts. Passive verbs (should, may,
+    # consider, could, might, optionally, "recommended to")
+    # weaken the rule system. Flag each occurrence as a WARNING.
+    # ERROR if a directive-context sentence (lines with "You" or
+    # "the agent" in instruction position) lacks a MUST/SHALL/
+    # REQUIRED verb at all.
+    #
+    # Implemented as a single awk pass per file for speed
+    # (the bash version launched 4 subshells per line per file).
+    local drift=0
+    local rules_dir="$repo_root/.spiral/rules"
+    [[ -d "$rules_dir" ]] || return 0
+
+    local rfile
+    for rfile in "$rules_dir"/*.md; do
+        [[ -f "$rfile" ]] || continue
+        local _out
+        _out=$(awk -v rfile="$rfile" '
+        BEGIN {
+            pv[1] = "should"; pv[2] = "may"; pv[3] = "consider"
+            pv[4] = "could"; pv[5] = "might"; pv[6] = "optionally"
+            pv[7] = "recommended to"
+        }
+        {
+            ln++
+            line = $0
+            if (line == "") next
+            # Skip headings, code fences, block quotes, table rows.
+            if (line ~ /^#/) next
+            if (line ~ /^```/) next
+            if (line ~ /^>/) next
+            if (line ~ /^\|/) next
+
+            lower = tolower(line)
+            warn_emit = 0
+            for (i = 1; i <= 7; i++) {
+                if (index(lower, pv[i]) > 0) {
+                    # Word boundary: char before and after must be non-alnum/space/end.
+                    re = "(^|[^[:alnum:]_])" pv[i] "([^[:alnum:]_]|$)"
+                    if (match(lower, re)) {
+                        printf "%s:%d: WARNING: Passive verb \x27%s\x27 in rule file — replace with MUST/SHALL/REQUIRED\n", rfile, ln, pv[i]
+                        warn_emit = 1
+                    }
+                }
+            }
+
+            # Skip lines that are code/inline examples.
+            if (line ~ /`/) next
+            if (line ~ /^>/) next
+
+            # Directive context: line begins with or contains
+            # "You" or "the agent" in instruction position.
+            if (match(lower, /(you)([[:space:]]|$)/) || match(lower, /(the agent)([[:space:]]|$)/)) {
+                if (!match(lower, /(\bMUST\b|\bSHALL\b|\bREQUIRED\b)/)) {
+                    printf "%s:%d: ERROR: Directive sentence lacks MUST/SHALL/REQUIRED gating verb\n", rfile, ln
+                }
+            }
+        }
+        ' "$rfile")
+        if [[ -n "$_out" ]]; then
+            FINDINGS="$FINDINGS
+$_out"
+            drift=1
+        fi
+    done
+
+    return $drift
+}
 
 check_status() {
     # The AGENTS.md "Current Status" row must say the same
@@ -706,6 +777,7 @@ if [[ -n "$target_check" ]]; then
         counts) check_counts || true ;;
         spec-only) check_spec_only || true ;;
         tracker) check_tracker || true ;;
+        stale-rules) check_stale_rules || true ;;
         *) echo "error: unknown check '$target_check'" >&2
            echo "available: $CHECKS" >&2
            exit 2 ;;
@@ -717,6 +789,7 @@ else
     check_counts || true
     check_spec_only || true
     check_tracker || true
+    check_stale_rules || true
 fi
 
 # -- summary --------------------------------------------------------------
@@ -730,7 +803,8 @@ if [[ "$n_findings" -eq 0 ]]; then
     if [[ -n "$target_check" ]]; then
         echo "  $target_check          OK"
     else
-        echo "OK: 0 doc-drift findings across 6 check(s)."
+        n_checks=$(printf '%s\n' "$CHECKS" | wc -w | tr -d ' ')
+        echo "OK: 0 doc-drift findings across $n_checks check(s)."
     fi
     exit 0
 else

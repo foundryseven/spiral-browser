@@ -14,16 +14,30 @@
 default: verify
 
 # Full verification pipeline.
-verify:
-    @echo "=== 1/4  cargo fmt --all -- --check ==="
-    cargo fmt --all -- --check
-    @echo "=== 2/4  cargo clippy ==="
-    cargo clippy --workspace --all-targets -- -D warnings
-    @echo "=== 3/4  cargo test ==="
-    cargo test --workspace
-    @echo "=== 4/4  cargo build ==="
-    cargo build --workspace
-    @echo "=== ALL GREEN ==="
+verify: verify-fast verify-rules
+	@echo "=== ALL GREEN ==="
+
+# Fast verification pipeline (skip nightly clippy + audits).
+verify-fast:
+	@echo "=== 1/4  cargo fmt --all -- --check ==="
+	cargo fmt --all -- --check
+	@echo "=== 2/4  cargo clippy ==="
+	cargo clippy --workspace --all-targets -- -D warnings
+	@echo "=== 3/4  cargo test ==="
+	cargo test --workspace
+	@echo "=== 4/4  cargo build ==="
+	cargo build --workspace
+	@echo "=== FAST VERIFY PASSED ==="
+
+# Rule-enforcement pipeline (nightly clippy + both audits).
+verify-rules:
+	@echo "=== verify-rules: 1/3  cargo +nightly clippy ==="
+	cargo +nightly clippy --workspace --all-targets -- -D warnings
+	@echo "=== verify-rules: 2/3  audit-orphan-exports ==="
+	./scripts/audit-orphan-exports.sh
+	@echo "=== verify-rules: 3/3  audit-doc-drift ==="
+	./scripts/audit-doc-drift.sh
+	@echo "=== RULES ENFORCEMENT PASSED ==="
 
 # Format check only.
 fmt-check:

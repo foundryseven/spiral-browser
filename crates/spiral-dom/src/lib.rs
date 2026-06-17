@@ -66,11 +66,17 @@ pub struct Dom {
 }
 
 impl Dom {
-    /// Create a new empty DOM.
+    /// Create a new empty DOM in quirks mode.
+    ///
+    /// The default is quirks mode because the HTML parser
+    /// (§12.1) treats the absence of a DOCTYPE — by far the
+    /// most common case on the modern web — as the quirks
+    /// mode trigger. The parser flips this off when it sees a
+    /// no-quirks DOCTYPE (e.g. `<!DOCTYPE html>`).
     pub fn new() -> Self {
         let doc = Document {
             children: Vec::new(),
-            quirks_mode: false,
+            quirks_mode: true,
         };
         let nodes = vec![Some(Node::Document(doc))];
         Self { nodes, root: 0 }
@@ -183,6 +189,20 @@ impl Dom {
     pub fn set_quirks_mode(&mut self, quirks: bool) {
         if let Some(Node::Document(doc)) = self.get_node_mut(self.root) {
             doc.quirks_mode = quirks;
+        }
+    }
+
+    /// Get the document's quirks mode.
+    ///
+    /// Returns `true` when the document is in quirks mode (the
+    /// default before the parser has seen a non-quirks DOCTYPE).
+    /// WHATWG HTML §12.1 defines quirks mode; the parser sets
+    /// this to `false` when it sees a no-quirks or limited-quirks
+    /// DOCTYPE (e.g. `<!DOCTYPE html>`).
+    pub fn quirks_mode(&self) -> bool {
+        match self.get_node(self.root) {
+            Some(Node::Document(doc)) => doc.quirks_mode,
+            _ => true,
         }
     }
 

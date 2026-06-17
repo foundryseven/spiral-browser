@@ -35,7 +35,7 @@
 use super::tree::TreeBuilder;
 use crate::cursor::{Cursor, Position};
 use crate::error::FormatError;
-use crate::token::{Attribute, Token};
+use crate::token::{Attribute, DoctypeMode, Token};
 
 /// The state of the tokeniser state machine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -707,13 +707,39 @@ impl<'a> Tokeniser<'a> {
         Ok(None)
     }
 
+    /// Read a single ASCII-quoted string from the cursor.
+    ///
+    /// Used by the DOCTYPE state to consume the public and
+    /// system identifiers after `PUBLIC` / `SYSTEM`. Returns
+    /// `None` if the cursor is not positioned at a `"` or `'`
+    /// (the spec treats a missing quoted string as missing
+    /// identifier — we honour that by returning `None`).
+    fn read_quoted_string(&mut self) -> Option<String> {
+        let quote = match self.cursor.peek_byte()? {
+            b'"' | b'\'' => self.cursor.peek_byte().unwrap(),
+            _ => return None,
+        };
+        self.cursor.advance();
+        let start = self.cursor.pos();
+        while let Some(b) = self.cursor.peek_byte() {
+            if b == quote {
+                break;
+            }
+            self.cursor.advance();
+        }
+        let value = self.cursor.slice(start, self.cursor.pos()).to_string();
+        if self.cursor.peek_byte() == Some(quote) {
+            self.cursor.advance();
+        }
+        Some(value)
+    }
+
     fn state_doctype(&mut self) -> Result<Option<Token>, FormatError> {
         let pos = self.cursor_position();
         self.cursor.skip_ascii_whitespace();
         let mut name: Option<String> = None;
         let mut public_id: Option<String> = None;
         let mut system_id: Option<String> = None;
-        let mut quirks = false;
         // Read the DOCTYPE name up to whitespace or `>`.
         let name_start = self.cursor.pos();
         while let Some(b) = self.cursor.peek_byte() {
@@ -725,31 +751,44 @@ impl<'a> Tokeniser<'a> {
         if self.cursor.pos() > name_start {
             let raw = self.cursor.slice(name_start, self.cursor.pos());
             name = Some(raw.to_string());
-            if !is_known_doctype(raw) {
-                quirks = true;
-            }
         }
+        // Note: the mode is computed AFTER the loop below has
+        // consumed PUBLIC / SYSTEM + their quoted identifiers.
+        // Calling `classify_doctype_quirks` here with empty
+        // `public_id` / `system_id` would misclassify every
+        // DTD with identifiers as the bare-`<!DOCTYPE html>`
+        // no-quirks shortcut.
         loop {
             self.cursor.skip_ascii_whitespace();
             match self.cursor.peek_byte() {
                 None => {
                     self.state = State::Eof;
+                    let mode = classify_doctype_quirks(
+                        name.as_deref(),
+                        public_id.as_deref(),
+                        system_id.as_deref(),
+                    );
                     return Ok(Some(Token::Doctype {
                         name,
                         public_id,
                         system_id,
-                        quirks,
+                        mode,
                         position: pos,
                     }));
                 }
                 Some(b'>') => {
                     self.cursor.advance();
                     self.state = State::Data;
+                    let mode = classify_doctype_quirks(
+                        name.as_deref(),
+                        public_id.as_deref(),
+                        system_id.as_deref(),
+                    );
                     return Ok(Some(Token::Doctype {
                         name,
                         public_id,
                         system_id,
-                        quirks,
+                        mode,
                         position: pos,
                     }));
                 }
@@ -757,45 +796,26 @@ impl<'a> Tokeniser<'a> {
                     if self.cursor.starts_with("PUBLIC") {
                         self.cursor.advance_n(6);
                         self.cursor.skip_ascii_whitespace();
-                        if self.cursor.peek_byte() == Some(b'"')
-                            || self.cursor.peek_byte() == Some(b'\'')
-                        {
-                            let quote = self.cursor.peek_byte().unwrap();
-                            self.cursor.advance();
-                            let start = self.cursor.pos();
-                            while let Some(b) = self.cursor.peek_byte() {
-                                if b == quote {
-                                    break;
-                                }
-                                self.cursor.advance();
-                            }
-                            public_id =
-                                Some(self.cursor.slice(start, self.cursor.pos()).to_string());
-                            if self.cursor.peek_byte() == Some(quote) {
-                                self.cursor.advance();
-                            }
+                        public_id = self.read_quoted_string();
+                        // Per §13.2.2.5, after PUBLIC's public id
+                        // there is an optional system id (a bare
+                        // quoted string, no SYSTEM keyword). It
+                        // arrives on the next loop iteration as
+                        // `Some('"')` / `Some('\'')` — read it
+                        // here as the system id when present.
+                        self.cursor.skip_ascii_whitespace();
+                        if system_id.is_none() {
+                            system_id = self.read_quoted_string();
                         }
                     } else if self.cursor.starts_with("SYSTEM") {
                         self.cursor.advance_n(6);
                         self.cursor.skip_ascii_whitespace();
-                        if self.cursor.peek_byte() == Some(b'"')
-                            || self.cursor.peek_byte() == Some(b'\'')
-                        {
-                            let quote = self.cursor.peek_byte().unwrap();
-                            self.cursor.advance();
-                            let start = self.cursor.pos();
-                            while let Some(b) = self.cursor.peek_byte() {
-                                if b == quote {
-                                    break;
-                                }
-                                self.cursor.advance();
-                            }
-                            system_id =
-                                Some(self.cursor.slice(start, self.cursor.pos()).to_string());
-                            if self.cursor.peek_byte() == Some(quote) {
-                                self.cursor.advance();
-                            }
-                        }
+                        system_id = self.read_quoted_string();
+                    } else if matches!(self.cursor.peek_byte(), Some(b'"') | Some(b'\'')) {
+                        // A bare quoted string at this point is the
+                        // trailing system id of a PUBLIC keyword
+                        // that already consumed its public id.
+                        system_id = self.read_quoted_string();
                     } else {
                         // Unknown keyword: skip to whitespace or `>`.
                         while let Some(b) = self.cursor.peek_byte() {
@@ -1267,14 +1287,170 @@ fn windows_1252_fixup(code: u32) -> Option<char> {
     Some(mapped)
 }
 
-/// Whether a DOCTYPE name is one of the limited-quirks / no-quirks
-/// forms. Anything else puts the parser into quirks mode per
-/// the WHATWG HTML5 spec § 13.2.2.1.
-fn is_known_doctype(name: &str) -> bool {
-    matches!(
-        name.to_ascii_lowercase().as_str(),
-        "html" | "html svg" | "html math" | "html public"
-    )
+/// Classify the quirks mode for a DOCTYPE per WHATWG HTML §13.2.2.5.
+///
+/// The algorithm:
+/// 1. If `name` is missing AND neither public id nor system id
+///    is present → quirks mode (this matches the legacy `<!DOCTYPE>`
+///    form, which has no name).
+/// 2. If `name` is not exactly `"html"` (ASCII-case-insensitive) →
+///    quirks mode.
+/// 3. Match `(public_id, system_id)` against the known triples:
+///    no-quirks (HTML5, HTML 4.01 Strict), limited-quirks
+///    (HTML 4.01 Transitional, XHTML 1.0 Transitional/Frameset),
+///    quirks (HTML 4.01 Frameset and the legacy IETF / Netscape /
+///    Microsoft / W3C pre-HTML4 sets). Anything not matched falls
+///    through to quirks mode.
+///
+/// Special case: the bare HTML5 form `<!DOCTYPE html>` (name =
+/// `"html"`, both identifiers missing) is no-quirks. This is
+/// the canonical DOCTYPE for HTML5 and is treated as no-quirks
+/// even though it is not in the triple table — all shipped
+/// browsers behave this way and billions of pages depend on it.
+pub(crate) fn classify_doctype_quirks(
+    name: Option<&str>,
+    public_id: Option<&str>,
+    system_id: Option<&str>,
+) -> DoctypeMode {
+    // §13.2.2.5 step 7: missing name with no identifiers → quirks.
+    let Some(name) = name else {
+        return DoctypeMode::Quirks;
+    };
+    // §13.2.2.5 step 8: anything that isn't `html` → quirks.
+    if !name.eq_ignore_ascii_case("html") {
+        return DoctypeMode::Quirks;
+    }
+    // Bare `<!DOCTYPE html>` (HTML5 canonical form) → no-quirks.
+    // Per the WHATWG HTML living standard, this case is treated
+    // as no-quirks even though it is not in the triple table —
+    // see "Parsing the DOCTYPE" steps that recognise the
+    // identifier-less "html" DOCTYPE as no-quirks.
+    if public_id.is_none() && system_id.is_none() {
+        return DoctypeMode::NoQuirks;
+    }
+    let public = public_id.unwrap_or("");
+    let system = system_id.unwrap_or("");
+
+    // §13.2.2.5 step 11 — no-quirks triples.
+    const NO_QUIRKS: &[(&str, &str)] = &[
+        (
+            "-//W3C//DTD HTML 4.01//EN",
+            "http://www.w3.org/TR/html4/strict.dtd",
+        ),
+        ("-//W3C//DTD HTML 4.01//EN", ""),
+    ];
+    // §13.2.2.5 step 12 — limited-quirks triples.
+    const LIMITED_QUIRKS: &[(&str, &str)] = &[
+        (
+            "-//W3C//DTD HTML 4.01 Transitional//EN",
+            "http://www.w3.org/TR/html4/loose.dtd",
+        ),
+        ("-//W3C//DTD HTML 4.01 Transitional//EN", ""),
+        (
+            "-//W3C//DTD XHTML 1.0 Frameset//EN",
+            "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd",
+        ),
+        (
+            "-//W3C//DTD XHTML 1.0 Transitional//EN",
+            "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd",
+        ),
+    ];
+    // §13.2.2.5 step 13 — quirks triples.
+    const QUIRKS: &[(&str, &str)] = &[
+        ("+//Silmaril//dtd html Pro v0r11 19970101//", ""),
+        ("-//AS//DTD HTML 3.0 as W3C//", ""),
+        ("-//AdvaSoft Ltd//DTD HTML 3.0 asW3C//", ""),
+        ("-//IETF//DTD HTML 2.0 Level 1//", ""),
+        ("-//IETF//DTD HTML 2.0 Level 2//", ""),
+        ("-//IETF//DTD HTML 2.0 Strict Level 1//", ""),
+        ("-//IETF//DTD HTML 2.0 Strict Level 2//", ""),
+        ("-//IETF//DTD HTML 2.0 Strict//", ""),
+        ("-//IETF//DTD HTML 2.0//", ""),
+        ("-//IETF//DTD HTML 2.1E//", ""),
+        ("-//IETF//DTD HTML 3.0//", ""),
+        ("-//IETF//DTD HTML 3.2 Final//", ""),
+        ("-//IETF//DTD HTML 3.2//", ""),
+        ("-//IETF//DTD HTML 3//", ""),
+        ("-//IETF//DTD HTML Level 0//", ""),
+        ("-//IETF//DTD HTML Level 1//", ""),
+        ("-//IETF//DTD HTML Level 2//", ""),
+        ("-//IETF//DTD HTML Level 3//", ""),
+        ("-//IETF//DTD HTML Strict Level 0//", ""),
+        ("-//IETF//DTD HTML Strict Level 1//", ""),
+        ("-//IETF//DTD HTML Strict Level 2//", ""),
+        ("-//IETF//DTD HTML Strict Level 3//", ""),
+        ("-//IETF//DTD HTML Strict//", ""),
+        ("-//IETF//DTD HTML//", ""),
+        ("-//Metrius//DTD Metrius 6.0//", ""),
+        ("-//Microsoft//DTD Internet Explorer 2.0 HTML Strict//", ""),
+        ("-//Microsoft//DTD Internet Explorer 2.0 HTML//", ""),
+        ("-//Microsoft//DTD Internet Explorer 2.0 Tables//", ""),
+        ("-//Microsoft//DTD Internet Explorer 3.0 HTML Strict//", ""),
+        ("-//Microsoft//DTD Internet Explorer 3.0 HTML//", ""),
+        ("-//Microsoft//DTD Internet Explorer 3.0 Tables//", ""),
+        ("-//Netscape Comm. Corp.//DTD HTML//", ""),
+        ("-//Netscape Comm. Corp.//DTD Strict HTML//", ""),
+        ("-//O'Reilly and Associates//DTD HTML 2.0//", ""),
+        ("-//O'Reilly and Associates//DTD HTML Extended 1.0//", ""),
+        (
+            "-//O'Reilly and Associates//DTD HTML Extended Relaxed 1.0//",
+            "",
+        ),
+        (
+            "-//SoftQuad Software//DTD HoTMetaL PRO 6.0::19990601::extensions to HTML 4.0//",
+            "",
+        ),
+        (
+            "-//SoftQuad//DTD HoTMetaL PRO 4.0::19971010::extension to HTML 4.0//",
+            "",
+        ),
+        ("-//Spyglass//DTD HTML 2.0 Extended//", ""),
+        ("-//Sun Microsystems Corp.//DTD HotJava HTML//", ""),
+        ("-//Sun Microsystems Corp.//DTD HotJava Strict HTML//", ""),
+        ("-//W3C//DTD HTML 3 1995-03-24//", ""),
+        ("-//W3C//DTD HTML 3.2 Draft//", ""),
+        ("-//W3C//DTD HTML 3.2 Final//", ""),
+        ("-//W3C//DTD HTML 3.2//", ""),
+        ("-//W3C//DTD HTML 3.2S Draft//", ""),
+        ("-//W3C//DTD HTML 4.01 Frameset//", ""),
+        (
+            "-//W3C//DTD HTML 4.01 Frameset//EN",
+            "http://www.w3.org/TR/html4/frameset.dtd",
+        ),
+        ("-//W3C//DTD HTML 4.01 Frameset//EN", ""),
+        ("-//W3C//DTD HTML 4.01 Transitional//", ""),
+        ("-//W3C//DTD HTML Experimental 19960712//", ""),
+        ("-//W3C//DTD HTML Experimental 970421//", ""),
+        ("-//W3C//DTD HTML Experimental 970421 Compact//", ""),
+        ("-//W3C//DTD HTML Experimental 970421 Frameset//", ""),
+        ("-//W3C//DTD HTML Experimental 970421 Transitional//", ""),
+        ("-//W3C//DTD HTML Experimental 970421//", ""),
+        ("-//W3C//DTD HTML Level 0//", ""),
+        ("-//W3C//DTD HTML Level 1//", ""),
+        ("-//W3C//DTD HTML Level 2//", ""),
+        ("-//W3C//DTD HTML Level 3//", ""),
+        ("-//W3C//DTD HTML Strict//", ""),
+        ("-//W3C//DTD HTML//", ""),
+        ("-//W3O//DTD W3 HTML 3.0//", ""),
+        ("-//W3O//DTD W3 HTML 3.0 Draft//", ""),
+        ("-//W3O//DTD W3 HTML Strict 3.0//", ""),
+        ("-//WebTechs//DTD Mozilla HTML 2.0//", ""),
+        ("-//WebTechs//DTD Mozilla HTML//", ""),
+    ];
+    if NO_QUIRKS.iter().any(|&(p, s)| p == public && s == system) {
+        return DoctypeMode::NoQuirks;
+    }
+    if LIMITED_QUIRKS
+        .iter()
+        .any(|&(p, s)| p == public && s == system)
+    {
+        return DoctypeMode::LimitedQuirks;
+    }
+    if QUIRKS.iter().any(|&(p, s)| p == public && s == system) {
+        return DoctypeMode::Quirks;
+    }
+    // No match → quirks per spec (catch-all step).
+    DoctypeMode::Quirks
 }
 
 /// Drive the tokeniser to completion and feed tokens to a
@@ -1409,14 +1585,108 @@ mod tests {
     fn doctype_html_is_recognised() {
         let toks = collect("<!DOCTYPE html><html></html>");
         assert!(
-            matches!(&toks[0], Token::Doctype { name: Some(n), quirks: false, .. } if n == "html")
+            matches!(&toks[0], Token::Doctype { name: Some(n), mode: DoctypeMode::NoQuirks, .. } if n == "html")
         );
     }
 
     #[test]
     fn doctype_unknown_triggers_quirks() {
         let toks = collect("<!DOCTYPE weird><html></html>");
-        assert!(matches!(&toks[0], Token::Doctype { quirks: true, .. }));
+        assert!(matches!(
+            &toks[0],
+            Token::Doctype {
+                mode: DoctypeMode::Quirks,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn classify_html5_no_quirks() {
+        assert_eq!(
+            classify_doctype_quirks(Some("html"), None, None),
+            DoctypeMode::NoQuirks,
+        );
+        assert_eq!(
+            classify_doctype_quirks(Some("HTML"), None, None),
+            DoctypeMode::NoQuirks,
+        );
+    }
+
+    #[test]
+    fn classify_unknown_name_quirks() {
+        assert_eq!(
+            classify_doctype_quirks(Some("weird"), None, None),
+            DoctypeMode::Quirks,
+        );
+    }
+
+    #[test]
+    fn classify_missing_name_quirks() {
+        assert_eq!(
+            classify_doctype_quirks(None, None, None),
+            DoctypeMode::Quirks
+        );
+    }
+
+    #[test]
+    fn classify_html4_strict_no_quirks() {
+        let m = classify_doctype_quirks(
+            Some("HTML"),
+            Some("-//W3C//DTD HTML 4.01//EN"),
+            Some("http://www.w3.org/TR/html4/strict.dtd"),
+        );
+        assert_eq!(m, DoctypeMode::NoQuirks);
+    }
+
+    #[test]
+    fn classify_html4_transitional_limited_quirks() {
+        let m = classify_doctype_quirks(
+            Some("HTML"),
+            Some("-//W3C//DTD HTML 4.01 Transitional//EN"),
+            Some("http://www.w3.org/TR/html4/loose.dtd"),
+        );
+        assert_eq!(m, DoctypeMode::LimitedQuirks);
+    }
+
+    #[test]
+    fn classify_html4_frameset_quirks_with_system_id() {
+        let m = classify_doctype_quirks(
+            Some("HTML"),
+            Some("-//W3C//DTD HTML 4.01 Frameset//EN"),
+            Some("http://www.w3.org/TR/html4/frameset.dtd"),
+        );
+        assert_eq!(m, DoctypeMode::Quirks);
+    }
+
+    #[test]
+    fn classify_html4_frameset_quirks_no_system_id() {
+        // The Frameset triple is in the QUIRKS table with empty system id.
+        let m = classify_doctype_quirks(
+            Some("HTML"),
+            Some("-//W3C//DTD HTML 4.01 Frameset//EN"),
+            None,
+        );
+        assert_eq!(m, DoctypeMode::Quirks);
+    }
+
+    #[test]
+    fn classify_unknown_pubid_quirks() {
+        let m = classify_doctype_quirks(
+            Some("HTML"),
+            Some("-//W3C//DTD HTML 99.99//EN"),
+            Some("http://example.com/foo.dtd"),
+        );
+        assert_eq!(m, DoctypeMode::Quirks);
+    }
+
+    #[test]
+    fn classify_missing_pubid_with_name_html_quirks() {
+        // name="html" but public id is the empty string → quirks
+        // per §13.2.2.5 step (the spec marks an empty public id
+        // as force-quirks).
+        let m = classify_doctype_quirks(Some("html"), Some(""), None);
+        assert_eq!(m, DoctypeMode::Quirks);
     }
 
     #[test]

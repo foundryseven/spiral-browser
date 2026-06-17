@@ -149,6 +149,36 @@ code, etc.). Do not merge until fixed.
 
 ---
 
+## 4.1 Workflow Gates (cross-references)
+
+You are the gate. The implementer ran the gates listed
+below; your job is to verify they ran. When you reach
+one of the moments below, the cited rule file's `MUST`
+line is the threshold. A "no" answer is a BLOCKING
+issue in your verdict.
+
+| Moment (what the implementer claimed) | You MUST verify | Rule file |
+|--------|----------|-----------|
+| Wiring claim (new `pub` symbol is consumed) | `./scripts/audit-orphan-exports.sh` → 0 findings | [`.spiral/rules/architecture.md`](../../.spiral/rules/architecture.md) § Workflow Tools |
+| SSOT / docs claim (ledger, active context, tracker are current) | `./scripts/audit-doc-drift.sh` → 0 findings | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+| "Tests pass" claim | `just verify-packet <crate>` → green | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Workflow Tools |
+| `pub` API change claim (reverse-dep fan-out) | `just test-with-deps <crate>` → green | [`.spiral/rules/testing.md`](../../.spiral/rules/testing.md) § Iteration speed |
+| `unsafe` block claim | `cargo miri test -p <crate>` ran in the implementer's loop | [`.spiral/rules/unsafe-standards.md`](../../.spiral/rules/unsafe-standards.md) § Workflow Tools |
+| Perf claim (no regression > 5%) | `cargo bench --workspace` baseline diff is in the diff stat | [`.spiral/rules/performance.md`](../../.spiral/rules/performance.md) § Workflow Tools |
+| Lint claim | `cargo fmt --all -- --check && cargo clippy --workspace --all-targets -- -D warnings` → clean | [`.spiral/rules/coding-standards.md`](../../.spiral/rules/coding-standards.md) § Workflow Tools |
+
+If the implementer skipped any of the above, the verdict
+is **REQUEST_CHANGES** (not **APPROVE_WITH_NITS**);
+skipping a MUST line is a hard rule violation, not a
+nit.
+
+The full per-crate verification sweep is the §2 Review
+Loop block above; the table above is the per-claim
+mapping. When in doubt: re-run the gate yourself
+before signing off.
+
+---
+
 ## 5. When to Escalate to Architect
 
 Escalate to the architect (request a role switch) if:

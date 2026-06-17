@@ -31,7 +31,7 @@ context re-load cost that the script was built to avoid.
 The script also surfaces the packet's pre-expanded block
 (spec, crates affected, call sites, tests expected,
 end-to-end surface), which is otherwise invisible until
-you scroll through the tracker.
+an agent scrolls through the tracker.
 
 ## During Iteration (recommended)
 

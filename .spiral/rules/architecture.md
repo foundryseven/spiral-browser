@@ -6,12 +6,39 @@ paths:
 
 # Architecture Rules
 
+> **Read first.** This file is the operative contract for crate
+> boundaries and dep graph changes. The companion workflow gate
+> table lives in [`AGENTS.md`](../AGENTS.md) and the gate-level
+> detail lives in [`.spiral/rules/workflow.md`](workflow.md).
+> Where this file and `AGENTS.md` disagree, this file wins for
+> architecture-specific questions; `workflow.md` wins for
+> "what tool, when".
+
+## Workflow Tools (mandatory)
+
+| Moment | MUST run | Why |
+|--------|----------|-----|
+| Before adding a new `Cargo.toml` dep | `cargo tree --workspace --edges normal -i <this-crate>` | Confirms the new edge points "down" the canonical graph below; no upward edge is permitted. |
+| After promoting a `pub(crate)` item to `pub` | `./scripts/audit-orphan-exports.sh` | Verifies the new `pub` symbol has an external consumer (Wiring & Integration). |
+| After writing an ADR for a boundary change | `bin/spiral-context.sh` to re-surface SSOT | Confirms the ADR is referenced from `docs/implementation_tracker.md`. |
+
+
+
 ## Crate Boundaries
 
-A crate may not depend on a crate "up" the dependency graph. The
-topology is a DAG, not a free-for-all. If you are about to write
-`spiral-fmt` → `spiral-browser` (or any other "downward" edge), stop
-and write an ADR.
+A crate MUST NOT depend on a crate "up" the dependency graph. The
+topology is a DAG, not a free-for-all. An implementer MUST run
+`cargo tree --workspace --edges normal -i <this-crate>` (or
+`cargo metadata | jq` for programmatic use) before adding a new
+dependency edge, to confirm the edge goes "down" the graph and
+does not cross a boundary already declared in `### The canonical
+dependency graph` below. If a candidate edge crosses an
+existing boundary (e.g. `spiral-fmt` → `spiral-browser`, or any
+other "downward" arrow), the implementer MUST stop and write an
+ADR under `docs/decisions/` per the Decision Protocol in `AGENTS.md`
+before writing any code. The "MUST run" verb is gating; an
+untracked dep edge is a build break treated by
+`scripts/audit-orphan-exports.sh` and a peer reviewer.
 
 ### The canonical dependency graph
 
@@ -62,9 +89,8 @@ The rule for re-exports:
 
 - `spiral-core` defines the type.
 - All other crates `use spiral_core::TheType`.
-- No crate may re-export from `spiral-core` to "wrap" the type.
-  If a wrapper is needed, that wrapper is its own type and lives
-  in the crate that needs it.
+- No crate MUST re-export from `spiral-core` to "wrap" the type.
+  A wrapper is its own type and lives in the crate that needs it.
 
 ### Shared types
 
@@ -89,7 +115,10 @@ The rule for re-exports:
 - Feature flags for optional deps: default off, named with the
   crate's own name (e.g. `v8` on `spiral-vortex`, not `enable_v8`).
 - Public surface is the `pub` items in `lib.rs`. Everything else is
-  crate-internal and may be re-exported as the public surface evolves.
+  crate-internal and MUST remain private until promotion to `pub`.
+  A `pub(crate)` item MUST NOT be widened to `pub` except when an external
+  consumer requires it, and the change MUST be verified by
+  `./scripts/audit-orphan-exports.sh` after the next build.
 
 ## When to split a crate
 

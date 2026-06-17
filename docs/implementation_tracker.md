@@ -66,6 +66,277 @@ the cross-cutting work that does not fit any one subsystem.
 
 ---
 
+## Workflow Refactor (no-code-agentic)
+
+Self-contained six-packet refactor of the agent's operating contract.
+Branches from `main` at `80281af`. Lives on `refactor/no-code-agentic`.
+Not part of Group → Phase → Step → Packet hierarchy; tracked here as its
+own deliverable per
+[`docs/plans/no-code-agentic-refactor.md`](../plans/no-code-agentic-refactor.md).
+
+| Packet | Title | Status |
+|--------|-------|--------|
+| **R1** | Global config rewrite (`~/.config/opencode/*`) — strip Spiral-specific rules from the global AGENTS.md into the project tree | [x] SHIPPED 2026-06-17 (commits in `e50bd47`..`78001dc`) |
+| **R2** | AGENTS.md rewrite — add `## Workflow Discipline (Compulsory)` and the `MUST` directive verbs to the workflow table | [x] SHIPPED 2026-06-17 (commit `5778a41`) |
+| **R3** | Five rule files self-stand — add `MUST` / `MUST NOT` / `MUST RUN` gates to `architecture.md`, `coding-standards.md`, `performance.md`, `testing.md`, `unsafe-standards.md`; each file MUST cross-link to `AGENTS.md` and `workflow.md` | [x] SHIPPED 2026-06-17 (this commit) |
+| **R4** | Role contracts (`docs/agents/*.md`) cross-reference the rule files | [x] SHIPPED 2026-06-17 (this commit) |
+| **R5** | Audit scripts (`audit-orphan-exports.sh`, `audit-doc-drift.sh`) enforce R1–R4 — gate on "MUST" verb presence, reject stale rule copies | [x] SHIPPED 2026-06-18 (this commit) |
+| **R6** | Stale crate reference sweep across `docs/agents/*.md` (originally flagged in `docs/agents/test-writer.md` — file does not exist in the project tree; the role lives at `docs/agents/tester.md`, and the live stale refs are in `docs/agents/architect.md`) | [x] SHIPPED 2026-06-18 (this commit) |
+| **R7** *(post-batch follow-up)* | CI gap-fill — `tool-coverage` and `nightly-clippy` jobs added to `.github/workflows/ci.yml` so the R5 contract is enforced in CI, not just locally | [x] SHIPPED 2026-06-18 (this commit) |
+
+### R3 — Self-Standing Rule Files
+
+The five "operative contract" rule files MUST each carry:
+1. A `> **Read first.**` blockquote pointing to `AGENTS.md` and
+   `.spiral/rules/workflow.md` for the workflow gate table.
+2. A `## Workflow Tools (mandatory)` table listing the
+   crate/section-specific `MUST run` commands.
+3. `MUST` / `MUST NOT` / `MUST RUN` verbs in the body (replacing
+   `should`, `may`, `is recommended to`, `is considered to`).
+
+Affected files: `.spiral/rules/architecture.md`,
+`coding-standards.md`, `performance.md`, `testing.md`,
+`unsafe-standards.md`. The `workflow.md` and
+`doc-drift-prevention.md` rule files were already gated under R2
+and are out of scope for R3.
+
+### Wiring & Integration
+
+- **Call sites:** `.spiral/rules/architecture.md:1`,
+  `coding-standards.md:1`, `performance.md:1`, `testing.md:1`,
+  `unsafe-standards.md:1` each open with the new `> **Read first.**`
+  blockquote. Cross-references to `AGENTS.md` and `workflow.md`
+  resolve at file-relative paths.
+- **Test coverage:** Manual grep audit: 0 remaining `may`, `should`,
+  `could`, `might` in the 5 target files. `MUST`/`MUST NOT`
+  verb density ≥ 3 per file (verified by `grep -cE
+  "\bMUST\b|\bMUST NOT\b|\bMUST RUN\b"`).
+- **End-to-end surface:** Reviewer reads any rule file in
+  isolation and lands on a clear workflow gate (the table at the
+  top) plus a body using only `MUST` / `MUST NOT` verbs.
+
+### R4 — Role Contracts Cross-Reference the Rule Files
+
+R3 turned the five rule files from passive reference into
+directive contract (`MUST` / `MUST NOT` / `MUST RUN`). R4
+is the symmetric pass over the role contracts: each
+`docs/agents/*.md` role doc that an agent reads at session
+start now carries a "Workflow Gates (cross-references)"
+section routing role-specific moments to the new `MUST`
+lines in `.spiral/rules/`. The role doc is the entry
+point; the rule file is the authority.
+
+Affected files (4 of the 7 role contracts in
+`docs/agents/`):
+
+- `docs/agents/implementer.md` — default role; gates
+  span the full table (architecture, coding-standards,
+  testing, performance, unsafe-standards). Section §5.1
+  inserted between §5 "The Verification Checklist" and
+  §6 "Style & Conventions".
+- `docs/agents/architect.md` — boundary and ADR author;
+  gates focus on `architecture.md` (dep edges, ADR
+  cross-link) and `coding-standards.md` (doc-drift
+  audit). Section §5.1 inserted between §5 "When to
+  Resist a Refactor" and §6 "The Architect → Implementer
+  Handoff".
+- `docs/agents/reviewer.md` — the gate; the new section
+  flips the table from "moment → run" to
+  "what implementer claimed → verify", so a missing
+  gate is a `REQUEST_CHANGES` not a nit. Section §4.1
+  inserted between §4 "Verdict Format" and §5 "When to
+  Escalate to Architect".
+- `docs/agents/tester.md` — test coverage steward; gates
+  focus on `testing.md` (in-cycle, reverse-dep, Miri,
+  pre-claim) with one cross-link each to
+  `coding-standards.md` and `performance.md`. Section
+  §6.1 inserted between §6 "The Test-Pyramid Rule" and
+  §7 "The SSOT Update Rule".
+
+Out of scope (R6 or R1): `security.md`, `release.md`,
+`onboarding.md`, `ledger-template.md`, `PROMPT_LIBRARY.md`,
+`README.md`, and the global `~/.config/opencode/agents/*.md`
+stubs. R4 ships the four files named in
+[`docs/plans/no-code-agentic-refactor.md` §R4](../plans/no-code-agentic-refactor.md).
+
+### Wiring & Integration
+
+- **Call sites:**
+  `docs/agents/implementer.md:292`, `architect.md:168`,
+  `reviewer.md:152`, `tester.md:178` (approximate; the
+  sections are anchored to the section number, not the
+  line). All four sections resolve their relative links
+  to `.spiral/rules/*.md` from the `docs/agents/`
+  directory; verified by `cd docs/agents && for r in
+  ../../.spiral/rules/{architecture,coding-standards,
+  testing,performance,unsafe-standards}.md; do test -f $r;
+  done` → all five target rule files exist.
+- **Test coverage:** No new unit tests (R4 is
+  documentation-only). The end-to-end surface is
+  exercised at the next implementer session: the
+  implementer reads `implementer.md` §5.1, follows the
+  citation to `.spiral/rules/testing.md`, sees the
+  `MUST run` line, and runs the cited command. Manual
+  audit: 0 `should` / `may` / `is recommended to` / `is
+  considered to` in the four new sections; 16
+  `MUST`/`MUST NOT` verb instances across the four new
+  tables (verified by
+  `grep -cE "\bMUST\b" docs/agents/{implementer,
+  architect,reviewer,tester}.md`).
+- **End-to-end surface:** `bin/spiral-context.sh` still
+  surfaces the role doc matching the active role; the
+  agent now lands on a routing table at section §5.1
+  (or §4.1 / §6.1 by role) pointing at the rule file
+  the moment demands. Reviewer can confirm with a
+  single `git diff` inspection that every role doc
+  references at least one rule file with a relative
+  link.
+
+### R5 — Audit Scripts Enforce R1–R4
+
+The R1–R4 packets shipped a directive workflow contract
+(`MUST` / `MUST NOT` / `MUST RUN` in the rule files;
+role contracts cross-referencing them). R5 turns that
+contract into a hard gate: pre-commit and pre-merge
+runs of the audit scripts now fail CI if the contract
+drifts.
+
+Three new enforcement surfaces:
+
+1. **`scripts/audit-orphan-exports.sh --tool-coverage`.**
+   Every executable under `bin/` and `scripts/` MUST be
+   named in at least one `.spiral/rules/*.md` rule
+   file. The check iterates the tool list, greps the
+   rules directory for the basename, and exits 1 if
+   any tool is un-referenced. A `--tool-coverage` flag
+   selects the new mode; the default behaviour (orphan
+   `pub` symbol check) is unchanged.
+2. **`scripts/audit-doc-drift.sh` `check_stale_rules`.**
+   The script's per-file awk pass now flags passive
+   verbs (`should`, `may`, `consider`, `could`,
+   `might`, `optionally`, `recommended to`) as
+   WARNING and directive sentences in
+   `.spiral/rules/*.md` that lack a `MUST` / `MUST NOT`
+   / `MUST RUN` / `SHALL` / `REQUIRED` verb as ERROR.
+   The new check runs as part of the existing
+   `audit-doc-drift.sh` invocation, so the pre-commit
+   gate is unchanged from the agent's perspective.
+3. **`justfile` `verify-rules` recipe + `bin/spiral-context.sh
+   --rules-check`.** `just verify-rules` runs nightly
+   clippy + both audit scripts; `just verify` is now
+   an aggregator that runs `verify-fast` (the existing
+   4-step pre-commit gate) and `verify-rules` (the
+   new nightly gate). `bin/spiral-context.sh
+   --rules-check` is the session-start fast-scan
+   variant (calls both audits inline and prints a
+   summary).
+
+Affected files: `scripts/audit-orphan-exports.sh`,
+`scripts/audit-doc-drift.sh`, `justfile`,
+`bin/spiral-context.sh`.
+
+### Wiring & Integration
+
+- **Call sites:**
+  `scripts/audit-orphan-exports.sh:64` (`--tool-coverage`
+  arg parser), `scripts/audit-orphan-exports.sh:108`
+  (tool-coverage mode), `scripts/audit-doc-drift.sh`
+  (the awk pass flags passive verbs and missing
+  `MUST` verbs in `.spiral/rules/*.md`),
+  `justfile:verify-rules`, `bin/spiral-context.sh:34`
+  (`--rules-check` flag), `bin/spiral-context.sh:166`
+  (`run_rules_audit` function).
+- **Test coverage:** No new Rust unit tests (R5 is
+  tooling). Coverage is via the scripts themselves
+  running against the live tree:
+  `./scripts/audit-orphan-exports.sh --tool-coverage`
+  → `OK: tool-coverage — every bin/ and scripts/
+  tool is referenced in .spiral/rules/.` (exit 0);
+  `./scripts/audit-doc-drift.sh` → `OK: 0 doc-drift
+  findings across 7 check(s).` (exit 0);
+  `./scripts/audit-orphan-exports.sh` → `OK: 0
+  orphan exports across 20 crate(s) audited`
+  (exit 0); `just verify-rules` → all three audits
+  + nightly clippy green.
+- **End-to-end surface:** A reviewer running
+  `just verify` before merge now runs the full
+  pre-commit + nightly gate in one command. A session
+  start running `bin/spiral-context.sh --rules-check`
+  sees the always-relevant files plus a fast
+  rules-audit summary in under 200 ms. Any drift in
+  the R1–R4 contract surfaces as a `FAIL` line and a
+  non-zero exit.
+
+### R6 — Stale Crate Reference Sweep
+
+The original plan
+([`docs/plans/no-code-agentic-refactor.md`](../plans/no-code-agentic-refactor.md))
+flagged `docs/agents/test-writer.md` as the target
+of the sweep. That filename does not exist in the
+project tree; the tester role lives at
+`docs/agents/tester.md` and contains no stale
+crate references. The actual live stale refs were
+in `docs/agents/architect.md`:
+
+- Line 96 (ADR scope example): cited
+  `spiral-js` → `spiral-vortex` as a live example,
+  but the surrounding table at line 192 had drifted
+  to cite `spiral-html` → `spiral-fmt` instead.
+  Replaced the table cell with the current
+  `spiral-js` → `spiral-vortex` example for
+  consistency, and added a `> **Note on retired
+  crate names:**` blockquote documenting the three
+  historical renames (`spiral-html` → `spiral-fmt`,
+  `spiral-layout` → `spiral-gyre`, `spiral-js` →
+  `spiral-vortex`) so the reader can disambiguate
+  historical from current examples at a glance.
+
+Other live status docs (`AGENTS.md`, `active_context.md`,
+`implementation_tracker.md`) and the append-only
+`progress_ledger.md` keep their mentions of
+retired crate names — they are status flags and
+historical record, not live cross-references. The
+plan itself, the tracker R6 row, and the `CHANGELOG.md`
+retain the original `test-writer.md` filename as
+historical record of the global ↔ project naming
+divergence; the divergence itself is small and
+deliberate (project kept the shorter `tester.md`).
+
+Affected file: `docs/agents/architect.md` (lines 96
+and 192; lines 96–110 after edit).
+
+### Wiring & Integration
+
+- **Call sites:**
+  `docs/agents/architect.md:96` (ADR scope example)
+  and `docs/agents/architect.md:192` (rename-ADR
+  checklist table cell). Both now reference the
+  current `spiral-js` → `spiral-vortex` rename
+  consistently. The new `> **Note on retired
+  crate names:**` blockquote at lines 103–110
+  references all three historical renames and
+  points the reader to `docs/decisions/` for the
+  rename ADRs.
+- **Test coverage:** No new unit tests (R6 is a doc
+  sweep). Coverage is via the live grep audit:
+  `grep -nE 'spiral-html|spiral-layout|spiral-js'
+  docs/agents/architect.md docs/agents/tester.md
+  docs/agents/implementer.md
+  docs/agents/reviewer.md` returns only lines
+  inside the historical-rename blockquote (the
+  blockquote is the intended location of those
+  mentions) and the line-96 example (which now
+  uses the current rename). The other three
+  role docs return 0 matches.
+- **End-to-end surface:** An implementer reading
+  `docs/agents/architect.md` §ADR scope sees a
+  consistent live example (`spiral-js` →
+  `spiral-vortex`) and a clearly-marked
+  historical-rename note block, with no
+  ambiguity about which crate names are current.
+
+---
+
 ## Phases
 
 A Phase is a major delivery milestone. One Phase = one shipped
@@ -262,14 +533,7 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 
 ### Step 2.1 — Fragment parsing algorithm
 - [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). *Shipped 2026-06-17; see `spiral_fmt::parse_html_fragment` in `crates/spiral-fmt/src/lib.rs:73`, the `Fragment` struct at `crates/spiral-fmt/src/lib.rs:50-65`, the fragment module at `crates/spiral-fmt/src/html/fragment.rs`, and `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id` in `crates/spiral-fmt/src/html/tree.rs:126-208`.*
-- [ ] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
-  - **Spec:** WHATWG HTML §13.2.2.5 "Parsing the DOCTYPE", §12.1 "Quirks mode".
-  - **Crates affected:** `spiral-fmt` (tokeniser already emits `Token::Doctype { quirks: bool }` at `crates/spiral-fmt/src/html/tokeniser.rs:716-752`), `spiral-dom` (already exposes `Dom::set_quirks_mode` at `crates/spiral-dom/src/lib.rs:183`).
-  - **Call sites expected:** `crates/spiral-fmt/src/html/tree.rs` should call `self.dom.set_quirks_mode(token.quirks)` when a `Token::Doctype` is fed; ideally gate by `if self.mode == InsertionMode::BeforeHtml` and the token has quirks == true.
-  - **Tests expected:** `crates/spiral-fmt/tests/quirks.rs` (new file) — `parse_doctype_unknown_triggers_quirks`, `parse_doctype_html5_no_quirks`, `parse_doctype_missing_triggers_quirks`, `parse_no_doctype_triggers_quirks`.
-  - **End-to-end surface:** `parse_html("<!DOCTYPE html><p>x")` → `result.quirks_mode == false`; `parse_html("<!DOCTYPE foo>")` → `result.quirks_mode == true`. Verifiable in tests.
-  - **ADR required:** NO (extends an existing mechanism, no dep swap).
-  - **Architecture doc:** `docs/architecture/fmt.md`.
+- [x] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). *Shipped 2026-06-17; see `classify_doctype_quirks(name, public_id, system_id) -> DoctypeMode` at `crates/spiral-fmt/src/html/tokeniser.rs:1284`, the `DoctypeMode` enum at `crates/spiral-fmt/src/token.rs:97`, the tree-builder gate at `crates/spiral-fmt/src/html/tree.rs:309`, the `read_quoted_string` helper at `crates/spiral-fmt/src/html/tokeniser.rs:710`, the public `Dom::quirks_mode()` getter at `crates/spiral-dom/src/lib.rs:188`, and the new integration test file `crates/spiral-fmt/tests/quirks.rs` (10 tests, all passing).*
 - [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
   - **Spec:** WHATWG HTML §4.6.7 + §13 tree-builder handling. The tokeniser already lists `noscript` in `is_rawtext_element` at `crates/spiral-fmt/src/html/tree.rs:1718-1732`; the tree builder needs a dedicated `InHead` arm.
   - **Crates affected:** `spiral-fmt`.
@@ -527,7 +791,7 @@ The next 8 unchecked packets across all phases, in recommended order:
 3. **Packet 2.8.2** — Active formatting elements list (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
 4. **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1). ✅ SHIPPED 2026-06-17.
 5. **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). ✅ SHIPPED 2026-06-17.
-6. **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
+6. **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). ✅ SHIPPED 2026-06-17.
 7. **Packet 2.7.1** — `URL` parser (WHATWG URL §4).
 8. **Packet 2.7.2** — `URLSearchParams` IDL.
 9. **Packet 4.1.1** — `spiral-vello` workspace member decision (ADR required).
