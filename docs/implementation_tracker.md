@@ -82,6 +82,7 @@ own deliverable per
 | **R4** | Role contracts (`docs/agents/*.md`) cross-reference the rule files | [x] SHIPPED 2026-06-17 (this commit) |
 | **R5** | Audit scripts (`audit-orphan-exports.sh`, `audit-doc-drift.sh`) enforce R1–R4 — gate on "MUST" verb presence, reject stale rule copies | [x] SHIPPED 2026-06-18 (this commit) |
 | **R6** | Stale crate reference sweep across `docs/agents/*.md` (originally flagged in `docs/agents/test-writer.md` — file does not exist in the project tree; the role lives at `docs/agents/tester.md`, and the live stale refs are in `docs/agents/architect.md`) | [x] SHIPPED 2026-06-18 (this commit) |
+| **R7** *(post-batch follow-up)* | CI gap-fill — `tool-coverage` and `nightly-clippy` jobs added to `.github/workflows/ci.yml` so the R5 contract is enforced in CI, not just locally | [x] SHIPPED 2026-06-18 (this commit) |
 
 ### R3 — Self-Standing Rule Files
 

@@ -119,6 +119,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: bash scripts/audit-orphan-exports.sh
 
+  tool-coverage:
+    name: Tool-Coverage Audit (R5)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/audit-orphan-exports.sh --tool-coverage
+
   doc-drift:
     name: Doc-Drift Prevention Audit
     runs-on: ubuntu-latest
@@ -127,4 +134,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: bash scripts/audit-doc-drift.sh
+
+  nightly-clippy:
+    name: Nightly Clippy (R5 verify-rules gate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwayland-dev libxkbcommon-dev libfontconfig1-dev libfreetype-dev pkg-config
+      - run: cargo +nightly clippy --workspace --all-targets -- -D warnings
 

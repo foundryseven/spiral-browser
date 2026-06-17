@@ -4585,3 +4585,28 @@ identified. Key findings:
   - `docs/progress_ledger.md` — this entry.
 - **Status:** Shipped Packet R6. The no-code-agentic refactor plan ([`docs/plans/no-code-agentic-refactor.md`](plans/no-code-agentic-refactor.md)) is now complete: R1 (global config), R2 (AGENTS.md workflow discipline), R3 (rule files self-stand), R4 (role contracts cross-reference rules), R5 (audit enforcement), and R6 (stale-ref sweep) all shipped as a single batch on branch `refactor/no-code-agentic`. The R5 enforcement hooks now actively prevent regression on the R1–R4 contract; the R6 sweep leaves the role docs with a single, current example per live cross-reference and a clearly-marked historical-rename blockquote for disambiguation.
 
+## 2026-06-18 — CI gap-fill: tool-coverage + nightly-clippy jobs
+
+- **What:** Two missing jobs added to `.github/workflows/ci.yml` so the R5 enforcement contract is fully exercised in CI, not just locally. The R5 packet shipped the audit infrastructure and the local `just verify-rules` recipe, but the workflow had not been updated to call the new surfaces.
+- **Jobs added:**
+  - **`tool-coverage`** — runs `bash scripts/audit-orphan-exports.sh --tool-coverage` on `ubuntu-latest`. Catches the R5 "every `bin/` and `scripts/` tool must be named in at least one `.spiral/rules/*.md` file" contract. The existing `wiring` job runs the default mode (orphan-`pub` symbol check); this new job runs the `--tool-coverage` mode (un-referenced tools). No toolchain install needed — the script only shells out to `grep` and `bash`.
+  - **`nightly-clippy`** — runs `cargo +nightly clippy --workspace --all-targets -- -D warnings` on `ubuntu-latest`. Mirrors the `just verify-rules` gate locally; catches lints the stable channel misses. Installs `libwayland-dev` + `libxkbcommon-dev` + `libfontconfig1-dev` + `libfreetype-dev` for parity with the existing stable `clippy` and `test` jobs.
+- **What was deliberately left alone:**
+  - **`bin/spiral-context.sh --rules-check`** — not added as a separate job. It is a session-start convenience that calls the same audit scripts the `wiring`, `tool-coverage`, and `doc-drift` jobs already run; adding it would be duplication.
+  - **Branch filter** — left as `branches: [master]` + `pull_request: branches: [master]`. The new branch `refactor/no-code-agentic` will trigger CI on PR open, which is the supported path.
+- **Wiring & Integration:**
+  - **Files affected (1):** `.github/workflows/ci.yml` (added 2 jobs after `wiring`).
+  - **Call sites:** `wiring` job (line 113) unchanged; new `tool-coverage` job (line 122) calls `bash scripts/audit-orphan-exports.sh --tool-coverage`; new `nightly-clippy` job (line 132) calls `cargo +nightly clippy --workspace --all-targets -- -D warnings`. The `doc-drift` job (line 137) is unchanged.
+  - **Test coverage:** the local `just verify-rules` gate already exercises both new surfaces; CI now mirrors it. The local `bash scripts/audit-orphan-exports.sh --tool-coverage` returns `OK: tool-coverage — every bin/ and scripts/ tool is referenced in .spiral/rules/.` and `cargo +nightly clippy --workspace --all-targets -- -D warnings` was already part of `just verify-rules` (R5 packet, line 35 of the justfile).
+  - **End-to-end surface:** opening a PR against `master` (via `bin/spiral-pr.sh R6` for the no-code-agentic refactor, or via the GitHub web UI for any future branch) now triggers 11 CI jobs: `fmt`, `clippy` × 3 OSes, `test` × 3, `build` × 3, `audit`, `deny`, `secrets`, `wiring`, `tool-coverage`, `doc-drift`, `nightly-clippy`. Any future drift on the R5 contract surfaces as a `FAIL` line and a non-zero exit in the matching job.
+- **Verification (local, pre-push):**
+  - `./scripts/audit-orphan-exports.sh --tool-coverage` ✓ exit 0.
+  - `./scripts/audit-doc-drift.sh` ✓ 0 findings across 7 checks.
+  - `./scripts/audit-orphan-exports.sh` ✓ 0 orphans across 20 crates.
+  - `just verify-fast` ✓ all green.
+  - `just verify-rules` ✓ nightly clippy + both audits green (mirrors the new CI job).
+- **SSOT updates:**
+  - `.github/workflows/ci.yml` — 2 new jobs added.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** CI gap-fill shipped. The R5 enforcement contract is now uniformly enforced across local (`just verify-rules`) and CI (the new `tool-coverage` and `nightly-clippy` jobs). The 11-job pipeline is the canonical surface for the next implementer session.
+
