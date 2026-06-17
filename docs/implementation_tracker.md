@@ -263,8 +263,29 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 ### Step 2.1 — Fragment parsing algorithm
 - [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). *Shipped 2026-06-17; see `spiral_fmt::parse_html_fragment` in `crates/spiral-fmt/src/lib.rs:73`, the `Fragment` struct at `crates/spiral-fmt/src/lib.rs:50-65`, the fragment module at `crates/spiral-fmt/src/html/fragment.rs`, and `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id` in `crates/spiral-fmt/src/html/tree.rs:126-208`.*
 - [ ] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1).
+  - **Spec:** WHATWG HTML §13.2.2.5 "Parsing the DOCTYPE", §12.1 "Quirks mode".
+  - **Crates affected:** `spiral-fmt` (tokeniser already emits `Token::Doctype { quirks: bool }` at `crates/spiral-fmt/src/html/tokeniser.rs:716-752`), `spiral-dom` (already exposes `Dom::set_quirks_mode` at `crates/spiral-dom/src/lib.rs:183`).
+  - **Call sites expected:** `crates/spiral-fmt/src/html/tree.rs` should call `self.dom.set_quirks_mode(token.quirks)` when a `Token::Doctype` is fed; ideally gate by `if self.mode == InsertionMode::BeforeHtml` and the token has quirks == true.
+  - **Tests expected:** `crates/spiral-fmt/tests/quirks.rs` (new file) — `parse_doctype_unknown_triggers_quirks`, `parse_doctype_html5_no_quirks`, `parse_doctype_missing_triggers_quirks`, `parse_no_doctype_triggers_quirks`.
+  - **End-to-end surface:** `parse_html("<!DOCTYPE html><p>x")` → `result.quirks_mode == false`; `parse_html("<!DOCTYPE foo>")` → `result.quirks_mode == true`. Verifiable in tests.
+  - **ADR required:** NO (extends an existing mechanism, no dep swap).
+  - **Architecture doc:** `docs/architecture/fmt.md`.
 - [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
+  - **Spec:** WHATWG HTML §4.6.7 + §13 tree-builder handling. The tokeniser already lists `noscript` in `is_rawtext_element` at `crates/spiral-fmt/src/html/tree.rs:1718-1732`; the tree builder needs a dedicated `InHead` arm.
+  - **Crates affected:** `spiral-fmt`.
+  - **Call sites expected:** `crates/spiral-fmt/src/html/tree.rs` — `<noscript>` start-tag in `InHead` mode should append to head; elsewhere treat as a normal element.
+  - **Tests expected:** `crates/spiral-fmt/tests/noscript.rs` — `<noscript>` in `<head>` lands in head; `<noscript>` in `<body>` is a body child.
+  - **End-to-end surface:** `parse_html("<head><noscript></noscript></head>")` → noscript is a child of head.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/fmt.md`.
 - [ ] **Packet 2.1.4** — `<template>` content document-fragment construction.
+  - **Spec:** WHATWG HTML §13.2.6.4 "The 'in head' insertion mode" (template element handling) + §4.12.3 "template contents owner".
+  - **Crates affected:** `spiral-fmt` (tree builder), `spiral-dom` (new `DocumentFragment` node kind? or just an inert subtree?).
+  - **Call sites expected:** `crates/spiral-fmt/src/html/tree.rs` — `<template>` start-tag creates an element AND a fragment whose contents are appended as the element's children. The fragment is the "template contents owner" per spec.
+  - **Tests expected:** `crates/spiral-fmt/tests/template.rs` — `<template><p>x</p></template>` produces a template element with a `<p>` child but the `<p>` is in a separate document fragment; `<p>` is NOT visible in the template element's children until cloned (via the future `template.content` IDL).
+  - **End-to-end surface:** `parse_html("<template><p>x</p></template>")` returns a DOM where `template_element.children` includes a `<p>` (we collapse the fragment in M4.4.1+; full IDL lands in Packet 2.2.x).
+  - **ADR required:** YES if we add a `DocumentFragment` node kind; NO if we collapse into a regular element subtree. Decide and write the ADR up front.
+  - **Architecture doc:** `docs/architecture/fmt.md`.
 
 ### Step 2.2 — DOM collection types
 - [ ] **Packet 2.2.1** — `NodeList` (live + static variants).

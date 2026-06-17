@@ -40,6 +40,48 @@ the user prompt may be a hint, but it is not a ticket.
 
 ---
 
+## 1.1 Packet Pre-Expansion (when writing the tracker)
+
+When a packet is first added to
+`docs/implementation_tracker.md`, expand it beyond the
+one-line summary. The next implementer who picks it up
+should not have to guess where the code goes or what
+consumes it. Use this expansion shape:
+
+```
+- [ ] **Packet X.Y.Z** — Title (WHATWG / RFC / etc. §NN).
+      - **Spec:** one-line spec reference + the precise
+        section to read.
+      - **Crates affected:** which crates will be touched.
+      - **Call sites expected:** the file:line locations
+        where the new symbol will be invoked from. Use
+        `?` for not-yet-known sites (better than nothing).
+      - **Tests expected:** the test file path + a list of
+        test names that must exist before the packet
+        ships.
+      - **End-to-end surface:** the human-verifiable
+        artefact. "API added" is not end-to-end; "running
+        `cargo run --bin spiral-foo` prints X" is.
+      - **ADR required:** YES if the change swaps a dep,
+        renames a crate, or alters the public type
+        surface; NO otherwise.
+      - **Architecture doc:** which `docs/architecture/<...>.md`
+        to read first.
+```
+
+A fully-expanded packet saves the next implementer 15-30
+minutes of "where does this go?" archaeology. If you are
+the implementer picking up an unexpanded packet, expand it
+*before* writing code — that's a small upfront cost that
+returns on every subsequent reader.
+
+If you are picking up one of these, **read the linked architecture doc
+first** (`docs/architecture/fmt.md`, `vortex.md`, `gyre.md`, `net.md`),
+then read the matching ADR if any, then write the failing test, then
+write the code (TDFlow).
+
+---
+
 ## 2. The TDFlow Loop
 
 Spiral follows **TDFlow** (test-driven flow). When
