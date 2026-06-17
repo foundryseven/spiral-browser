@@ -701,3 +701,164 @@ fn parse_aaa_with_furthest_block() {
             == Some("paragraph")
     );
 }
+
+// =====================================================================
+// Foster parenting (Packet 2.8.3 — WHATWG HTML §12.2.6.1)
+// =====================================================================
+//
+// Foster parenting is what the parser does when a non-table tag ends
+// up between table children: it lifts the orphan OUT of the table and
+// reinserts it just before the table. This is a one-time cost per
+// misnesting that real-world pages pay silently all the time.
+
+/// WHATWG §12.2.6.1, example 1:
+/// `<table><b>foo</b><tr><td>bar</td></tr></table>`
+/// → `<b>` should end up as a SIBLING of `<table>`, not inside it.
+/// `<tr>`/`<td>` are still inside the `<table>`.
+#[test]
+fn parse_foster_parent_inline_before_table_row() {
+    let dom = parse_html("<table><b>foo</b><tr><td>bar</td></tr></table>")
+        .expect("parse");
+
+    let body_id = dom
+        .descendants(dom.root)
+        .find(|&(id, _)| dom.get_tag(id) == Some("body"))
+        .map(|(id, _)| id)
+        .expect("body");
+
+    let body_children = dom.get_children(body_id).expect("body children");
+    // body has exactly one child: <b> (fostered) followed by the
+    // <table> sibling. We accept any order in which <b> appears
+    // before <table>.
+    let mut b_before_table = false;
+    let mut saw_b = false;
+    for &child in &body_children {
+        if dom.get_tag(child) == Some("b") {
+            saw_b = true;
+            // <b>'s text "foo" must be its own child (i.e. <b> is a
+            // real element, not a wrapper around the table).
+            let b_children = dom.get_children(child).expect("b children");
+            assert_eq!(b_children.len(), 1);
+            assert!(
+                dom.get_text(b_children[0]).map(|t| t.content.as_str())
+                    == Some("foo")
+            );
+            // Crucially, <b> must NOT contain the <table>.
+            for c in &b_children {
+                assert_ne!(dom.get_tag(*c), Some("table"));
+            }
+        } else if dom.get_tag(child) == Some("table") {
+            // The <table> must be empty of inline content; only the
+            // <tr> child should be inside.
+            if saw_b {
+                b_before_table = true;
+            }
+            let table_children = dom.get_children(child).expect("table children");
+            for tc in &table_children {
+                if dom.get_tag(*tc) != Some("tbody")
+                    && dom.get_tag(*tc) != Some("thead")
+                    && dom.get_tag(*tc) != Some("tfoot")
+                {
+                    assert_eq!(
+                        dom.get_tag(*tc),
+                        Some("tr"),
+                        "non-tr child inside <table>: {:?}",
+                        dom.get_tag(*tc)
+                    );
+                }
+            }
+            // The <td> should be reachable inside the table subtree.
+            let has_td = dom
+                .descendants(child)
+                .any(|(id, _)| dom.get_tag(id) == Some("td"));
+            assert!(has_td, "<td> should still be inside <table>");
+        }
+    }
+    assert!(saw_b, "<b> should be a sibling of <table>");
+    assert!(b_before_table, "<b> should appear before <table> in body");
+}
+
+/// WHATWG §12.2.6.1, the text-foster case:
+/// `<table>foo<tr><td>bar</td></tr></table>`
+/// → the text "foo" is foster-parented BEFORE the table.
+#[test]
+fn parse_foster_parent_text_before_table() {
+    let dom = parse_html("<table>foo<tr><td>bar</td></tr></table>").expect("parse");
+    let body_id = dom
+        .descendants(dom.root)
+        .find(|&(id, _)| dom.get_tag(id) == Some("body"))
+        .map(|(id, _)| id)
+        .expect("body");
+
+    let body_children = dom.get_children(body_id).expect("body children");
+    let mut table_id = None;
+    for &c in &body_children {
+        if dom.get_tag(c) == Some("table") {
+            table_id = Some(c);
+        }
+    }
+    let table_id = table_id.expect("table in body");
+
+    // The text "foo" should be a text-node sibling of <table> that
+    // appears BEFORE <table> in the body.
+    let mut saw_foo = false;
+    for &c in &body_children {
+        if c == table_id {
+            // Once we see the table, the fostered text must already
+            // have appeared.
+            assert!(saw_foo, "fostered text must appear before <table>");
+            break;
+        }
+        if let Some(t) = dom.get_text(c) {
+            if t.content == "foo" {
+                saw_foo = true;
+            }
+        }
+    }
+
+    // <table> itself must not contain the text "foo".
+    for (id, _) in dom.descendants(table_id) {
+        if let Some(t) = dom.get_text(id) {
+            assert_ne!(t.content, "foo");
+        }
+    }
+}
+
+/// WHATWG §12.2.6.1, the <select> case:
+/// `<select><option>x<b>y</b></option></select>`
+/// → `<b>` stays inside `<option>` (no foster parenting in select).
+/// The reverse: `<select><b>foo</b><option>bar</option></select>`
+/// → `<b>` is also foster-parented OUT of select in the spec (since
+/// `<select>` is a "special" parent). We assert the conservative
+/// reading: `<b>` is a child of the body / ancestor of `<select>`,
+/// not inside `<select>`.
+#[test]
+fn parse_foster_parent_select_kicks_inline() {
+    let dom =
+        parse_html("<select><b>foo</b><option>bar</option></select>").expect("parse");
+    let body_id = dom
+        .descendants(dom.root)
+        .find(|&(id, _)| dom.get_tag(id) == Some("body"))
+        .map(|(id, _)| id)
+        .expect("body");
+
+    // <b> must not be a descendant of <select>.
+    let select_id = dom
+        .descendants(body_id)
+        .find(|&(id, _)| dom.get_tag(id) == Some("select"))
+        .map(|(id, _)| id)
+        .expect("select");
+    let b_inside_select = dom
+        .descendants(select_id)
+        .any(|(id, _)| dom.get_tag(id) == Some("b"));
+    assert!(
+        !b_inside_select,
+        "<b> should be foster-parented out of <select>"
+    );
+
+    // <b> must still exist somewhere in the document.
+    let b_anywhere = dom
+        .descendants(dom.root)
+        .any(|(id, _)| dom.get_tag(id) == Some("b"));
+    assert!(b_anywhere, "<b> should still exist in the document");
+}

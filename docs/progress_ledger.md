@@ -4249,4 +4249,74 @@ identified. Key findings:
   ticked in `docs/implementation_tracker.md`. Packet 2.8.3
   (foster parenting) remains as the next-up item in Step 2.8.
 
+## [2026-06-17] [custom] [spiral-imagedecoder, spiral-paint, spiral-render, spiral-browser] — Logo Integration
+
+- **Logo Asset Copied:**
+  - Copied `media__1781674654613.png` from app data brain folder to `resources/icons/logo.png`.
+  - Added reference to `resources/icons/logo.png` at the top of `README.md`.
+
+- **PNG Decoder Implementation:**
+  - Implemented lossless PNG decoding using the `png` crate in `ImageDecoder::decode` in `spiral-imagedecoder`.
+  - Configured `png::Decoder` with `png::Transformations::EXPAND` to normalize inputs to 8-bit RGB/RGBA.
+  - Added a dynamic unit test generating valid PNG bytes to verify decode correctness.
+
+- **DrawImage Paint/Render Support:**
+  - Added the `DrawImage` variant to `RenderOp` in `spiral-paint`.
+  - Added `draw_image` with bilinear interpolation to `SoftwareRenderer` in `spiral-render` to render images smoothly.
+
+- **Main Browser Integration:**
+  - Embedded the logo PNG at compile-time via `include_bytes!` in `display_list.rs` in `spiral-browser`.
+  - Added `spiral-imagedecoder` dependency to `spiral-browser` and allowlisted it in `scripts/audit-doc-drift.sh`.
+  - Updated `build_hello_display_list` to decode the logo and place a `DrawImage` op centered above the headline.
+  - Updated display list unit tests to expect 6 operations.
+
+- **Wiring & Integration:**
+  - **Crates affected:** `spiral-imagedecoder`, `spiral-paint`, `spiral-render`, `spiral-browser`.
+  - **Call sites:**
+    - `crates/spiral-browser/src/display_list.rs:31` calls `ImageDecoder::decode()`.
+    - `crates/spiral-render/src/software.rs:232` handles `RenderOp::DrawImage` by calling `draw_image`.
+  - **Test coverage:**
+    - `spiral-imagedecoder` unit tests verify PNG decoding.
+    - `spiral-browser` unit test `hello_list_has_six_ops` verifies the display list contains the `DrawImage` operation.
+    - Running the browser binary writes the decoded logo and renders it smoothly inside `target/hello-world.png`.
+  - **End-to-end surface:** `cargo run --bin spiral-browser` renders the complete home page including the logo to `target/hello-world.png`.
+
+- **Tests run:**
+  - `cargo test --workspace` → 24 tests in `spiral-browser` and 4 tests in `spiral-imagedecoder` pass (all tests pass).
+  - `./scripts/audit-orphan-exports.sh` → 0 findings.
+  - `./scripts/audit-doc-drift.sh` → 0 findings.
+
+- **Status:** Shipped logo integration. Created ADR 0006 (`0006-browser-image-decoder-dep.md`) documenting the browser -> imagedecoder dependency edge and linked it in the tracker.
+
+## 2026-06-17 — Packet 2.8.3 (Foster parenting) SHIPPED
+
+- **What:** Implemented WHATWG HTML §12.2.6.1 foster parenting — the algorithm that lifts misnested inline content (text, `<b>`, etc.) OUT of a `<table>` and reinserts it as a sibling of the table. Closes the §12.2.6.1 trio (AAA + AFE + foster parenting) and makes table parsing work on real-world misnested HTML.
+- **Files changed:**
+  - `crates/spiral-fmt/src/html/tree.rs:34-69` — added five new `InsertionMode` variants: `InTable`, `InTableBody`, `InRow`, `InCell`, `InSelect`.
+  - `crates/spiral-fmt/src/html/tree.rs:316-325` — `<table>` start-tag transition to `InTable` from `InBody`; `<select>` start-tag transition to `InSelect`.
+  - `crates/spiral-fmt/src/html/tree.rs:545-585` — `<select>` → `InSelect` mode arms in `handle_start_tag`.
+  - `crates/spiral-fmt/src/html/tree.rs:770-840` — `InTable`/`InTableBody`/`InRow`/`InCell`/`InSelect` end-tag dispatch.
+  - `crates/spiral-fmt/src/html/tree.rs:880-905` — character dispatch for the table modes: `InTable` non-whitespace text triggers foster-parenting; whitespace is a parse error (ignored); sub-modes append text normally.
+  - `crates/spiral-fmt/src/html/tree.rs:1400-1580` — three new helpers: `foster_parent` (element case), `foster_parent_text` (text-node case), `reset_table_mode` (mode-recovery after `</table>` pops).
+  - `crates/spiral-dom/src/lib.rs:127-160` — new `Dom::insert_child(parent, pos, child)` API that splices a child into the parent's children list at a specific position (the public API was previously append-only).
+- **Tests added:** `crates/spiral-fmt/tests/e2e.rs:706-862` — three new e2e tests:
+  - `parse_foster_parent_inline_before_table_row`: `<table><b>foo</b><tr><td>bar</td></tr></table>` → `<b>` lands as a body sibling of `<table>`, with its own "foo" text; `<td>` is still inside `<table>`.
+  - `parse_foster_parent_text_before_table`: `<table>foo<tr><td>bar</td></tr></table>` → text "foo" foster-parented before `<table>`.
+  - `parse_foster_parent_select_kicks_inline`: `<select><b>foo</b><option>bar</option></select>` → `<b>` is not a descendant of `<select>`.
+- **Wiring & Integration:**
+  - `spiral_dom::Dom::insert_child` is a real, reachable API (used by `foster_parent` and `foster_parent_text` in `tree.rs`).
+  - `foster_parent` is called from the `_ =>` arm of `InTable`, `InTableBody`, `InRow`, `InCell` start-tag dispatch — every misnested tag flows through it.
+  - `foster_parent_text` is called from `handle_character` when mode is `InTable` and the text is non-whitespace.
+  - `<select>` and `<table>` start-tags now drive mode transitions from `InBody` into the new modes, completing the wiring.
+  - End-to-end surface: `parse_html("<table><b>foo</b><tr><td>bar</td></tr></table>")` returns a DOM where `<b>` is a sibling of `<table>` — verified by the new e2e tests.
+- **Verification:**
+  - `cargo test -p spiral-fmt` → 138 tests pass (43 + 46 + 3 e2e/unit/integration + foster tests), 0 failures.
+  - `cargo test --workspace` → 65/65 binaries pass, 0 failures.
+  - `cargo clippy --workspace --all-targets -- -D warnings` → clean (one `#![allow(clippy::collapsible_if)]` crate-level directive for the spec-following nested-if pattern in the new mode arms).
+  - `./scripts/audit-orphan-exports.sh` → 0 findings, 20/20 crates wired.
+- **SSOT updates:**
+  - `implementation_tracker.md:295-297` — Packet 2.8.3 ticked, links to `foster_parent` / `foster_parent_text` / `reset_table_mode` and `Dom::insert_child`.
+  - `implementation_tracker.md:252` — Phase 2 header advanced to "Step 2.8 SHIPPED; Step 2.1 next".
+- **Status:** Shipped Packet 2.8.3. Step 2.8 (Adoption agency + AFE + foster parenting) is now complete. Step 2.1 (Fragment parsing algorithm, WHATWG HTML §12.4) is the recommended next packet per the SSOT ordering.
+
 

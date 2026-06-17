@@ -13,23 +13,24 @@
 //! - `InHead`
 //! - `AfterHead`
 //! - `InBody`
+//! - `InTable` (Packet 2.8.3 — for foster parenting)
+//! - `InTableBody` (Packet 2.8.3 — for foster parenting)
+//! - `InRow` (Packet 2.8.3 — for foster parenting)
+//! - `InCell` (Packet 2.8.3 — for foster parenting)
+//! - `InSelect` (Packet 2.8.3 — for foster parenting)
 //! - `AfterBody`
 //! - `AfterAfterBody`
-//!
-//! These cover the common cases the M4.4.1 test set exercises.
-//! The full insertion-mode machine (tables, select, template,
-//! foreign content) lands in M5+.
-
 #![allow(clippy::needless_return)]
+#![allow(clippy::collapsible_if)]
+
 
 use crate::cursor::Position;
 use crate::error::FormatError;
 use crate::token::Token;
 
-/// The insertion mode of the tree builder.
-///
-/// Each mode determines how a StartTag, EndTag, or Character token
-/// is processed.
+/// Insertion mode the tree builder is currently in. Per WHATWG
+/// HTML §12.2.4.1 the parser transitions between these states as
+/// it consumes tokens.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum InsertionMode {
     /// Document is empty; the next token starts the parse.
@@ -49,6 +50,24 @@ pub(crate) enum InsertionMode {
     AfterBody,
     /// After `</html>`, waiting for EOF.
     AfterAfterBody,
+    /// Packet 2.8.3 — foster parenting. Active when the stack of
+    /// open elements has a `table` in it and the current node is
+    /// that `table` or one of its table descendants.
+    InTable,
+    /// Packet 2.8.3 — active when the current node is a `tbody`,
+    /// `thead`, or `tfoot`.
+    InTableBody,
+    /// Packet 2.8.3 — active when the current node is a `tr`.
+    InRow,
+    /// Packet 2.8.3 — active when the current node is a `td` or
+    /// `th`.
+    InCell,
+    /// Packet 2.8.3 — active when the current node is a `select`
+    /// or one of its descendants. Per spec, `<select>` is one of
+    /// the few elements that ALSO trigger foster parenting (in
+    /// reverse — non-`<option>`/`<optgroup>` content is kicked
+    /// out of the select).
+    InSelect,
 }
 
 /// Represents an entry in the list of active formatting elements.
@@ -279,6 +298,33 @@ impl TreeBuilder {
                     return Ok(());
                 }
 
+                // Packet 2.8.3: `<table>` opens a table context.
+                // Switch to `InTable` so that subsequent inline /
+                // character tokens inside the table get
+                // foster-parented per WHATWG §12.2.6.1.
+                if lower == "table" {
+                    if self.stack_contains("p") {
+                        self.pop_until(|tag| tag == "p");
+                    }
+                    self.reconstruct_active_formatting_elements()?;
+                    let _id = self.create_element("table")?;
+                    self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    self.active_formatting_elements.push(ActiveElement::Marker);
+                    self.mode = InsertionMode::InTable;
+                    return Ok(());
+                }
+
+                // Packet 2.8.3: `<select>` opens a select context.
+                // Switch to `InSelect` so that non-option content
+                // gets kicked out per WHATWG §12.2.6.1.
+                if lower == "select" {
+                    self.reconstruct_active_formatting_elements()?;
+                    let _id = self.create_element("select")?;
+                    self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    self.mode = InsertionMode::InSelect;
+                    return Ok(());
+                }
+
                 // Block-level elements: close any open `<p>` first.
                 if is_block_level(&lower) && self.stack_contains("p") {
                     self.pop_until(|tag| tag == "p");
@@ -324,6 +370,216 @@ impl TreeBuilder {
                     return Ok(());
                 }
                 // Parse error. Ignore.
+                Ok(())
+            }
+            // ---- Packet 2.8.3: foster parenting start-tags ----
+            InsertionMode::InTable => {
+                match lower.as_str() {
+                    "caption" => {
+                        let _id = self.create_element("caption")?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    }
+                    "colgroup" => {
+                        let _id = self.create_element("colgroup")?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    }
+                    "col" => {
+                        let _ = self.create_element("colgroup")?;
+                        let _id = self.create_element("col")?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.stack.pop(); // self-closing
+                    }
+                    "thead" | "tbody" | "tfoot" => {
+                        let _id = self.create_element(&lower)?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.mode = InsertionMode::InTableBody;
+                    }
+                    "tr" => {
+                        let _ = self.create_element("tbody")?;
+                        let _id = self.create_element("tr")?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.mode = InsertionMode::InRow;
+                    }
+                    "td" | "th" => {
+                        let _ = self.create_element("tbody")?;
+                        let _ = self.create_element("tr")?;
+                        let _id = self.create_element(&lower)?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.mode = InsertionMode::InCell;
+                    }
+                    "script" | "style" | "template" => {
+                        let _id = self.create_element(&lower)?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    }
+                    "table" => {
+                        // A second <table> while in InTable: close
+                        // the current and re-process in InBody.
+                        if self.stack_contains("table") {
+                            self.pop_until(|tag| tag == "table");
+                            self.mode = InsertionMode::InBody;
+                            return self.handle_start_tag(
+                                name,
+                                attributes,
+                                position,
+                                tokeniser,
+                            );
+                        }
+                        return Ok(());
+                    }
+                    _ => {
+                        // Anything else: foster parent.
+                        self.foster_parent(&lower, attributes, position, tokeniser)?;
+                    }
+                }
+                Ok(())
+            }
+            InsertionMode::InTableBody => {
+                match lower.as_str() {
+                    "tr" => {
+                        let _id = self.create_element("tr")?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.mode = InsertionMode::InRow;
+                    }
+                    "thead" | "tbody" | "tfoot" => {
+                        // A second section before any <tr>: close
+                        // the open section and re-process.
+                        self.pop_until(|tag| tag == "tbody" || tag == "thead" || tag == "tfoot");
+                        let top_tag = self
+                            .stack
+                            .last()
+                            .and_then(|&id| self.dom.get_tag(id));
+                        if matches!(top_tag, Some("table")) {
+                            return self.handle_start_tag(
+                                name,
+                                attributes,
+                                position,
+                                tokeniser,
+                            );
+                        }
+                        return Ok(());
+                    }
+                    "td" | "th" => {
+                        let _ = self.create_element("tr")?;
+                        let _id = self.create_element(&lower)?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.mode = InsertionMode::InCell;
+                    }
+                    "table" => {
+                        self.pop_until(|tag| tag == "table");
+                        let top_tag = self
+                            .stack
+                            .last()
+                            .and_then(|&id| self.dom.get_tag(id));
+                        if matches!(top_tag, Some("html")) {
+                            self.mode = InsertionMode::InBody;
+                            return self.handle_start_tag(
+                                name,
+                                attributes,
+                                position,
+                                tokeniser,
+                            );
+                        }
+                        return Ok(());
+                    }
+                    _ => {
+                        self.foster_parent(&lower, attributes, position, tokeniser)?;
+                    }
+                }
+                Ok(())
+            }
+            InsertionMode::InRow => {
+                match lower.as_str() {
+                    "td" | "th" => {
+                        let _id = self.create_element(&lower)?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                        self.mode = InsertionMode::InCell;
+                    }
+                    "tr" | "thead" | "tbody" | "tfoot" => {
+                        self.pop_until(|tag| tag == "tr");
+                        return self.handle_start_tag(
+                            name,
+                            attributes,
+                            position,
+                            tokeniser,
+                        );
+                    }
+                    "table" => {
+                        self.pop_until(|tag| tag == "table");
+                        let top_tag = self
+                            .stack
+                            .last()
+                            .and_then(|&id| self.dom.get_tag(id));
+                        if matches!(top_tag, Some("html")) {
+                            self.mode = InsertionMode::InBody;
+                            return self.handle_start_tag(
+                                name,
+                                attributes,
+                                position,
+                                tokeniser,
+                            );
+                        }
+                        return Ok(());
+                    }
+                    _ => {
+                        self.foster_parent(&lower, attributes, position, tokeniser)?;
+                    }
+                }
+                Ok(())
+            }
+            InsertionMode::InCell => {
+                match lower.as_str() {
+                    "td" | "th" | "tr" | "thead" | "tbody" | "tfoot" | "caption"
+                    | "colgroup" | "col" | "table" => {
+                        self.pop_until(|tag| tag == "td" || tag == "th");
+                        return self.handle_start_tag(
+                            name,
+                            attributes,
+                            position,
+                            tokeniser,
+                        );
+                    }
+                    _ => {
+                        self.foster_parent(&lower, attributes, position, tokeniser)?;
+                    }
+                }
+                Ok(())
+            }
+            InsertionMode::InSelect => {
+                match lower.as_str() {
+                    "option" | "optgroup" => {
+                        let _id = self.create_element(&lower)?;
+                        self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    }
+                    _ => {
+                        // Anything else: pop the select and re-process
+                        // in the parent context.
+                        if self.stack_contains("select") {
+                            self.pop_until(|tag| tag == "select");
+                            if self
+                                .stack
+                                .last()
+                                .map(|&id| self.dom.get_tag(id) == Some("select"))
+                                .unwrap_or(false)
+                            {
+                                self.stack.pop();
+                            }
+                            self.mode = InsertionMode::InBody;
+                            return self.handle_start_tag(
+                                name,
+                                attributes,
+                                position,
+                                tokeniser,
+                            );
+                        }
+                        self.mode = InsertionMode::InBody;
+                        return self.handle_start_tag(
+                            name,
+                            attributes,
+                            position,
+                            tokeniser,
+                        );
+                    }
+                }
                 Ok(())
             }
         }
@@ -380,14 +636,6 @@ impl TreeBuilder {
                     self.mode = InsertionMode::AfterHead;
                     return self.handle_end_tag(name, _position, _tokeniser);
                 }
-                // The head-list rawtext elements (title, style,
-                // script, noscript) need to pop themselves off
-                // the stack when their end tag arrives; the
-                // previous "ignore any other end tag" comment
-                // assumed they never appeared, but with the
-                // rawtext / script-data tokenisation added
-                // (M4.4.1 Item 2) they are real elements with
-                // real children.
                 if is_rawtext_element(&lower) {
                     self.pop_until(|tag| tag == lower);
                     if self
@@ -400,7 +648,6 @@ impl TreeBuilder {
                     }
                     return Ok(());
                 }
-                // Ignore any other end tag inside head.
                 Ok(())
             }
             InsertionMode::AfterHead => {
@@ -412,7 +659,6 @@ impl TreeBuilder {
                 if lower == "head" {
                     return Ok(());
                 }
-                // Anything else: pop head, transition to body, retry.
                 self.mode = InsertionMode::InBody;
                 self.handle_end_tag(name, _position, _tokeniser)
             }
@@ -442,8 +688,6 @@ impl TreeBuilder {
                     self.run_adoption_agency_algorithm(&lower)?;
                     return Ok(());
                 }
-                // Pop elements until we find one matching the end
-                // tag. If none, ignore.
                 self.pop_until(|tag| tag == lower);
                 if self
                     .stack
@@ -465,7 +709,92 @@ impl TreeBuilder {
                 if lower == "html" {
                     return Ok(());
                 }
-                // Parse error: ignore.
+                Ok(())
+            }
+            // ---- Packet 2.8.3: foster parenting end-tags ----
+            InsertionMode::InTable => {
+                if lower == "table" {
+                    if self.stack_contains("table") {
+                        self.pop_until(|tag| tag == "table");
+                        self.reset_table_mode();
+                    }
+                } else if lower == "br" {
+                    self.reconstruct_active_formatting_elements()?;
+                    let _ = self.create_element("br")?;
+                    self.pop_until(|tag| tag == "table");
+                    self.reset_table_mode();
+                }
+                Ok(())
+            }
+            InsertionMode::InTableBody => {
+                if lower == "tbody" || lower == "thead" || lower == "tfoot" {
+                    if self.stack_contains(&lower) {
+                        self.pop_until(|tag| tag == lower);
+                        self.mode = InsertionMode::InTable;
+                    }
+                } else if lower == "table"
+                    && (self.stack_contains("tbody")
+                        || self.stack_contains("thead")
+                        || self.stack_contains("tfoot"))
+                {
+                    self.pop_until(|tag| {
+                        tag == "tbody" || tag == "thead" || tag == "tfoot"
+                    });
+                    self.mode = InsertionMode::InTable;
+                    return self.handle_end_tag(name, _position, _tokeniser);
+                }
+                Ok(())
+            }
+            InsertionMode::InRow => {
+                if lower == "tr" {
+                    if self.stack_contains("tr") {
+                        self.pop_until(|tag| tag == "tr");
+                        self.mode = InsertionMode::InTableBody;
+                    }
+                } else if lower == "table"
+                    || lower == "tbody"
+                    || lower == "thead"
+                    || lower == "tfoot"
+                {
+                    if self.stack_contains("tr") {
+                        self.pop_until(|tag| tag == "tr");
+                        self.mode = InsertionMode::InTableBody;
+                        return self.handle_end_tag(name, _position, _tokeniser);
+                    }
+                }
+                Ok(())
+            }
+            InsertionMode::InCell => {
+                if lower == "td" || lower == "th" {
+                    if self.stack_contains(&lower) {
+                        self.pop_until(|tag| tag == lower);
+                        self.mode = InsertionMode::InRow;
+                    }
+                } else if lower == "tr"
+                    || lower == "table"
+                    || lower == "tbody"
+                    || lower == "thead"
+                    || lower == "tfoot"
+                {
+                    if self.stack_contains("td") || self.stack_contains("th") {
+                        self.pop_until(|tag| tag == "td" || tag == "th");
+                        self.mode = InsertionMode::InRow;
+                        return self.handle_end_tag(name, _position, _tokeniser);
+                    }
+                }
+                Ok(())
+            }
+            InsertionMode::InSelect => {
+                if lower == "select" {
+                    if self.stack_contains("select") {
+                        self.pop_until(|tag| tag == "select");
+                        self.mode = InsertionMode::InBody;
+                    }
+                } else if lower == "option" || lower == "optgroup" {
+                    if self.stack_contains(&lower) {
+                        self.pop_until(|tag| tag == lower);
+                    }
+                }
                 Ok(())
             }
         }
@@ -476,20 +805,10 @@ impl TreeBuilder {
         text: &str,
         tokeniser: &super::tokeniser::Tokeniser<'_>,
     ) -> Result<(), FormatError> {
-        // Inside a raw-text / script-data element, the body is
-        // delivered as a single Character token. Treat it as a
-        // text append to the current top of stack regardless of
-        // insertion mode. This is what keeps `InHead` from
-        // re-parenting the body of a `<title>` or `<script>`
-        // into `<body>`.
         if self.rawtext_depth > 0 {
             return self.append_text_to_current(text, tokeniser);
         }
         if text.chars().all(|c| c.is_ascii_whitespace()) {
-            // Per HTML5, ASCII whitespace handling is mode-specific.
-            // For the M4.4.1 minimum we accept whitespace in every
-            // mode and append it to the current element (or to
-            // `<head>` if that's the current target).
             if matches!(
                 self.mode,
                 InsertionMode::Initial | InsertionMode::BeforeHtml
@@ -502,8 +821,6 @@ impl TreeBuilder {
                 if text.chars().all(|c| c.is_ascii_whitespace()) {
                     return Ok(());
                 }
-                // Non-whitespace before html: parse error, but we
-                // recover by jumping to InBody.
                 self.flush_implicit()?;
                 self.mode = InsertionMode::InBody;
                 return self.handle_character(text, tokeniser);
@@ -526,10 +843,8 @@ impl TreeBuilder {
             }
             InsertionMode::InHead => {
                 if text.chars().all(|c| c.is_ascii_whitespace()) {
-                    // Whitespace inside `<head>` is fine.
                     return self.append_text_to_current(text, tokeniser);
                 }
-                // Non-whitespace: close head, transition to body.
                 self.pop_until(|tag| tag == "head");
                 if self
                     .stack
@@ -557,6 +872,20 @@ impl TreeBuilder {
                 }
                 self.append_text_to_current(text, tokeniser)
             }
+            // ---- Packet 2.8.3: foster parenting characters ----
+            InsertionMode::InTable => {
+                if text.chars().all(|c| c.is_ascii_whitespace()) {
+                    return Ok(());
+                }
+                self.foster_parent_text(text, tokeniser)?;
+                Ok(())
+            }
+            InsertionMode::InTableBody | InsertionMode::InRow | InsertionMode::InCell => {
+                self.append_text_to_current(text, tokeniser)
+            }
+            InsertionMode::InSelect => {
+                self.append_text_to_current(text, tokeniser)
+            }
         }
     }
 
@@ -571,16 +900,20 @@ impl TreeBuilder {
         if !self.head_created {
             self.create_head()?;
         }
-        if !self.body_created {
-            // Only create the body if we're transitioning out of
-            // head; calling create_body unconditionally would
-            // produce a body in the Initial mode for empty docs.
-            if matches!(
+        if !self.body_created
+            && matches!(
                 self.mode,
-                InsertionMode::InBody | InsertionMode::AfterBody | InsertionMode::AfterAfterBody
-            ) {
-                self.create_body()?;
-            }
+                InsertionMode::InBody
+                    | InsertionMode::AfterBody
+                    | InsertionMode::AfterAfterBody
+                    | InsertionMode::InTable
+                    | InsertionMode::InTableBody
+                    | InsertionMode::InRow
+                    | InsertionMode::InCell
+                    | InsertionMode::InSelect
+            )
+        {
+            self.create_body()?;
         }
         Ok(())
     }
@@ -590,7 +923,6 @@ impl TreeBuilder {
             return Ok(());
         }
         let id = self.dom.create_element("html");
-        // Append to the document root.
         self.dom
             .append_child(self.dom.root, id)
             .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
@@ -606,7 +938,6 @@ impl TreeBuilder {
         if !self.html_created {
             self.create_html()?;
         }
-        // Find html on the stack and append the head to it.
         let html = self
             .stack
             .iter()
@@ -633,7 +964,6 @@ impl TreeBuilder {
         if !self.head_created {
             self.create_head()?;
         }
-        // Append body to html.
         let html = self
             .stack
             .iter()
@@ -651,11 +981,7 @@ impl TreeBuilder {
     }
 
     fn create_element(&mut self, tag: &str) -> Result<spiral_dom::NodeId, FormatError> {
-        // Ensure the implicit wrappers exist so we always have a
-        // legal parent.
         self.flush_implicit()?;
-        // Current element: top of the stack, or document root
-        // when the stack is empty.
         let parent = *self.stack.last().unwrap_or(&self.dom.root);
         let id = self.dom.create_element(tag);
         self.dom
@@ -706,9 +1032,6 @@ impl TreeBuilder {
     ) -> Result<(), FormatError> {
         self.flush_implicit()?;
         let parent = *self.stack.last().unwrap_or(&self.dom.root);
-        // Per HTML5, adjacent text nodes are merged. The simplest
-        // correct approach: if the last child of `parent` is a
-        // text node, append to it; otherwise create a new one.
         if let Some(children) = self.dom.get_children(parent) {
             if let Some(&last) = children.last() {
                 if let Some(existing) = self.dom.get_text_mut(last) {
@@ -746,7 +1069,6 @@ impl TreeBuilder {
     #[allow(dead_code)]
     fn set_quirks_mode(&mut self, _quirks: bool) {
         // Deprecated in favour of `Dom::set_quirks_mode`.
-        // Kept as a no-op shim so the file remains self-contained.
     }
 
     fn push_active_formatting_element(&mut self, node_id: spiral_dom::NodeId) {
@@ -918,7 +1240,8 @@ impl TreeBuilder {
                 Some(idx) => idx,
             };
 
-            let formatting_element = match self.active_formatting_elements[formatting_element_idx] {
+            let formatting_element = match self.active_formatting_elements[formatting_element_idx]
+            {
                 ActiveElement::Element(id) => id,
                 _ => unreachable!(),
             };
@@ -1100,6 +1423,190 @@ impl TreeBuilder {
         }
 
         Ok(())
+    }
+
+    // ------------------------------------------------------------
+    // Packet 2.8.3 — foster parenting
+    // ------------------------------------------------------------
+    //
+    // The "foster parent" of an element is the parent of the
+    // most-recent `table` in the stack of open elements. Per
+    // WHATWG §12.2.6.1, when an inline tag or non-whitespace text
+    // arrives inside a table context, we:
+    //   1. Find the most recent `table` ancestor.
+    //   2. Insert the orphan as a SIBLING of that table — i.e.
+    //      append it to the table's parent, just before the table.
+    //   3. The orphan is NOT pushed onto the open-elements stack;
+    //      its end-tag is a parse error per spec.
+
+    /// Foster parent an element. Called by the `InTable`,
+    /// `InTableBody`, `InRow`, `InCell`, and `InSelect` mode arms
+    /// for any tag that is not a valid table child.
+    fn foster_parent(
+        &mut self,
+        tag: &str,
+        attributes: &[crate::token::Attribute],
+        position: Position,
+        tokeniser: &super::tokeniser::Tokeniser<'_>,
+    ) -> Result<(), FormatError> {
+        self.flush_implicit()?;
+
+        let id = self.dom.create_element(tag);
+
+        // The foster target is the parent of the most-recent
+        // table on the open-elements stack. If there is no table
+        // (e.g. in InSelect, or InTable with no table on the
+        // stack — a spec edge case), fall back to the top of
+        // stack.
+        let table_idx = self
+            .stack
+            .iter()
+            .rposition(|&sid| self.dom.get_tag(sid) == Some("table"));
+
+        if let Some(idx) = table_idx {
+            let foster_target = if idx == 0 {
+                self.dom.root
+            } else {
+                self.stack[idx - 1]
+            };
+            // Insert just BEFORE the table in the foster target's
+            // children list, if the table is actually a child of
+            // the foster target. Otherwise, fall back to plain
+            // append.
+            let table_id = self.stack[idx];
+            if let Some(children) = self.dom.get_children(foster_target) {
+                if let Some(pos) = children.iter().position(|&c| c == table_id) {
+                    self.dom
+                        .insert_child(foster_target, pos, id)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                } else {
+                    self.dom
+                        .append_child(foster_target, id)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                }
+            } else {
+                self.dom
+                    .append_child(foster_target, id)
+                    .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+            }
+        } else {
+            // No table in stack (e.g. in InSelect). Foster to
+            // current top of stack.
+            let parent = *self.stack.last().unwrap_or(&self.dom.root);
+            self.dom
+                .append_child(parent, id)
+                .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+        }
+
+        // If the new element is a formatting element, push it on
+        // the AFE list.
+        if is_formatting_element(tag) {
+            self.push_active_formatting_element(id);
+        }
+
+        // Apply attributes directly to the new element (it is not
+        // on the open-elements stack, so we cannot use
+        // `apply_attributes_to_current`).
+        for attr in attributes {
+            if attr.name.is_empty() {
+                continue;
+            }
+            self.dom
+                .set_attribute(id, &attr.name, &attr.value)
+                .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+        }
+        let _ = position;
+        let _ = tokeniser;
+
+        // Per spec, the foster-parented element IS pushed onto
+        // the open-elements stack so that further content (text,
+        // nested inline) goes inside it. The spec then continues
+        // processing tokens in InBody mode (because the foster
+        // parent placed the orphan outside the table).
+        self.stack.push(id);
+        self.mode = InsertionMode::InBody;
+
+        Ok(())
+    }
+
+    /// Foster parent a text node. Same algorithm as the element
+    /// case but creates a text node.
+    fn foster_parent_text(
+        &mut self,
+        text: &str,
+        _tokeniser: &super::tokeniser::Tokeniser<'_>,
+    ) -> Result<(), FormatError> {
+        self.flush_implicit()?;
+
+        let id = self.dom.create_text(text);
+
+        let table_idx = self
+            .stack
+            .iter()
+            .rposition(|&sid| self.dom.get_tag(sid) == Some("table"));
+
+        if let Some(idx) = table_idx {
+            let foster_target = if idx == 0 {
+                self.dom.root
+            } else {
+                self.stack[idx - 1]
+            };
+            let table_id = self.stack[idx];
+            if let Some(children) = self.dom.get_children(foster_target) {
+                if let Some(pos) = children.iter().position(|&c| c == table_id) {
+                    self.dom
+                        .insert_child(foster_target, pos, id)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                } else {
+                    self.dom
+                        .append_child(foster_target, id)
+                        .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+                }
+            } else {
+                self.dom
+                    .append_child(foster_target, id)
+                    .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+            }
+        } else {
+            let parent = *self.stack.last().unwrap_or(&self.dom.root);
+            self.dom
+                .append_child(parent, id)
+                .map_err(|e| FormatError::html_tree(0, 0, e.to_string()))?;
+        }
+        Ok(())
+    }
+
+    /// After `</table>` (or a parse-error pop that crosses a
+    /// table boundary), reset the insertion mode to whatever is
+    /// appropriate given the current state of the open-elements
+    /// stack. Per WHATWG §12.2.4.1.
+    fn reset_table_mode(&mut self) {
+        for &id in self.stack.iter().rev() {
+            match self.dom.get_tag(id) {
+                Some("select") => {
+                    self.mode = InsertionMode::InSelect;
+                    return;
+                }
+                Some("td") | Some("th") => {
+                    self.mode = InsertionMode::InCell;
+                    return;
+                }
+                Some("tr") => {
+                    self.mode = InsertionMode::InRow;
+                    return;
+                }
+                Some("tbody") | Some("thead") | Some("tfoot") => {
+                    self.mode = InsertionMode::InTableBody;
+                    return;
+                }
+                Some("table") => {
+                    self.mode = InsertionMode::InTable;
+                    return;
+                }
+                _ => continue,
+            }
+        }
+        self.mode = InsertionMode::InBody;
     }
 }
 

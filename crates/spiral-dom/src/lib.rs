@@ -132,6 +132,40 @@ impl Dom {
         Ok(())
     }
 
+    /// Insert a child node at a specific position in the parent's
+    /// child list. Used by the HTML parser's foster-parenting
+    /// algorithm (WHATWG §12.2.6.1) to splice an orphan BEFORE
+    /// an existing table sibling. `pos` is clamped to the parent's
+    /// current child count.
+    pub fn insert_child(&mut self, parent: NodeId, pos: usize, child: NodeId) -> Result<()> {
+        if parent >= self.nodes.len() || child >= self.nodes.len() {
+            return Err(Error::Dom("Invalid node ID".to_string()));
+        }
+        let pos = match &self.nodes[parent] {
+            Some(Node::Element(el)) => pos.min(el.children.len()),
+            Some(Node::Document(doc)) => pos.min(doc.children.len()),
+            _ => return Err(Error::Dom("Parent cannot have children".to_string())),
+        };
+        match &mut self.nodes[parent] {
+            Some(Node::Element(el)) => {
+                el.children.insert(pos, child);
+            }
+            Some(Node::Document(doc)) => {
+                doc.children.insert(pos, child);
+            }
+            _ => unreachable!(),
+        }
+        if let Some(node) = &mut self.nodes[child] {
+            match node {
+                Node::Element(el) => el.parent = Some(parent),
+                Node::Text(t) => t.parent = Some(parent),
+                Node::Comment(c) => c.parent = Some(parent),
+                Node::Document(_) => {}
+            }
+        }
+        Ok(())
+    }
+
     /// Get a node by ID.
     pub fn get_node(&self, id: NodeId) -> Option<&Node> {
         self.nodes.get(id).and_then(|n| n.as_ref())

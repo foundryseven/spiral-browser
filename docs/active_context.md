@@ -1,9 +1,9 @@
 # Active Context
 
 **Last updated:** 2026-06-17
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 in flight (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ☐) · Doc-drift prevention and wiring audit fully green (0 findings)
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 next · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
-*(Phase 1 Steps 1.1–1.6 done; Step 2.8 in flight; packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ☐)*
+*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 next)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 **Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
@@ -124,7 +124,7 @@ The top-20 competitive gaps identified by the research are foundational P2 work 
 
 **Packet 2.8.1 — Adoption agency algorithm (WHATWG HTML §12.2.6.1)**. ✅ SHIPPED 2026-06-17 — see `tree::run_adoption_agency_algorithm` in `crates/spiral-fmt/src/html/tree.rs:894`.
 **Packet 2.8.2 — Active formatting elements list (WHATWG HTML §12.2.6.1)**. ✅ SHIPPED 2026-06-17 — see `TreeBuilder::active_formatting_elements` and reconstructor in `crates/spiral-fmt/src/html/tree.rs:71-825`.
-**Packet 2.8.3 — Foster parenting (WHATWG HTML §12.2.6.1)**. ☐ Next up — required for correct table parsing.
+**Packet 2.8.3 — Foster parenting (WHATWG HTML §12.2.6.1)**. ✅ SHIPPED 2026-06-17 — see `foster_parent` / `foster_parent_text` / `reset_table_mode` and the `InTable` / `InTableBody` / `InRow` / `InCell` / `InSelect` mode arms in `crates/spiral-fmt/src/html/tree.rs:545-585, 770-840, 880-905, 1400-1580`. New `spiral_dom::Dom::insert_child` API in `crates/spiral-dom/src/lib.rs:127-160`.
 
 **Step 2.1 — Fragment parsing (Phase 2):**
 - [ ] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content.
@@ -345,9 +345,15 @@ any shipped browser:
 
 ---
 
-## Next up — Packet 2.8.3 (Foster parenting)
+## Next up — Step 2.1 (Fragment parsing)
 
-The next step is Packet 2.8.3 (Foster parenting, WHATWG HTML §12.2.6.1). This is the last packet in the Step 2.8 suite and is required for correct table parsing (in particular for `<table>` reparents into misnested rows/cells). It builds on the AFE list and adoption agency algorithm shipped in Packets 2.8.2 and 2.8.1 (2026-06-17).
+Step 2.8 (AAA + AFE + foster parenting) shipped 2026-06-17 — see the
+ledger entry. The next step is **Step 2.1 (Fragment parsing, WHATWG
+HTML §12.4)**, beginning with **Packet 2.1.1** (the fragment
+parsing algorithm itself, required for `innerHTML`,
+`insertAdjacentHTML`, and `<template>` content). Packets 2.1.2-2.1.5
+(DOM collections, global attributes, `data-*`, `globalThis`) round
+out the step.
 
 ## Completed (packets shipped)
 

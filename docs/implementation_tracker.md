@@ -166,7 +166,7 @@ shipped, step 1.5 shipped (per ADR 0001), step 1.6 in progress.
 - [x] **Packet 1.6.3 (M4.5 Item 11)** — `spiral-network` HTTP/1.1 client stub. `R: Resolver` generic bound. 1 binary, 1 integration test.
 - [x] **Packet 1.6.4 (M4.5 Item 12)** — `spiral-filter` runtime hook (Bet 3). Default policy: "worst offenders only" per `docs/active_context.md` § Ad Policy. ADR: [0005-filter-hook-architecture.md](../decisions/0005-filter-hook-architecture.md).
 - [x] **Packet 1.6.5 (M4.5 Item 13)** — Gyre box model + margins (first Gyre layout work; no Taffy).
-- ADR: TBD (packet-level work only)
+- ADR: [0006-browser-image-decoder-dep.md](../decisions/0006-browser-image-decoder-dep.md) (Accepted 2026-06-17)
 
 > **Note (2026-06-16, post-1.6.4 audit):** the original Step 1.6
 > also listed Packets 1.6.6 (adoption agency), 1.6.7 (active
@@ -249,7 +249,7 @@ reading.** No feature work in this Phase; pure structural.
 
 ---
 
-## Phase 2 — Engines Depth 🔄 IN FLIGHT (Step 2.8 in flight; packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ☐)
+## Phase 2 — Engines Depth 🔄 IN FLIGHT (Step 2.8 SHIPPED; packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅; Step 2.1 next)
 
 The top-20 competitive gaps identified in `docs/research/` (worktree
 `research/competitive-parity` @ 2026-06-16). Each gap becomes one Step.
@@ -294,7 +294,7 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 ### Step 2.8 — Adoption agency + AFE + foster parenting (deferred from Step 1.6)
 - [x] **Packet 2.8.1** — Adoption agency algorithm (WHATWG HTML §12.2.6.1). *Shipped 2026-06-17; see `tree::run_adoption_agency_algorithm` in `crates/spiral-fmt/src/html/tree.rs:894`.*
 - [x] **Packet 2.8.2** — Active formatting elements list (WHATWG HTML §12.2.6.1). *Shipped 2026-06-17; see `TreeBuilder::active_formatting_elements`, `push_active_formatting_element`, `reconstruct_active_formatting_elements`, `clear_up_to_last_marker` in `crates/spiral-fmt/src/html/tree.rs:71-825`.*
-- [ ] **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1).
+- [x] **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1). *Shipped 2026-06-17; see `TreeBuilder::foster_parent`, `foster_parent_text`, `reset_table_mode` and the `InTable`/`InTableBody`/`InRow`/`InCell`/`InSelect` mode arms in `crates/spiral-fmt/src/html/tree.rs:545-585, 770-840, 880-905, 1400-1580`. New `spiral_dom::Dom::insert_child` API in `crates/spiral-dom/src/lib.rs:127-160`.*
 
 ### Wiring & Integration (Phase 2)
 
