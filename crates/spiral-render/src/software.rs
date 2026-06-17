@@ -230,6 +230,27 @@ impl SoftwareRenderer {
                 } => {
                     self.draw_text(*x, *y, text, *font_size, *color, parent_xform, parent_clip);
                 }
+                RenderOp::DrawImage {
+                    x,
+                    y,
+                    width,
+                    height,
+                    data,
+                    img_width,
+                    img_height,
+                } => {
+                    self.draw_image(
+                        *x,
+                        *y,
+                        *width,
+                        *height,
+                        data,
+                        *img_width,
+                        *img_height,
+                        parent_xform,
+                        parent_clip,
+                    );
+                }
                 RenderOp::Clip {
                     x,
                     y,
@@ -326,6 +347,114 @@ impl SoftwareRenderer {
             let g = font::glyph(raw).unwrap_or_else(font::space_glyph);
             self.blit_glyph(cx, ty, scale, &g, rgba, clip);
             cx += font::GLYPH_ADVANCE as f32 * scale;
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn draw_image(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        data: &[u8],
+        img_width: u32,
+        img_height: u32,
+        xform: Transform,
+        clip: Option<(i32, i32, i32, i32)>,
+    ) {
+        if img_width == 0 || img_height == 0 || data.is_empty() {
+            return;
+        }
+
+        let (x0, y0) = xform.apply(x, y);
+        let (x1, y1) = xform.apply(x + width, y + height);
+
+        let lo_x = x0.min(x1).max(0.0) as i32;
+        let lo_y = y0.min(y1).max(0.0) as i32;
+        let hi_x = x0.max(x1).min(self.width as f32).ceil() as i32;
+        let hi_y = y0.max(y1).min(self.height as f32).ceil() as i32;
+        let (lo_x, lo_y, hi_x, hi_y) = apply_clip(lo_x, lo_y, hi_x, hi_y, clip);
+        if hi_x <= lo_x || hi_y <= lo_y {
+            return;
+        }
+
+        let w_f = img_width as f32;
+        let h_f = img_height as f32;
+        let dest_w = x1 - x0;
+        let dest_h = y1 - y0;
+
+        let scale_x = if dest_w > 0.0 { w_f / dest_w } else { 0.0 };
+        let scale_y = if dest_h > 0.0 { h_f / dest_h } else { 0.0 };
+
+        let get_pixel = |px: usize, py: usize| -> Rgba {
+            let idx = (py * img_width as usize + px) * 4;
+            if idx + 3 < data.len() {
+                [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]]
+            } else {
+                [0, 0, 0, 0]
+            }
+        };
+
+        for yy in lo_y..hi_y {
+            let row_start = (yy as u32 * self.width) as usize;
+            let src_y = (yy as f32 - y0) * scale_y;
+
+            for xx in lo_x..hi_x {
+                let src_x = (xx as f32 - x0) * scale_x;
+
+                let x_floor = src_x.floor();
+                let y_floor = src_y.floor();
+
+                let px = x_floor as i32;
+                let py = y_floor as i32;
+
+                let fx = src_x - x_floor;
+                let fy = src_y - y_floor;
+
+                let px0 = px.clamp(0, img_width as i32 - 1) as usize;
+                let px1 = (px + 1).clamp(0, img_width as i32 - 1) as usize;
+                let py0 = py.clamp(0, img_height as i32 - 1) as usize;
+                let py1 = (py + 1).clamp(0, img_height as i32 - 1) as usize;
+
+                let w00 = (1.0 - fx) * (1.0 - fy);
+                let w10 = fx * (1.0 - fy);
+                let w01 = (1.0 - fx) * fy;
+                let w11 = fx * fy;
+
+                let c00 = get_pixel(px0, py0);
+                let c10 = get_pixel(px1, py0);
+                let c01 = get_pixel(px0, py1);
+                let c11 = get_pixel(px1, py1);
+
+                let r = (c00[0] as f32 * w00
+                    + c10[0] as f32 * w10
+                    + c01[0] as f32 * w01
+                    + c11[0] as f32 * w11)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
+                let g = (c00[1] as f32 * w00
+                    + c10[1] as f32 * w10
+                    + c01[1] as f32 * w01
+                    + c11[1] as f32 * w11)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
+                let b = (c00[2] as f32 * w00
+                    + c10[2] as f32 * w10
+                    + c01[2] as f32 * w01
+                    + c11[2] as f32 * w11)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
+                let a = (c00[3] as f32 * w00
+                    + c10[3] as f32 * w10
+                    + c01[3] as f32 * w01
+                    + c11[3] as f32 * w11)
+                    .round()
+                    .clamp(0.0, 255.0) as u8;
+
+                let idx = row_start + xx as usize;
+                self.pixels[idx] = blend_pixel(self.pixels[idx], [r, g, b, a]);
+            }
         }
     }
 

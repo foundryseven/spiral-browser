@@ -73,11 +73,60 @@ impl ImageDecoder {
         // Phase 2: Per-format decoders (png, zune-jpeg, webp, ravif)
         match format {
             ImageFormat::Png => {
-                // Phase 2: png crate
+                let mut decoder = png::Decoder::new(std::io::Cursor::new(data));
+                decoder.set_transformations(png::Transformations::EXPAND);
+                let mut reader = decoder
+                    .read_info()
+                    .map_err(|e| Error::Parse(e.to_string()))?;
+                let buf_size = reader
+                    .output_buffer_size()
+                    .ok_or_else(|| Error::Parse("Invalid PNG buffer size".to_string()))?;
+                let mut buf = vec![0; buf_size];
+                let info = reader
+                    .next_frame(&mut buf)
+                    .map_err(|e| Error::Parse(e.to_string()))?;
+                let bytes = &buf[..info.buffer_size()];
+
+                let mut rgba_data = Vec::with_capacity((info.width * info.height * 4) as usize);
+                match info.color_type {
+                    png::ColorType::Rgb => {
+                        for chunk in bytes.chunks_exact(3) {
+                            rgba_data.push(chunk[0]);
+                            rgba_data.push(chunk[1]);
+                            rgba_data.push(chunk[2]);
+                            rgba_data.push(255);
+                        }
+                    }
+                    png::ColorType::Rgba => {
+                        rgba_data.extend_from_slice(bytes);
+                    }
+                    png::ColorType::Grayscale => {
+                        for &gray in bytes {
+                            rgba_data.push(gray);
+                            rgba_data.push(gray);
+                            rgba_data.push(gray);
+                            rgba_data.push(255);
+                        }
+                    }
+                    png::ColorType::GrayscaleAlpha => {
+                        for chunk in bytes.chunks_exact(2) {
+                            rgba_data.push(chunk[0]);
+                            rgba_data.push(chunk[0]);
+                            rgba_data.push(chunk[0]);
+                            rgba_data.push(chunk[1]);
+                        }
+                    }
+                    png::ColorType::Indexed => {
+                        return Err(Error::Parse(
+                            "Indexed PNG color type not expanded".to_string(),
+                        ));
+                    }
+                }
+
                 Ok(DecodedImage {
-                    width: 1,
-                    height: 1,
-                    data: vec![255, 255, 255, 255],
+                    width: info.width,
+                    height: info.height,
+                    data: rgba_data,
                     format,
                 })
             }
@@ -145,9 +194,20 @@ mod tests {
 
     #[test]
     fn test_decode_png() {
+        let mut data = Vec::new();
+        {
+            let mut encoder = png::Encoder::new(&mut data, 1, 1);
+            encoder.set_color(png::ColorType::Rgba);
+            encoder.set_depth(png::BitDepth::Eight);
+            let mut writer = encoder.write_header().unwrap();
+            writer.write_image_data(&[255, 0, 0, 255]).unwrap();
+        }
+
         let decoder = ImageDecoder::new();
-        let data = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
         let image = decoder.decode(&data).unwrap();
         assert_eq!(image.format, ImageFormat::Png);
+        assert_eq!(image.width, 1);
+        assert_eq!(image.height, 1);
+        assert_eq!(image.data, vec![255, 0, 0, 255]);
     }
 }

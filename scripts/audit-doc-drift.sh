@@ -191,26 +191,32 @@ check_status() {
     # Expand the agents_phase string into a set of IDs that
     # are claimed as shipped (single IDs and ranges).
     local agents_claimed
-    agents_claimed=$(printf '%s' "$agents_phase" | awk '
-        match($0, /[0-9]+\.[0-9]+\.[0-9]+[–-][0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/) {
-            s = substr($0, RSTART, RLENGTH)
-            match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
-            a = substr(s, RSTART, RLENGTH)
-            sub(/.*[–-]/, "", s)
-            match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
-            b = substr(s, RSTART, RLENGTH)
-            n = split(a, pa, ".")
-            base = pa[1] "." pa[2] "."
-            ia = pa[3] + 0
-            n = split(b, pb, ".")
-            ib = pb[3] + 0
-            for (i = ia; i <= ib; i++) print base i
-        }
-        match($0, /[0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/) {
-            s = substr($0, RSTART, RLENGTH)
-            if (s !~ /[–-][0-9]/) {
+    agents_claimed=$(LC_ALL=C printf '%s' "$agents_phase" | LC_ALL=C awk '
+        {
+            line = $0
+            while (match(line, /[0-9]+\.[0-9]+\.[0-9]+[–-][0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/)) {
+                s = substr(line, RSTART, RLENGTH)
                 match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
-                print substr(s, RSTART, RLENGTH)
+                a = substr(s, RSTART, RLENGTH)
+                sub(/.*[–-]/, "", s)
+                match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
+                b = substr(s, RSTART, RLENGTH)
+                n = split(a, pa, ".")
+                base = pa[1] "." pa[2] "."
+                ia = pa[3] + 0
+                n = split(b, pb, ".")
+                ib = pb[3] + 0
+                for (i = ia; i <= ib; i++) print base i
+                line = substr(line, RSTART + RLENGTH)
+            }
+            line = $0
+            while (match(line, /[0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/)) {
+                s = substr(line, RSTART, RLENGTH)
+                if (s !~ /[–-][0-9]/) {
+                    match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
+                    print substr(s, RSTART, RLENGTH)
+                }
+                line = substr(line, RSTART + RLENGTH)
             }
         }
     ' | sort)
@@ -230,31 +236,32 @@ check_status() {
     # The agents_phase line uses range notation
     # (e.g. "1.6.1–1.6.4 SHIPPED") so we expand the range.
     local agents_shipped
-    agents_shipped=$(printf '%s' "$agents_phase" | awk '
-        # Match a range like "1.6.1–1.6.4 SHIPPED" (en-dash or hyphen).
-        match($0, /[0-9]+\.[0-9]+\.[0-9]+[–-][0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/) {
-            s = substr($0, RSTART, RLENGTH)
-            # Extract the two endpoints.
-            match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
-            a = substr(s, RSTART, RLENGTH)
-            sub(/.*[–-]/, "", s)
-            match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
-            b = substr(s, RSTART, RLENGTH)
-            # a and b are dotted triples with the same prefix;
-            # expand a..b as the trailing integer range.
-            n = split(a, pa, ".")
-            base = pa[1] "." pa[2] "."
-            ia = pa[3] + 0
-            n = split(b, pb, ".")
-            ib = pb[3] + 0
-            for (i = ia; i <= ib; i++) print base i
-        }
-        # Also match a single ID with SHIPPED.
-        match($0, /[0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/) {
-            s = substr($0, RSTART, RLENGTH)
-            if (s !~ /[–-][0-9]/) {
+    agents_shipped=$(LC_ALL=C printf '%s' "$agents_phase" | LC_ALL=C awk '
+        {
+            line = $0
+            while (match(line, /[0-9]+\.[0-9]+\.[0-9]+[–-][0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/)) {
+                s = substr(line, RSTART, RLENGTH)
                 match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
-                print substr(s, RSTART, RLENGTH)
+                a = substr(s, RSTART, RLENGTH)
+                sub(/.*[–-]/, "", s)
+                match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
+                b = substr(s, RSTART, RLENGTH)
+                n = split(a, pa, ".")
+                base = pa[1] "." pa[2] "."
+                ia = pa[3] + 0
+                n = split(b, pb, ".")
+                ib = pb[3] + 0
+                for (i = ia; i <= ib; i++) print base i
+                line = substr(line, RSTART + RLENGTH)
+            }
+            line = $0
+            while (match(line, /[0-9]+\.[0-9]+\.[0-9]+[[:space:]]+SHIPPED/)) {
+                s = substr(line, RSTART, RLENGTH)
+                if (s !~ /[–-][0-9]/) {
+                    match(s, /^[0-9]+\.[0-9]+\.[0-9]+/)
+                    print substr(s, RSTART, RLENGTH)
+                }
+                line = substr(line, RSTART + RLENGTH)
             }
         }
     ' | sort)
@@ -336,6 +343,7 @@ check_dep_graph() {
         "spiral-browser spiral-render"
         "spiral-browser spiral-paint"
         "spiral-browser spiral-ui"
+        "spiral-browser spiral-imagedecoder"
         "spiral-network spiral-net"
         "spiral-network spiral-filter"
         "spiral-gyre spiral-css"

@@ -717,8 +717,7 @@ fn parse_aaa_with_furthest_block() {
 /// `<tr>`/`<td>` are still inside the `<table>`.
 #[test]
 fn parse_foster_parent_inline_before_table_row() {
-    let dom = parse_html("<table><b>foo</b><tr><td>bar</td></tr></table>")
-        .expect("parse");
+    let dom = parse_html("<table><b>foo</b><tr><td>bar</td></tr></table>").expect("parse");
 
     let body_id = dom
         .descendants(dom.root)
@@ -739,10 +738,7 @@ fn parse_foster_parent_inline_before_table_row() {
             // real element, not a wrapper around the table).
             let b_children = dom.get_children(child).expect("b children");
             assert_eq!(b_children.len(), 1);
-            assert!(
-                dom.get_text(b_children[0]).map(|t| t.content.as_str())
-                    == Some("foo")
-            );
+            assert!(dom.get_text(b_children[0]).map(|t| t.content.as_str()) == Some("foo"));
             // Crucially, <b> must NOT contain the <table>.
             for c in &b_children {
                 assert_ne!(dom.get_tag(*c), Some("table"));
@@ -834,8 +830,7 @@ fn parse_foster_parent_text_before_table() {
 /// not inside `<select>`.
 #[test]
 fn parse_foster_parent_select_kicks_inline() {
-    let dom =
-        parse_html("<select><b>foo</b><option>bar</option></select>").expect("parse");
+    let dom = parse_html("<select><b>foo</b><option>bar</option></select>").expect("parse");
     let body_id = dom
         .descendants(dom.root)
         .find(|&(id, _)| dom.get_tag(id) == Some("body"))

@@ -145,13 +145,19 @@ fn fragment_nodes(
         let Some(root_kids) = dom.get_children(dom.root) else {
             return Vec::new();
         };
-        let Some(&html) = root_kids.iter().find(|&&id| dom.get_tag(id) == Some("html")) else {
+        let Some(&html) = root_kids
+            .iter()
+            .find(|&&id| dom.get_tag(id) == Some("html"))
+        else {
             return Vec::new();
         };
         let Some(html_kids) = dom.get_children(html) else {
             return Vec::new();
         };
-        let Some(&body) = html_kids.iter().find(|&&id| dom.get_tag(id) == Some("body")) else {
+        let Some(&body) = html_kids
+            .iter()
+            .find(|&&id| dom.get_tag(id) == Some("body"))
+        else {
             return Vec::new();
         };
         return dom.get_children(body).unwrap_or_default();

@@ -1,5 +1,7 @@
 # Spiral Browser
 
+![Spiral Browser Logo](resources/icons/logo.png)
+
 A fully independent web browser built from scratch in Rust. Not based on Chromium, WebKit, or Gecko. Features a custom rendering engine, custom JavaScript engine, and a Zen-browser-inspired UI with vertical sidebar tabs, a floating URL bar, and single-accent-colour theming.
 
 ## Status

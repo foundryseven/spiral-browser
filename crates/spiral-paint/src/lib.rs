@@ -34,6 +34,16 @@ pub enum RenderOp {
         font_size: f32,
         color: Color,
     },
+    /// Draw an image.
+    DrawImage {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        data: Vec<u8>,
+        img_width: u32,
+        img_height: u32,
+    },
     /// Clip to a rectangle.
     Clip {
         x: f32,

@@ -33,6 +33,7 @@ The structure is fixed by [`0000-template.md`](0000-template.md).
 | [0003](0003-gyre-rename.md) | Rename `spiral-layout` to `spiral-gyre` (post-Fork 1). The Vortex rename (`spiral-js` → `spiral-vortex`) is documented in the body of ADR 0002. | Accepted | 2026-06-14 |
 | [0004](0004-resolver-trait-async-design.md) | `Resolver` trait is `async`-native, with `R: Resolver` generic bound on the client | Accepted | 2026-06-16 |
 | [0005](0005-filter-hook-architecture.md) | `FilterHook`, `Decision`, and `Party` live in `spiral-core` (not `spiral-filter`); resolves the packet 1.6.4 dep-arrow violation | Accepted | 2026-06-16 |
+| [0006](0006-browser-image-decoder-dep.md) | Add `spiral-imagedecoder` dependency to `spiral-browser` to render startup logo | Accepted | 2026-06-17 |
 
 ---
 

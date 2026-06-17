@@ -23,7 +23,6 @@
 #![allow(clippy::needless_return)]
 #![allow(clippy::collapsible_if)]
 
-
 use crate::cursor::Position;
 use crate::error::FormatError;
 use crate::token::Token;
@@ -531,12 +530,7 @@ impl TreeBuilder {
                         if self.stack_contains("table") {
                             self.pop_until(|tag| tag == "table");
                             self.mode = InsertionMode::InBody;
-                            return self.handle_start_tag(
-                                name,
-                                attributes,
-                                position,
-                                tokeniser,
-                            );
+                            return self.handle_start_tag(name, attributes, position, tokeniser);
                         }
                         return Ok(());
                     }
@@ -558,17 +552,9 @@ impl TreeBuilder {
                         // A second section before any <tr>: close
                         // the open section and re-process.
                         self.pop_until(|tag| tag == "tbody" || tag == "thead" || tag == "tfoot");
-                        let top_tag = self
-                            .stack
-                            .last()
-                            .and_then(|&id| self.dom.get_tag(id));
+                        let top_tag = self.stack.last().and_then(|&id| self.dom.get_tag(id));
                         if matches!(top_tag, Some("table")) {
-                            return self.handle_start_tag(
-                                name,
-                                attributes,
-                                position,
-                                tokeniser,
-                            );
+                            return self.handle_start_tag(name, attributes, position, tokeniser);
                         }
                         return Ok(());
                     }
@@ -580,18 +566,10 @@ impl TreeBuilder {
                     }
                     "table" => {
                         self.pop_until(|tag| tag == "table");
-                        let top_tag = self
-                            .stack
-                            .last()
-                            .and_then(|&id| self.dom.get_tag(id));
+                        let top_tag = self.stack.last().and_then(|&id| self.dom.get_tag(id));
                         if matches!(top_tag, Some("html")) {
                             self.mode = InsertionMode::InBody;
-                            return self.handle_start_tag(
-                                name,
-                                attributes,
-                                position,
-                                tokeniser,
-                            );
+                            return self.handle_start_tag(name, attributes, position, tokeniser);
                         }
                         return Ok(());
                     }
@@ -610,27 +588,14 @@ impl TreeBuilder {
                     }
                     "tr" | "thead" | "tbody" | "tfoot" => {
                         self.pop_until(|tag| tag == "tr");
-                        return self.handle_start_tag(
-                            name,
-                            attributes,
-                            position,
-                            tokeniser,
-                        );
+                        return self.handle_start_tag(name, attributes, position, tokeniser);
                     }
                     "table" => {
                         self.pop_until(|tag| tag == "table");
-                        let top_tag = self
-                            .stack
-                            .last()
-                            .and_then(|&id| self.dom.get_tag(id));
+                        let top_tag = self.stack.last().and_then(|&id| self.dom.get_tag(id));
                         if matches!(top_tag, Some("html")) {
                             self.mode = InsertionMode::InBody;
-                            return self.handle_start_tag(
-                                name,
-                                attributes,
-                                position,
-                                tokeniser,
-                            );
+                            return self.handle_start_tag(name, attributes, position, tokeniser);
                         }
                         return Ok(());
                     }
@@ -642,15 +607,10 @@ impl TreeBuilder {
             }
             InsertionMode::InCell => {
                 match lower.as_str() {
-                    "td" | "th" | "tr" | "thead" | "tbody" | "tfoot" | "caption"
-                    | "colgroup" | "col" | "table" => {
+                    "td" | "th" | "tr" | "thead" | "tbody" | "tfoot" | "caption" | "colgroup"
+                    | "col" | "table" => {
                         self.pop_until(|tag| tag == "td" || tag == "th");
-                        return self.handle_start_tag(
-                            name,
-                            attributes,
-                            position,
-                            tokeniser,
-                        );
+                        return self.handle_start_tag(name, attributes, position, tokeniser);
                     }
                     _ => {
                         self.foster_parent(&lower, attributes, position, tokeniser)?;
@@ -678,20 +638,10 @@ impl TreeBuilder {
                                 self.stack.pop();
                             }
                             self.mode = InsertionMode::InBody;
-                            return self.handle_start_tag(
-                                name,
-                                attributes,
-                                position,
-                                tokeniser,
-                            );
+                            return self.handle_start_tag(name, attributes, position, tokeniser);
                         }
                         self.mode = InsertionMode::InBody;
-                        return self.handle_start_tag(
-                            name,
-                            attributes,
-                            position,
-                            tokeniser,
-                        );
+                        return self.handle_start_tag(name, attributes, position, tokeniser);
                     }
                 }
                 Ok(())
@@ -851,9 +801,7 @@ impl TreeBuilder {
                         || self.stack_contains("thead")
                         || self.stack_contains("tfoot"))
                 {
-                    self.pop_until(|tag| {
-                        tag == "tbody" || tag == "thead" || tag == "tfoot"
-                    });
+                    self.pop_until(|tag| tag == "tbody" || tag == "thead" || tag == "tfoot");
                     self.mode = InsertionMode::InTable;
                     return self.handle_end_tag(name, _position, _tokeniser);
                 }
@@ -1005,9 +953,7 @@ impl TreeBuilder {
             InsertionMode::InTableBody | InsertionMode::InRow | InsertionMode::InCell => {
                 self.append_text_to_current(text, tokeniser)
             }
-            InsertionMode::InSelect => {
-                self.append_text_to_current(text, tokeniser)
-            }
+            InsertionMode::InSelect => self.append_text_to_current(text, tokeniser),
         }
     }
 
@@ -1362,8 +1308,7 @@ impl TreeBuilder {
                 Some(idx) => idx,
             };
 
-            let formatting_element = match self.active_formatting_elements[formatting_element_idx]
-            {
+            let formatting_element = match self.active_formatting_elements[formatting_element_idx] {
                 ActiveElement::Element(id) => id,
                 _ => unreachable!(),
             };
@@ -1787,14 +1732,7 @@ fn context_to_mode(tag: &str) -> InsertionMode {
 fn is_rawtext_context(tag: &str) -> bool {
     matches!(
         tag,
-        "title"
-            | "textarea"
-            | "style"
-            | "script"
-            | "xmp"
-            | "iframe"
-            | "noembed"
-            | "noframes"
+        "title" | "textarea" | "style" | "script" | "xmp" | "iframe" | "noembed" | "noframes"
     )
 }
 

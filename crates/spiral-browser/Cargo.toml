@@ -12,6 +12,7 @@ spiral-ui.workspace = true
 spiral-theme.workspace = true
 spiral-paint.workspace = true
 spiral-render.workspace = true
+spiral-imagedecoder.workspace = true
 tokio.workspace = true
 log.workspace = true
 env_logger.workspace = true

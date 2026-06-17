@@ -25,12 +25,33 @@ pub fn build_hello_display_list(tab: &TabState, theme: &BrowserTheme) -> Display
     });
 
     let font_size: f32 = 64.0;
+    let mut current_y = ((h - font_size) * 0.5).max(0.0);
+
+    let logo_bytes = include_bytes!("../../../resources/icons/logo.png");
+    let decoder = spiral_imagedecoder::ImageDecoder::new();
+    if let Ok(decoded) = decoder.decode(logo_bytes) {
+        let logo_size: f32 = 160.0;
+        let total_content_h = logo_size + 24.0 + font_size;
+        let start_y = ((h - total_content_h) * 0.5).max(20.0);
+
+        list.ops.push(RenderOp::DrawImage {
+            x: ((w - logo_size) * 0.5).max(0.0),
+            y: start_y,
+            width: logo_size,
+            height: logo_size,
+            data: decoded.data,
+            img_width: decoded.width,
+            img_height: decoded.height,
+        });
+
+        current_y = start_y + logo_size + 24.0;
+    }
+
     let text_w = font::text_width(HELLO_HEADLINE) as f32 * (font_size / font::GLYPH_HEIGHT as f32);
     let tx = ((w - text_w) * 0.5).max(0.0);
-    let ty = ((h - font_size) * 0.5).max(0.0);
     list.ops.push(RenderOp::DrawText {
         x: tx,
-        y: ty,
+        y: current_y,
         text: HELLO_HEADLINE.to_string(),
         font_size,
         color: theme.text_primary,
@@ -38,7 +59,7 @@ pub fn build_hello_display_list(tab: &TabState, theme: &BrowserTheme) -> Display
 
     list.ops.push(RenderOp::FillRect {
         x: tx,
-        y: ty + font_size + 4.0,
+        y: current_y + font_size + 4.0,
         width: text_w,
         height: 3.0,
         color: theme.accent,
@@ -87,10 +108,10 @@ mod tests {
     }
 
     #[test]
-    fn hello_list_has_five_ops() {
+    fn hello_list_has_six_ops() {
         let tab = TabState::new(TabId(0), "https://example.com/");
         let list = build_hello_display_list(&tab, &theme());
-        assert_eq!(list.ops.len(), 5);
+        assert_eq!(list.ops.len(), 6);
     }
 
     #[test]
