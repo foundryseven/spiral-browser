@@ -4816,3 +4816,26 @@ identified. Key findings:
   - `docs/progress_ledger.md` — this entry.
 - **Status:** PR #4 still open at https://github.com/foundryseven/spiral-browser/pull/4. After merge + `OPENCODE_GO_API_KEY` + `SONAR_TOKEN` secrets set, the bot's first run targets the next open PR.
 
+---
+
+## 2026-06-18 — DeepSource replaces SonarCloud + Spiral-Bot
+
+- **What:** Retired the SonarCloud + Spiral-Bot stack (which never produced a working Rust scan, because the SonarCloud free tier has no Rust rules and the OpenCode-Go fix-bot was never wired due to missing secrets) and adopted **DeepSource** as the Rust quality gate. DeepSource is free for OSS public repos, has Rust as a first-class supported language, generates Autofix™ patches as commit suggestions on every PR, and exposes a status check that gates the merge button on `main`. The earlier 2026-06-18 entries above (lines 4783, 4803) document the Spiral-Bot experiment and remain as historical record; this entry records its reversal. Full rationale: [`docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md`](../decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md).
+- **Wiring & Integration:**
+  - **Files affected (added):** `deepsource.toml` (new, repo root) — enables `rust` and `secrets` analyzers. `docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md` (new) — ADR per AGENTS.md §Decision Protocol.
+  - **Files affected (deleted):** `.github/workflows/spiral-bot.yml`; `bin/spiral-bot/` (entire directory — `index.ts`, `ai.ts`, `github.ts`, `sonarqube.ts`, `package.json`, `.gitignore`, `__tests__/ai.test.ts`, `__tests__/github.test.ts`, `__tests__/sonarqube.test.ts`, `prompts/sonarqube-fix.md`). Net deletion: ~600 LoC of Bun/TypeScript plus the 5-min cron workflow.
+  - **Files affected (modified):** `AGENTS.md` (lines 39, 50–51 — SonarQube/Spiral-Bot references replaced with DeepSource merge-gate language); `bin/README.md` (line 13 — removed the `spiral-bot/` row); `docs/active_context.md` (lines 499–509 — removed the Spiral-Bot section); `CHANGELOG.md` (added `[Unreleased] > Removed` entry); `docs/implementation_tracker.md` (this entry).
+  - **Call sites:** `deepsource.toml` is consumed by the DeepSource GitHub App on every push and PR. The DeepSource status check appears on the `main` branch protection rule.
+  - **Test coverage:** No new code tests. End-to-end coverage is the green-button flow: a deliberately-bad commit (e.g. `.unwrap()` in a `lib.rs`) is expected to (a) produce a red DeepSource check on the PR, (b) post an Autofix™ suggestion as a commit suggestion, (c) leave the merge button disabled until the check is green.
+  - **End-to-end surface:** The DeepSource status check on `main` is the green-button signal — visible to humans on every PR, clickable merge is gated on it being green. Dependabot security updates handle dependency vulnerability PRs independently.
+- **UI actions required (one-time, by the user):** install the DeepSource GitHub App on `https://github.com/foundryseven/spiral-browser`; configure the quality gate in the DeepSource dashboard to require the `rust` and `secrets` checks; add the DeepSource status check to the `main` branch protection rule.
+- **SSOT updates:**
+  - `AGENTS.md` — Workflow Discipline table and Prohibited behaviour list updated.
+  - `bin/README.md` — `spiral-bot/` row removed.
+  - `docs/active_context.md` — Spiral-Bot section removed; Cloudflare section above it is unchanged.
+  - `docs/progress_ledger.md` — this entry.
+  - `docs/implementation_tracker.md` — recorded under the Workflow Refactor group.
+  - `CHANGELOG.md` — `[Unreleased] > Removed` entry.
+- **Status:** Code changes shipped on `feature/deepsource-replaces-sonar`. PR open via `bin/spiral-pr.sh`. After merge, the user installs the DeepSource App and configures the branch protection rule to complete the wire-up. PR #4 (the open Spiral-Bot PR) is now stale and should be closed as superseded.
+
+
