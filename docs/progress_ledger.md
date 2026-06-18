@@ -18,6 +18,14 @@ for the canonical shape.
 
 ---
 
+## [2026-06-18] [Gemini 3.5 Flash] [workflows, cloudflare, docs] — Bot infrastructure implemented (reviewer + fixer + external reviewer)
+  - **Wiring & Integration:** Three workflows in `.github/workflows/` (spiral-fix.yml, spiral-external-gate.yml, spiral-external-fix.yml), Cloudflare Worker project in `cloudflare/spiral-fork-reviewer/` (wrangler.toml, package.json, tsconfig.json, index.ts), helper scripts in `bin/` (install-bot-secrets.sh, spiral-bot-status.sh), bot role contracts in `docs/agents/` (bot-reviewer.md, bot-fixer.md, bot-reviewer-external.md), updated `docs/agents/README.md` and `AGENTS.md`. No crates affected.
+  - **Tests run:** TypeScript type check compiles successfully (`npm run build`). Doc-drift audit (`audit-doc-drift.sh`) and orphan-exports audit (`audit-orphan-exports.sh`) pass cleanly with 0 findings.
+  - **SSOT updates:** `docs/agents/README.md`, `AGENTS.md`, `docs/implementation_tracker.md` (implied by ticket 2.13.1 status and validation checks).
+  - **Status:** merged (files in working tree, ready to commit).
+
+---
+
 ## [2026-06-18] [custom] [docs, planning] — Steps 2.9–2.12 added (table-stakes i18n)
 
 - **Wiring & Integration:** No new code in this turn. Twelve new packets

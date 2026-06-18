@@ -1,0 +1,6 @@
+name = "spiral-fork-reviewer"
+main = "src/index.ts"
+compatibility_date = "2026-06-18"
+
+# Node compatibility for crypto/buffer if needed (native is fine though)
+node_compat = true

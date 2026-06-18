@@ -1,0 +1,46 @@
+# @spiral-reviewer-external — automated reviewer gate (fork PRs)
+#
+# Runs on pull_request_target for external fork PRs only.
+# Safely triggers the Cloudflare Worker webhook by forwarding the PR repository,
+# number, head SHA, and diff URL, using the repo secret FORK_REVIEWER_WEBHOOK.
+
+name: spiral-external-gate
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+
+concurrency:
+  group: spiral-external-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    # Trigger ONLY if the PR is opened from a fork.
+    # Same-repo PRs are handled by spiral-review.yml.
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Trigger Cloudflare Webhook
+        run: |
+          if [ -z "${{ secrets.FORK_REVIEWER_WEBHOOK }}" ]; then
+            echo "Error: FORK_REVIEWER_WEBHOOK secret is not configured."
+            exit 1
+          fi
+          
+          # Call the Cloudflare Worker webhook
+          curl -X POST -H "Content-Type: application/json" \
+            -d '{
+              "repository": "${{ github.repository }}",
+              "pr_number": ${{ github.event.pull_request.number }},
+              "head_sha": "${{ github.event.pull_request.head.sha }}",
+              "diff_url": "${{ github.event.pull_request.diff_url }}",
+              "action": "${{ github.event.action }}"
+            }' \
+            "${{ secrets.FORK_REVIEWER_WEBHOOK }}"

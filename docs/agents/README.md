@@ -19,6 +19,9 @@ restructure).
 | **Reviewer** | [`reviewer.md`](./reviewer.md) | You are reviewing a diff, PR, or commit before merge. |
 | **Architect** | [`architect.md`](./architect.md) | You are writing an ADR, refactoring boundaries, or proposing a new subsystem. |
 | **Tester** | [`tester.md`](./tester.md) | You are writing, auditing, or hardening tests. |
+| **Bot Reviewer** | [`bot-reviewer.md`](./bot-reviewer.md) | Automated first-line gatekeeper for internal PRs. |
+| **Bot Fixer** | [`bot-fixer.md`](./bot-fixer.md) | Automated corrector for internal/external PR defects. |
+| **Bot Reviewer (Ext)** | [`bot-reviewer-external.md`](./bot-reviewer-external.md) | Automated reviewer for fork PRs running on Cloudflare. |
 
 If you have not been told your role, **you are an
 implementer**. This is the default. Switching roles

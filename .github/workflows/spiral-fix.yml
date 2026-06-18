@@ -1,0 +1,128 @@
+# @spiral-fixer — automated PR fixer (internal PRs)
+#
+# Runs when triggered by the reviewer bot upon a check failure.
+# Automatically applies fixes, runs local verification (audits/tests),
+# commits, and pushes them back to the branch.
+#
+# Triggers:
+#   - workflow_dispatch (triggered by spiral-reviewer)
+#
+# Constraints:
+#   - Iteration cap of 5 runs per PR to prevent infinite loops.
+#   - Dynamic model routing based on diff size (Mimo V2.5 vs V2.5 Pro).
+
+name: spiral-fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to run the fixer on'
+        required: true
+        type: string
+      reason:
+        description: 'Reason for triggering the fixer'
+        required: false
+        type: string
+
+concurrency:
+  group: spiral-fixer-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: write
+  actions: read
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check iteration cap
+        id: iteration-gate
+        run: |
+          PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          # Retrieve PR labels using gh CLI
+          LABELS=$(gh pr view "$PR_NUMBER" --json labels -q '.labels[].name')
+          
+          ITERATION=0
+          for label in $LABELS; do
+            if [[ "$label" =~ ^spiral/fix-iteration:([0-9]+)$ ]]; then
+              ITERATION="${BASH_REMATCH[1]}"
+            fi
+          done
+          
+          echo "Current iteration: $ITERATION"
+          if [ "$ITERATION" -ge 5 ]; then
+            echo "Iteration limit of 5 reached. Stopping."
+            gh pr comment "$PR_NUMBER" --body "@spiral-fixer has reached the maximum of 5 auto-fix iterations on this PR. Stopping to let humans inspect."
+            exit 1
+          fi
+          
+          NEW_ITERATION=$((ITERATION + 1))
+          echo "new_iteration=$NEW_ITERATION" >> $GITHUB_OUTPUT
+          echo "old_iteration=$ITERATION" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dynamic Model Routing
+        id: model-routing
+        run: |
+          # Compare against origin/master to determine diff size
+          git diff origin/master...HEAD --name-only > files.txt
+          NUM_FILES=$(wc -l < files.txt)
+          NUM_LINES=$(git diff origin/master...HEAD | grep '^[+-][^[+-]]' | wc -l)
+          
+          # Check for any pub API changes in Rust files
+          PUB_CHANGES=$(git diff origin/master...HEAD | grep '^+.*pub ' || true)
+          
+          echo "Files changed: $NUM_FILES, Lines changed: $NUM_LINES"
+          if [ "$NUM_FILES" -le 3 ] && [ "$NUM_LINES" -le 150 ] && [ -z "$PUB_CHANGES" ]; then
+            MODEL="opencode-go/mimo-v2.5"
+            echo "Routing to cheap coder: $MODEL"
+          else
+            MODEL="opencode-go/mimo-v2.5-pro"
+            echo "Routing to coder-pro: $MODEL"
+          fi
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+
+      - name: Set up Rust toolchain
+        uses: actions/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run fixer agent
+        id: fixer
+        uses: anomalyco/opencode/github@<PINNED_SHA>
+        with:
+          model: ${{ steps.model-routing.outputs.model }}
+          agent: ./.opencode/agents/spiral-fixer.md
+          prompt: ./.opencode/prompts/fix.md
+          api_key: ${{ secrets.OPENCODE_API_KEY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update iteration label on PR
+        if: success()
+        run: |
+          PR_NUMBER="${{ github.event.inputs.pr_number }}"
+          OLD_LBL="spiral/fix-iteration:${{ steps.iteration-gate.outputs.old_iteration }}"
+          NEW_LBL="spiral/fix-iteration:${{ steps.iteration-gate.outputs.new_iteration }}"
+          
+          # Remove old iteration label (ignoring error if it doesn't exist)
+          gh pr edit "$PR_NUMBER" --remove-label "$OLD_LBL" || true
+          # Add new iteration label
+          gh pr edit "$PR_NUMBER" --add-label "$NEW_LBL"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

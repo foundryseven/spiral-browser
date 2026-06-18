@@ -706,12 +706,125 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
   - **ADR required:** NO (per ADR-0007).
   - **Architecture doc:** `docs/architecture/fmt.md` (URL section) or `net.md` (depending on Packet 2.7.1 ownership).
 
+### Step 2.13 — Bot Infrastructure (reviewer + fixer + external reviewer)
+
+Three opencode Go-backed bots wired to the GitHub PR flow. Closes
+the "who reviews and fixes PRs?" loop in the no-code-agentic model
+(see `docs/plans/no-code-agentic-refactor.md` and the bot plan in
+`docs/plans/bot-rollout.md`).
+
+Sub-status: 🟢 IN FLIGHT (packet 2.13.1 SHIPPED 2026-06-18).
+Tracked as one Step because the three workflows + three subagents +
+Cloudflare Worker ship together; splitting them would create
+half-wired intermediate states.
+
+- [x] **Packet 2.13.1** — Bot infrastructure (reviewer + fixer + external reviewer).
+      - **Spec:** none — this is a workflow / infrastructure packet, not a
+        spec-derived feature. Anchors: `docs/agents/reviewer.md`
+        (human reviewer contract), `docs/agents/implementer.md`
+        (human implementer contract), `.spiral/rules/coding-standards.md`
+        and `.spiral/rules/testing.md` (the contracts the bots enforce).
+      - **Crates affected:** none — the packet does not touch any
+        `crates/spiral-*` code. Touched trees: `.github/workflows/`
+        (5 new files), `.opencode/agents/` (3 new subagent defs),
+        `.opencode/prompts/` (3 new prompt files), `cloudflare/`
+        (new Worker + Container source), `bin/` (2 new helper scripts),
+        `docs/agents/` (3 new bot role contracts + README update),
+        `docs/decisions/0010-bot-architecture.md` (new ADR),
+        `docs/plans/bot-rollout.md` (new rollout plan), `AGENTS.md`
+        (workflow-table update), `docs/active_context.md` (status),
+        `docs/implementation_tracker.md` (this packet).
+      - **Call sites expected:** the bot workflow YAML files are
+        themselves the call sites for the opencode GitHub Action
+        (`anomalyco/opencode/github@<SHA>`); the Container's
+        Worker is the call site for the OpenCode Go API.
+      - **Tests expected:** none in `crates/*` (this packet ships
+        zero Rust code). Verification is via (a) workflow YAML
+        lint (`actionlint` if available, otherwise `gh workflow
+        enable` then `gh workflow run spiral-review.yml` against a
+        dry-run PR), (b) Container deploys clean (`wrangler deploy`
+        succeeds), (c) a deliberately-broken PR triggers the
+        full review → fail → auto-fix → re-review → green cycle.
+      - **End-to-end surface:** A `Check Run` named `opencode /
+      review` appears on every internal PR with a `success` or
+      `failure` conclusion. A fix commit is auto-pushed within 5
+      minutes of the failure on internal PRs. On external (fork)
+      PRs, a conversational review comment is posted within 5
+      minutes, ending with the `@spiral-fixer Fix my code` opt-in
+      offer; if the maintainer or contributor types the phrase,
+      a follow-up fix commit lands on the fork via the maintainer
+      token. After 5 iterations of review → fix on a single PR,
+      the bots post a final summary and stop; humans take over.
+      - **ADR required:** YES — `docs/decisions/0010-bot-architecture.md`
+        (cross-cutting decision: OpenCode Go + GitHub Actions for
+        internal, Cloudflare Worker + Container for external,
+        MiniMax M3 reviewer + dual-model MiMo V2.5/Pro fixer,
+        conversational tone, branch-protection gate via Check Run).
+      - **Architecture doc:** none — this packet is workflow
+        infrastructure, not a subsystem change.
+
 ### Wiring & Integration (Phase 2)
 
 - **Crates affected:** `spiral-fmt` (HTML), `spiral-dom`, `spiral-vortex` (JS stdlib).
 - **Call sites:** `spiral_fmt::html::parse_html_fragment(ctx, html)` consumed by `spiral-dom` setters and by Vortex `Element.innerHTML` setter.
 - **Test coverage:** WPT per-packet; one WPT sub-suite per Step.
 - **End-to-end surface:** `./justfile wpt-fmt` runs the HTML/WPT subset.
+
+#### Wiring & Integration (Step 2.13 — Bot Infrastructure)
+
+- **Crates affected:** none. Touched trees: `.github/workflows/`,
+  `.opencode/`, `cloudflare/`, `bin/`, `docs/agents/`,
+  `docs/decisions/`, `docs/plans/`, `AGENTS.md`,
+  `docs/active_context.md`, `docs/implementation_tracker.md`.
+- **Call sites:**
+  - `.github/workflows/spiral-review.yml` (new) — uses the
+    `anomalyco/opencode/github@<SHA>` action with
+    `model: opencode-go/minimax-m3` and
+    `agent: ./.opencode/agents/spiral-reviewer.md`.
+  - `.github/workflows/spiral-fix.yml` (new) — uses the same
+    action with `model: opencode-go/mimo-v2.5` (routed to
+    `-pro` per the diff heuristic) and
+    `agent: ./.opencode/agents/spiral-fixer.md`.
+  - `.github/workflows/spiral-external-gate.yml` (new) —
+    `pull_request_target` on fork PRs; calls the Cloudflare
+    Worker webhook with `FORK_REVIEWER_WEBHOOK`.
+  - `.github/workflows/spiral-external-fix.yml` (new) —
+    triggered by the maintainer's
+    `@spiral-fixer Fix my code` comment on a fork PR;
+    uses the maintainer's `GITHUB_TOKEN` (via
+    `pull_request_target`) to push fix commits to the fork
+    branch.
+  - `cloudflare/spiral-fork-reviewer/src/index.ts` (new) —
+    Worker fetch handler: receives webhook from the
+    GitHub App, fetches the diff via public GitHub API,
+    calls OpenCode Go with `OPENCODE_GO_KEY` Worker secret,
+    posts the comment + sets the `opencode / review` Check
+    Run via the GitHub App installation token.
+  - `bin/install-bot-secrets.sh` (new) — `gh secret set`
+    wrapper for `OPENCODE_API_KEY` and `FORK_REVIEWER_WEBHOOK`.
+  - `bin/spiral-bot-status.sh` (new) — quick-status script
+    that prints the last 5 runs of each bot workflow.
+- **Test coverage:** No new Rust unit tests (zero Rust code).
+  Verification is workflow-side: a deliberately-broken dry-run
+  PR triggers (a) a Check Run `failure` from `spiral-review`,
+  (b) a fix commit auto-pushed by `spiral-fix` within 5 min,
+  (c) a Check Run `success` on the re-review, and
+  (d) branch-protection allows merge (verified by an
+  attempted merge in dry-run).
+- **End-to-end surface:** A maintainer opens a PR with a known
+  defect (e.g. an orphan `pub` symbol). Within 5 min:
+  `spiral-review.yml` posts a conversational review comment
+  + sets `opencode / review` to `failure`. Within 5 min:
+  `spiral-fix.yml` auto-pushes a fix commit that resolves
+  the defect. `spiral-review.yml` re-runs on the new commit
+  and sets `opencode / review` to `success`. The branch
+  protection check flips green; the merge button enables.
+- **Audit expectation:** `./scripts/audit-orphan-exports.sh`
+  continues to exit 0 (no Rust changes). `./scripts/audit-doc-drift.sh`
+  must exit 0 after the new docs files are added. The bot
+  workflows themselves call both audits as part of the review
+  contract, so a bot-suggested change that introduces orphans
+  will be flagged on the review pass.
 
 #### Wiring & Integration (Steps 2.9–2.12, table-stakes i18n)
 

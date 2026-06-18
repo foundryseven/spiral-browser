@@ -1,0 +1,157 @@
+# @spiral-reviewer — automated PR reviewer (internal PRs)
+#
+# Runs on every internal PR open / synchronize / reopen.
+# Posts a conversational review comment + sets a Check Run
+# named `opencode / review` with conclusion success/failure/
+# neutral. Branch protection on master requires `success` to
+# enable the merge button.
+#
+# Triggers (see ADR 0010):
+#   - pull_request [opened, synchronize, reopened,
+#     ready_for_review, edited]
+#   - workflow_dispatch (manual re-run)
+#
+# Skips:
+#   - Draft PRs (github.event.pull_request.draft == true)
+#   - Fork PRs (handled by spiral-external-gate.yml)
+#   - PRs with the spiral:hotfix label (humans handle)
+#
+# Permissions: minimum required (per the opencode Action's
+# pull_request event context). The action does NOT need to
+# push code; only comment and set Check Runs.
+#
+# Pinned to the full SHA of anomalyco/opencode/github at
+# the version that supports `pull_request` events + custom
+# subagents. Update the SHA when bumping.
+
+name: spiral-reviewer
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - edited
+  workflow_dispatch:
+
+# Cancel any in-flight run for the same PR on a new push.
+concurrency:
+  group: spiral-reviewer-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  actions: read
+
+jobs:
+  review:
+    # Skip if PR is a draft or from a fork.
+    if: |
+      github.event_name != 'pull_request' ||
+      (
+        github.event.pull_request.draft != true &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run orphan-exports audit
+        id: audit-orphans
+        continue-on-error: true
+        run: ./scripts/audit-orphan-exports.sh
+
+      - name: Run doc-drift audit
+        id: audit-doc-drift
+        continue-on-error: true
+        run: ./scripts/audit-doc-drift.sh
+
+      - name: Run reviewer agent
+        id: reviewer
+        uses: anomalyco/opencode/github@<PINNED_SHA>
+        with:
+          model: opencode-go/minimax-m3
+          agent: ./.opencode/agents/spiral-reviewer.md
+          prompt: ./.opencode/prompts/review.md
+          api_key: ${{ secrets.OPENCODE_API_KEY }}
+          # The opencode Action reads the diff from
+          # ${{ github.event.pull_request }} automatically;
+          # we do not pass it explicitly.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set Check Run conclusion
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const conclusion = (() => {
+              if ('${{ steps.reviewer.outputs.conclusion }}') {
+                return '${{ steps.reviewer.outputs.conclusion }}';
+              }
+              // Fall back to audit script results if the
+              // reviewer agent did not emit a conclusion.
+              const orphanFailed = '${{ steps.audit-orphans.outcome }}' === 'failure';
+              const driftFailed = '${{ steps.audit-doc-drift.outcome }}' === 'failure';
+              if (orphanFailed || driftFailed) return 'failure';
+              return 'neutral';
+            })();
+            const summary = (() => {
+              const parts = [];
+              if ('${{ steps.audit-orphans.outcome }}' === 'failure') {
+                parts.push('- `audit-orphan-exports.sh` failed (orphan `pub` symbol).');
+              }
+              if ('${{ steps.audit-doc-drift.outcome }}' === 'failure') {
+                parts.push('- `audit-doc-drift.sh` failed (SSOT drift).');
+              }
+              const reviewerBody = '${{ steps.reviewer.outputs.body }}';
+              if (reviewerBody) parts.push(reviewerBody);
+              return parts.length ? parts.join('\n\n') : 'No findings.';
+            })();
+
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'opencode / review',
+              head_sha: context.payload.pull_request.head.sha,
+              status: 'completed',
+              conclusion,
+              output: {
+                title: `Review ${conclusion}`,
+                summary,
+              },
+            });
+
+      - name: Trigger fixer on failure
+        if: steps.reviewer.outputs.conclusion == 'failure' || steps.audit-orphans.outcome == 'failure' || steps.audit-doc-drift.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Trigger the fixer workflow via workflow_dispatch.
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow: 'spiral-fix.yml',
+              ref: context.payload.pull_request.head.ref,
+              inputs: {
+                pr_number: String(context.payload.pull_request.number),
+                reason: 'auto-triggered by reviewer failure',
+              },
+            });
