@@ -4778,3 +4778,64 @@ identified. Key findings:
   - `docs/active_context.md` — status line + "Next up" (next is packet 2.1.4, `<template>` content document fragment construction, per the existing dependency note).
 - **Status:** Implementation complete, all audits green, ready for PR via `bin/spiral-pr.sh 2.1.3`. No commits made (per `AGENTS.md` "Only commit, amend, push, or create PRs when explicitly requested" — the user can invoke `bin/spiral-pr.sh 2.1.3` to land the change).
 
+---
+
+## 2026-06-18 — Spiral-Bot CI fix-bot (Codacy merge gate automation)
+
+- **What:** Built Spiral-Bot, a GitHub Actions-based CI fix-bot that drives Codacy to green automatically. The bot polls Codacy API v3 on a 5-min cron schedule, reads findings, calls OpenCode Go (MiMo-V2.5 for T1, DeepSeek V4 Flash for T2) to draft fixes, and commits and pushes via `GITHUB_TOKEN`. Bounded retry: 3 iterations, 10-min gap. Circuit-breaker opens a GitHub Issue on exhaustion. "Having a rest" message on OpenCode Go cap hit.
+- **Wiring & Integration:**
+  - **Files affected:** `.github/workflows/codacy-bot.yml` (new), `bin/codacy-bot/index.ts` (new), `bin/codacy-bot/codacy.ts` (new), `bin/codacy-bot/ai.ts` (new), `bin/codacy-bot/github.ts` (new), `bin/codacy-bot/prompts/codacy-fix.md` (new), `bin/codacy-bot/package.json` (new), `bin/codacy-bot/.gitignore` (new), `bin/codacy-bot/__tests__/codacy.test.ts` (new), `bin/codacy-bot/__tests__/ai.test.ts` (new), `bin/codacy-bot/__tests__/github.test.ts` (new).
+  - **Call sites:** `bin/codacy-bot/index.ts` (orchestrator entry), `bin/codacy-bot/codacy.ts` (Codacy API v3 client), `bin/codacy-bot/ai.ts` (OpenCode Go client at `https://opencode.ai/zen/go/v1/chat/completions`), `bin/codacy-bot/github.ts` (GITHUB_TOKEN-based Contents API commits + Issues API comments).
+  - **Test coverage:** 14 tests across 3 test files. `classifyIssue` routing (5 tests), `applyDiff` (7 tests: single-hunk, multi-hunk, additions, replacements, offset, trailing content), AI module smoke (2 tests). All pass.
+  - **End-to-end surface:** GitHub Actions cron (every 5 min) triggers the workflow. Bot lists open PRs, fetches Codacy issues, applies fixes, commits via Contents API. PR #3 is the first real exercise.
+- **Tests:** `bun test` in `bin/codacy-bot/` — 14 pass, 0 fail.
+- **SSOT updates:**
+  - `docs/progress_ledger.md` — this entry.
+  - `docs/active_context.md` — Spiral-Bot added to infrastructure notes.
+- **Status:** PR #4 open at https://github.com/foundryseven/spiral-browser/pull/4. Blocked on:
+  1. `OPENCODE_GO_API_KEY` secret (requires separate OpenCode Go workspace creation).
+  2. `CODACY_API_TOKEN` secret (requires Codacy dashboard token generation).
+  3. PR #4 merge (the workflow file must be on main for the cron to trigger).
+  After merge + secret setup, the bot's first run will target PR #3.
+
+---
+
+## 2026-06-18 — Spiral-Bot switched from Codacy to SonarQube Cloud
+
+- **What:** Replaced Codacy with SonarQube Cloud as the code-quality tool for Spiral-Bot. Codacy's v3 API does not expose commit-level findings programmatically (every endpoint shape returned 404 during API probing), and the AI Reviewer is gated behind a manual human click in the Codacy dashboard (`action_required` check-run status), which blocks automated merge-gate enforcement. SonarQube Cloud was chosen for: (1) self-serve free-for-OSS plan, (2) full Web API v1+v2 with bearer-token auth, (3) programmatic issue access via `GET /api/issues/search?componentKeys=&pullRequest=`, (4) quality-gate check-runs on PRs without manual intervention, (5) 345,437+ GitHub App installs (largest in the category). PR #3 was closed as superseded (the bot's architecture replaces the polling-loop workflow change). Codacy GitHub App was not removed from the repo yet — leaving it installed but unused is safer than interrupting the Codacy dashboard's audit history.
+- **Wiring & Integration:**
+  - **Files affected:** `bin/codacy-bot/` renamed to `bin/spiral-bot/`; `bin/spiral-bot/codacy.ts` deleted, replaced by `bin/spiral-bot/sonarqube.ts`; `bin/spiral-bot/__tests__/codacy.test.ts` deleted, replaced by `bin/spiral-bot/__tests__/sonarqube.test.ts`; `bin/spiral-bot/prompts/codacy-fix.md` deleted, replaced by `bin/spiral-bot/prompts/sonarqube-fix.md`; `.github/workflows/codacy-bot.yml` deleted, replaced by `.github/workflows/spiral-bot.yml`; `bin/spiral-bot/index.ts` and `bin/spiral-bot/package.json` updated to reference `SONAR_TOKEN` and `SONAR_PROJECT_KEY` instead of `CODACY_API_TOKEN`.
+  - **Call sites:** `bin/spiral-bot/index.ts` (orchestrator), `bin/spiral-bot/sonarqube.ts` (SonarQube Cloud API client at `https://sonarcloud.io/api/issues/search`).
+  - **Test coverage:** 15 tests across 3 test files. `classifyIssue` routing (6 tests: BLOCKER/CRITICAL/MAJOR → t2, MINOR/INFO/unknown → t1), `applyDiff` (7 tests), AI module smoke (2 tests). All pass with `bun test`.
+  - **End-to-end surface:** GitHub Actions cron (every 5 min) triggers `.github/workflows/spiral-bot.yml`. Workflow runs `bun run bin/spiral-bot/index.ts`. Bot lists open PRs via `GET /repos/{owner}/{repo}/pulls?state=open`, fetches SonarQube issues via `GET /api/issues/search?componentKeys=<project>&pullRequest=<n>&resolved=false&paged`, applies fixes via the GitHub Contents API, commits via `PUT /repos/{owner}/{repo}/contents/{path}`.
+- **Tests:** `bun test` in `bin/spiral-bot/` — 15 pass, 0 fail.
+- **SSOT updates:**
+  - `AGENTS.md` — Workflow Tools table now references `spiral-bot.yml` as the SonarQube merge gate enforcer. Prohibited behaviour updated: agent MUST NOT bypass SonarQube because Spiral-Bot drives it to green automatically.
+  - `bin/README.md` — `spiral-bot/` script documented alongside the other bin/ entries.
+  - `docs/active_context.md` — Spiral-Bot section updated to reflect the Codacy → SonarQube Cloud switch, with the rationale recorded.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** PR #4 still open at https://github.com/foundryseven/spiral-browser/pull/4. After merge + `OPENCODE_GO_API_KEY` + `SONAR_TOKEN` secrets set, the bot's first run targets the next open PR.
+
+---
+
+## 2026-06-18 — DeepSource replaces SonarCloud + Spiral-Bot
+
+- **What:** Retired the SonarCloud + Spiral-Bot stack (which never produced a working Rust scan, because the SonarCloud free tier has no Rust rules and the OpenCode-Go fix-bot was never wired due to missing secrets) and adopted **DeepSource** as the Rust quality gate. DeepSource is free for OSS public repos, has Rust as a first-class supported language, generates Autofix™ patches as commit suggestions on every PR, and exposes a status check that gates the merge button on `main`. The earlier 2026-06-18 entries above (lines 4783, 4803) document the Spiral-Bot experiment and remain as historical record; this entry records its reversal. Full rationale: [`docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md`](../decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md).
+- **Wiring & Integration:**
+  - **Files affected (added):** `deepsource.toml` (new, repo root) — enables `rust` and `secrets` analyzers. `docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md` (new) — ADR per AGENTS.md §Decision Protocol.
+  - **Files affected (deleted):** `.github/workflows/spiral-bot.yml`; `bin/spiral-bot/` (entire directory — `index.ts`, `ai.ts`, `github.ts`, `sonarqube.ts`, `package.json`, `.gitignore`, `__tests__/ai.test.ts`, `__tests__/github.test.ts`, `__tests__/sonarqube.test.ts`, `prompts/sonarqube-fix.md`). Net deletion: ~600 LoC of Bun/TypeScript plus the 5-min cron workflow.
+  - **Files affected (modified):** `AGENTS.md` (lines 39, 50–51 — SonarQube/Spiral-Bot references replaced with DeepSource merge-gate language); `bin/README.md` (line 13 — removed the `spiral-bot/` row); `docs/active_context.md` (lines 499–509 — removed the Spiral-Bot section); `CHANGELOG.md` (added `[Unreleased] > Removed` entry); `docs/implementation_tracker.md` (this entry).
+  - **Call sites:** `deepsource.toml` is consumed by the DeepSource GitHub App on every push and PR. The DeepSource status check appears on the `main` branch protection rule.
+  - **Test coverage:** No new code tests. End-to-end coverage is the green-button flow: a deliberately-bad commit (e.g. `.unwrap()` in a `lib.rs`) is expected to (a) produce a red DeepSource check on the PR, (b) post an Autofix™ suggestion as a commit suggestion, (c) leave the merge button disabled until the check is green.
+  - **End-to-end surface:** The DeepSource status check on `main` is the green-button signal — visible to humans on every PR, clickable merge is gated on it being green. Dependabot security updates handle dependency vulnerability PRs independently.
+- **UI actions required (one-time, by the user):** install the DeepSource GitHub App on `https://github.com/foundryseven/spiral-browser`; configure the quality gate in the DeepSource dashboard to require the `rust` and `secrets` checks; add the DeepSource status check to the `main` branch protection rule.
+- **SSOT updates:**
+  - `AGENTS.md` — Workflow Discipline table and Prohibited behaviour list updated.
+  - `bin/README.md` — `spiral-bot/` row removed.
+  - `docs/active_context.md` — Spiral-Bot section removed; Cloudflare section above it is unchanged.
+  - `docs/progress_ledger.md` — this entry.
+  - `docs/implementation_tracker.md` — recorded under the Workflow Refactor group.
+  - `CHANGELOG.md` — `[Unreleased] > Removed` entry.
+- **Status:** Code changes shipped on `feature/deepsource-replaces-sonar`. PR open via `bin/spiral-pr.sh`. After merge, the user installs the DeepSource App and configures the branch protection rule to complete the wire-up. PR #4 (the open Spiral-Bot PR) is now stale and should be closed as superseded.
+
+

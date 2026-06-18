@@ -337,6 +337,30 @@ and 192; lines 96–110 after edit).
 
 ---
 
+### R9 — Tooling: Adopt DeepSource; retire SonarCloud + Spiral-Bot ✅
+
+**Status:** ✅ SHIPPED 2026-06-18 (on `feature/deepsource-replaces-sonar`).
+**Decider:** the team (no-code-agentic session 2026-06-18).
+**ADR:** [`docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md`](../decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md).
+
+**Trigger:** SonarCloud's free tier does not support Rust (compatibility error on every push attempt) and GitHub Copilot Autofix is not available on the personal-account repo. The "green button" the user wanted — a quality-gate status check that blocks the merge button on `main` — was not achievable with either SonarCloud or the previously-built Spiral-Bot fix-bot.
+
+**Change set:**
+- **Added** `deepsource.toml` (repo root) — enables `rust` and `secrets` analyzers. Quality-gate behaviour configured in the DeepSource dashboard UI (one-time).
+- **Deleted** `.github/workflows/spiral-bot.yml` and the entire `bin/spiral-bot/` directory (10 files, ~600 LoC Bun/TypeScript, plus the 5-min cron workflow).
+- **Modified** `AGENTS.md` (Workflow Discipline table + Prohibited behaviour list), `bin/README.md` (removed the `spiral-bot/` row), `docs/active_context.md` (removed the Spiral-Bot section), `CHANGELOG.md` (`[Unreleased] > Removed` entry), `docs/progress_ledger.md` (appended switch entry).
+- **One-time UI actions required (by the user):** install DeepSource GitHub App on the repo; configure the quality gate in the dashboard to require `rust` and `secrets`; add the DeepSource status check to `main` branch protection.
+
+### Wiring & Integration
+- **Files affected:** `deepsource.toml` (new, consumed by DeepSource App); `bin/spiral-bot/` (deleted); `.github/workflows/spiral-bot.yml` (deleted); 5 SSOT files modified.
+- **Call sites:** `deepsource.toml` → DeepSource App → status check on `main`. No Rust code paths changed; the change is tooling-only.
+- **Test coverage:** End-to-end is the green-button flow itself — a deliberately-bad commit (e.g. `.unwrap()` in a `lib.rs`) is expected to (a) trigger a red DeepSource check on the PR, (b) post an Autofix™ commit suggestion, (c) leave the merge button disabled until the check is green.
+- **End-to-end surface:** The DeepSource status check on `main` is the green-button signal — visible to humans on every PR. The user (or any reviewer) sees a green ✓ / red ✗ next to the merge button. Dependabot security updates (already on) handle dependency vulnerability PRs independently.
+
+**Status:** Code shipped on `feature/deepsource-replaces-sonar`. PR to follow via `bin/spiral-pr.sh`. After merge, the user installs the DeepSource App and configures branch protection to complete the wire-up. PR #4 (open Spiral-Bot PR) is now stale — close as superseded.
+
+---
+
 ## Phases
 
 A Phase is a major delivery milestone. One Phase = one shipped

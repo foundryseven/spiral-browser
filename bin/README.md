@@ -11,6 +11,7 @@ remember flag combinations.
 | `spiral-context.sh` | Print the 5-10 files most relevant to a given packet (or session start). The biggest session-pace win — kills the 15-20 minute context re-load that every fresh LLM session pays. | <1s |
 | `spiral-pr.sh` | Pre-flight checks + push + open PR for a packet. Wraps `cargo fmt`, `cargo clippy`, `cargo test --workspace`, the audit scripts, and `gh pr create` so PRs always go out clean. | 1-3 min |
 
+
 ## Flags
 
 | Flag | Effect | Use when |

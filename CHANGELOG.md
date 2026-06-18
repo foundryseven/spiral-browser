@@ -31,6 +31,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **`bin/spiral-pr.sh`** new entry point for the PR workflow (replaces manual `gh pr create` invocations).
 - **`justfile`** split `verify` into `verify-fast` (pre-commit) and `verify-rules` (pre-merge / nightly).
 
+### Removed
+- **SonarCloud + Spiral-Bot replaced by DeepSource (2026-06-18).** Per [`docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md`](docs/decisions/0013-deepsource-replaces-sonar-and-spiral-bot.md), the SonarCloud free tier does not support Rust and Copilot Autofix is not available on the personal account. Retired: `.github/workflows/spiral-bot.yml` and the entire `bin/spiral-bot/` directory (10 files, ~600 LoC of Bun/TypeScript). The DeepSource quality gate on `main` is the new "green button" — the merge button is greyed out until the DeepSource check is green. Humans still approve the merge. Dependabot security updates (already on) handle dependency vulnerability PRs.
+
 ---
 
 ## [0.0.0] - 2026-06-16
