@@ -18,6 +18,48 @@ for the canonical shape.
 
 ---
 
+## [2026-06-18] [custom] [docs, planning] — Steps 2.9–2.12 added (table-stakes i18n)
+
+- **Wiring & Integration:** No new code in this turn. Twelve new packets
+  added to `docs/implementation_tracker.md` Phase 2 covering
+  `navigator.language` IDL, `<html lang>` reflection, character encoding
+  detection (`encoding_rs`), `TextEncoder`/`TextDecoder`, UAX #9 bidi
+  (`unicode-bidi`), UAX #14 line break (`linebreak`), UAX #15
+  normalisation (`unicode-normalization`), UAX #11 East Asian Width
+  (`unicode-width`), complex text shaping (`rustybuzz` behind the
+  `harfbuzz` feature flag per ADR-0007), script detection
+  (`unicode-script`), script-aware font fallback, and IDNA 2008 + UTS
+  #46 (`idna`). One new ADR (`docs/decisions/0007-i18n-table-stakes-bet.md`).
+  One new end-to-end smoke test target
+  (`crates/spiral-browser/tests/i18n_smoke.rs`) deferred to the packet
+  wave. Eight new workspace deps, all down-only per
+  `.spiral/rules/architecture.md`. The `rustybuzz` dep is the only one
+  gated behind a feature flag; the other seven are default-on.
+- **Tests run:** N/A — this turn is SSOT planning only. The first
+  packet (2.9.1, `navigator.language` IDL) is the first place tests
+  will run. The WPT subsets for the new packets are the existing
+  `./justfile wpt-{fmt,vortex,gyre}` scripts; the `i18n_smoke.rs`
+  fixture is the end-to-end surface across all four Steps.
+- **SSOT updates:** `docs/implementation_tracker.md` (Steps 2.9–2.12 +
+  Phase 2 wiring section rewrite), `docs/active_context.md` (status
+  line + "next up" note + Steps 2.9–2.12 sub-section), new ADR
+  `docs/decisions/0007-i18n-table-stakes-bet.md`, this ledger entry.
+  `docs/research/09-i18n-engine.md` is updated in a separate edit
+  (packet-to-row mapping).
+- **Status:** uncommitted. The work is planning; the next
+  `git commit` will be the first packet (2.9.1) which carries its own
+  ledger entry.
+- **Forward hooks:** Step 2.12.1 (IDNA) depends on Packet 2.7.1 (URL
+  parser) ownership — flagged in the tracker and the ADR as an open
+  question for the implementer agent picking up 2.9.1. Step 2.11.1
+  (`rustybuzz` shaper) depends on Step 2.10.1 (bidi) and 2.10.2 (line
+  break) for the layout-iterator call order. Packet 2.9.3 (encoding
+  detection) is a hard prerequisite for the WPT run-and-fix loop on
+  any non-UTF-8 page; flagged in `active_context.md` as a
+  "do not pull forward past Step 2.1.7" rule.
+
+---
+
 ## [2026-06-14] [custom] [spiral-vortex, docs] — Vortex posture change: from-scratch JS engine, V8 as CI oracle only
 
 - **Posture change.** Vortex is no longer a V8 wrapper. It is a from-scratch
@@ -4705,4 +4747,34 @@ identified. Key findings:
   - 8 root docs rewritten.
   - `docs/progress_ledger.md` — this entry.
 - **Status:** Public-facing doc overhaul shipped. The eight root docs are now consistent in brand voice, project narrative, and cross-references. A new contributor or LLM agent can land on `README.md`, follow the `## Project documents` table, and reach every relevant doc with one click. The `## Workflow` table in `README.md` and the `## Workflow tools (canonical surface)` section in `CODEX.md` are the two primary entry points for the agent-driven workflow contract.
+
+---
+
+## 2026-06-18 — Packet 2.1.3 (`<noscript>` element, WHATWG HTML §4.6.7) shipped
+
+- **What:** Wired the `<noscript>` element per WHATWG HTML §4.6.7 with the v0.1 scripting flag always on. The previous behaviour treated `<noscript>` as rawtext everywhere (the M4.4.1 default). The new behaviour is the spec-mandated split:
+  - `<head><noscript>...</noscript></head>` — `<noscript>` is a metadata element. Its children parse as regular HTML (with a new `InHeadNoscript` insertion mode that mirrors `InBody` but keeps `[html, head, noscript, ...]` on the open-elements stack). On `</noscript>` we restore `InHead`.
+  - `<body><noscript>...</noscript></body>` — `<noscript>` switches the tokeniser to `Mode::Rawtext` (end-tag "noscript") for the duration of its body. The matching `</noscript>` calls `Tokeniser::exit_raw_mode()`.
+  - The `Tokeniser::raw_mode_for_start_tag` table no longer maps `noscript` to rawtext; the tree builder drives the mode switch via `enter_raw_mode` / `exit_raw_mode`. The tokeniser has no view of the insertion mode (the design comment at `crates/spiral-fmt/src/html/tokeniser.rs:1507-1514` explains why this is the correct split).
+  - The `TreeBuilder::handle_start_tag` and `handle_end_tag` signatures now take `&mut Tokeniser` (previously `&`). Three call sites updated: `process_token` at `crates/spiral-fmt/src/html/tree.rs:254`, `tokenise_into` at `crates/spiral-fmt/src/html/tokeniser.rs:1481`, and the `Fragment` parse loop at `crates/spiral-fmt/src/html/fragment.rs:84-87`.
+- **Wiring & Integration:**
+  - **Call sites:** `crates/spiral-fmt/src/html/tree.rs:53-58` (new `InHeadNoscript` mode), `:393` (start-tag in `InHead`), `:470-481` (start-tag in `InBody`), `:813-857` (end-tag in `InBody | InHeadNoscript`), `:1037-1051` (text in `InHead` dispatches to `InHeadNoscript` when stack top is `<noscript>`), `:1066-1072` (text in `InHeadNoscript`).
+  - **Test coverage:** `crates/spiral-fmt/tests/noscript.rs` (new, 7 tests). All 7 pass. The full `spiral-fmt` test suite is green (47 tests across 4 test files: `e2e.rs`, `fragment.rs`, `quirks.rs`, `noscript.rs`). The reverse-dep fan-out (`just test-with-deps spiral-fmt`) is green: `spiral-css` re-tests cleanly.
+  - **End-to-end surface:** `parse_html("<head><noscript><p>fallback</p></noscript></head>")` returns a DOM whose `<p>` is a child of `<noscript>`, which is a child of `<head>`. `parse_html("<body><noscript>raw <em>not a tag</em></noscript></body>")` returns a DOM whose `<noscript>` body is a single text node `"raw <em>not a tag</em>"` (no `<em>` child element).
+- **Tests:**
+  - `crates/spiral-fmt/tests/noscript.rs` (new, 7 tests):
+    - `noscript_in_head_parses_children_as_html` — `<link>` inside `<head><noscript>` is a parsed child.
+    - `noscript_in_head_with_paragraph` — `<p>` inside `<head><noscript>` is a parsed child.
+    - `noscript_in_body_treats_children_as_text` — `<em>` inside `<body><noscript>` is **not** a child (rawtext).
+    - `noscript_end_tag_pops_the_open_element` — descendant order is `[noscript, p, meta]`.
+    - `noscript_is_recognised_in_head` — `<span>` inside `<head><noscript>` is a parsed child.
+    - `noscript_with_text_only_in_head` — text inside `<head><noscript>` is appended to the noscript element.
+    - `noscript_in_body_attributes_are_kept` — `id` and `class` attributes on a body-noscript are stored on the element.
+  - `crates/spiral-fmt/src/html/tokeniser.rs` — existing 18 rawtext / fragment-context unit tests still pass (no regressions in the rawtext mode machinery).
+  - `crates/spiral-fmt/tests/{fragment.rs,quirks.rs,e2e.rs}` — all existing tests still pass (regression coverage on the `&mut Tokeniser` signature change and the new `InHeadNoscript` mode).
+- **SSOT updates:**
+  - `docs/implementation_tracker.md` — packet 2.1.3 ticked to `[x]` with call-site references.
+  - `docs/progress_ledger.md` — this entry.
+  - `docs/active_context.md` — status line + "Next up" (next is packet 2.1.4, `<template>` content document fragment construction, per the existing dependency note).
+- **Status:** Implementation complete, all audits green, ready for PR via `bin/spiral-pr.sh 2.1.3`. No commits made (per `AGENTS.md` "Only commit, amend, push, or create PRs when explicitly requested" — the user can invoke `bin/spiral-pr.sh 2.1.3` to land the change).
 

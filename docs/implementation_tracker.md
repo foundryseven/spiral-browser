@@ -534,7 +534,7 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 ### Step 2.1 — Fragment parsing algorithm
 - [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). *Shipped 2026-06-17; see `spiral_fmt::parse_html_fragment` in `crates/spiral-fmt/src/lib.rs:73`, the `Fragment` struct at `crates/spiral-fmt/src/lib.rs:50-65`, the fragment module at `crates/spiral-fmt/src/html/fragment.rs`, and `TreeBuilder::new_for_fragment` / `finish_for_fragment` / `fragment_context_id` in `crates/spiral-fmt/src/html/tree.rs:126-208`.*
 - [x] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). *Shipped 2026-06-17; see `classify_doctype_quirks(name, public_id, system_id) -> DoctypeMode` at `crates/spiral-fmt/src/html/tokeniser.rs:1284`, the `DoctypeMode` enum at `crates/spiral-fmt/src/token.rs:97`, the tree-builder gate at `crates/spiral-fmt/src/html/tree.rs:309`, the `read_quoted_string` helper at `crates/spiral-fmt/src/html/tokeniser.rs:710`, the public `Dom::quirks_mode()` getter at `crates/spiral-dom/src/lib.rs:188`, and the new integration test file `crates/spiral-fmt/tests/quirks.rs` (10 tests, all passing).*
-- [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
+- [x] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7). *Shipped 2026-06-18; see the new `InHeadNoscript` insertion mode in `crates/spiral-fmt/src/html/tree.rs:53-58` and the matching arm in `TreeBuilder::handle_end_tag` at `crates/spiral-fmt/src/html/tree.rs:813-857`, the `<noscript>` start-tag arms in `InHead` and `InBody` at `crates/spiral-fmt/src/html/tree.rs:393, 470-481`, and the tokeniser removal at `crates/spiral-fmt/src/html/tokeniser.rs:1507-1514`. The `noscript` element now parses children as regular HTML in `<head>` (per spec §4.6.7 with the scripting flag on) and switches the tokeniser to rawtext in `<body>` (also per spec). New tests at `crates/spiral-fmt/tests/noscript.rs` (7 tests, all passing).*
   - **Spec:** WHATWG HTML §4.6.7 + §13 tree-builder handling. The tokeniser already lists `noscript` in `is_rawtext_element` at `crates/spiral-fmt/src/html/tree.rs:1718-1732`; the tree builder needs a dedicated `InHead` arm.
   - **Crates affected:** `spiral-fmt`.
   - **Call sites expected:** `crates/spiral-fmt/src/html/tree.rs` — `<noscript>` start-tag in `InHead` mode should append to head; elsewhere treat as a normal element.
@@ -581,12 +581,156 @@ priority tags from `specs/GAP_ANALYSIS.md` re-tagged onto packets below.
 - [x] **Packet 2.8.2** — Active formatting elements list (WHATWG HTML §12.2.6.1). *Shipped 2026-06-17; see `TreeBuilder::active_formatting_elements`, `push_active_formatting_element`, `reconstruct_active_formatting_elements`, `clear_up_to_last_marker` in `crates/spiral-fmt/src/html/tree.rs:71-825`.*
 - [x] **Packet 2.8.3** — Foster parenting (WHATWG HTML §12.2.6.1). *Shipped 2026-06-17; see `TreeBuilder::foster_parent`, `foster_parent_text`, `reset_table_mode` and the `InTable`/`InTableBody`/`InRow`/`InCell`/`InSelect` mode arms in `crates/spiral-fmt/src/html/tree.rs:545-585, 770-840, 880-905, 1400-1580`. New `spiral_dom::Dom::insert_child` API in `crates/spiral-dom/src/lib.rs:127-160`.*
 
+### Step 2.9 — Locale detection + character encoding (table-stakes i18n)
+> **Scope rationale.** Per the ADR-0007 table-stakes bet, this Step
+> closes the four cheapest i18n gaps on the
+> `docs/research/09-i18n-engine.md` matrix: rows 45-47 (navigator
+> + `<html lang>`), row 74 (encoding detection), and row 75
+> (default `TextEncoder`/`TextDecoder` on UTF-8). All four wire
+> existing Rust crates; no new architectural surface.
+- [ ] **Packet 2.9.1** — `navigator.language` and `navigator.languages` IDL.
+  - **Spec:** HTML Living Standard §9.3 "Custom element" + Web IDL. `navigator.language` is the "most preferred" language tag; `navigator.languages` is the full preference list in priority order.
+  - **Crates affected:** `spiral-vortex` (Vortex builtins surface; add `Navigator` global + IDL). No new crate.
+  - **Call sites expected:** `crates/spiral-vortex/src/builtins/navigator.rs` (new file) registers `Navigator` on the `window` global; `vortex_eval("navigator.language")` returns the configured base-locale tag.
+  - **Tests expected:** `crates/spiral-vortex/tests/navigator.rs` — `navigator.language` returns `"en-US"` when `SpiralConfig::base_locale` is `"en-US"`; `navigator.languages` is `[base, "en"]` per Chrome convention; `setter` updates the per-origin list.
+  - **End-to-end surface:** `vortex_eval("navigator.language")` returns `Ok(JsValue::String("en-US"))`; `vortex_eval("navigator.languages[0]")` returns `Ok(JsValue::String("en-US"))`.
+  - **ADR required:** NO (per ADR-0007).
+  - **Architecture doc:** `docs/architecture/vortex.md` (builtins section).
+- [ ] **Packet 2.9.2** — `<html lang>` / `xml:lang` attribute reflection.
+  - **Spec:** HTML Living Standard §15.1.2 (the `lang` attribute) + §15.2.2 (the `xml:lang` attribute). Both map to `HTMLElement.lang` IDL getter/setter.
+  - **Crates affected:** `spiral-dom` (add `lang: Option<String>` to `Element`), `spiral-fmt` (populate on parse), `spiral-vortex` (IDL reflection via new builtins or `Element` accessor).
+  - **Call sites expected:** `spiral-fmt::html::tree::TreeBuilder` writes `lang` into the new `Element` field on `</html>` end-tag; `spiral_dom::Element::lang` getter returns the attribute value; `vortex_eval("document.documentElement.lang")` reads it.
+  - **Tests expected:** `crates/spiral-fmt/tests/lang.rs` — `<html lang="ja"></html>` produces `Element { lang: Some("ja") }`; `xml:lang` is the same field; missing attr returns `None`.
+  - **End-to-end surface:** `parse_html("<html lang='ja'></html>").root_element().lang == Some("ja".to_string())`.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/fmt.md`.
+- [ ] **Packet 2.9.3** — Character encoding detection (BOM, `<meta charset>`, `Content-Type: charset=`).
+  - **Spec:** WHATWG Encoding Standard §4 "Output encodings" + §6 "Browser UI"; HTML Living Standard §13.1.1 "The InputEncoding" (encoding sniffing algorithm).
+  - **Crates affected:** `spiral-fmt` (new `encoding` module; rewires `parse_html` to decode bytes before tokenisation).
+  - **Call sites expected:** `spiral_fmt::parse_html(bytes: &[u8])` is the new primary entry point; the existing `parse_html(&str)` is preserved as a thin UTF-8 wrapper that delegates. `crates/spiral-fmt/src/lib.rs:73` adds a sibling entry.
+  - **Tests expected:** `crates/spiral-fmt/tests/encoding.rs` — UTF-8 (BOM + no BOM), UTF-16 LE/BE (BOM-detected), Shift_JIS (from `<meta charset="Shift_JIS">`), ISO-8859-1 (from `<meta http-equiv>`), GBK (from Content-Type via the network stub at `crates/spiral-network/src/response.rs`).
+  - **End-to-end surface:** `parse_html(&b"<html><head><meta charset='Shift_JIS'></head><body>\x83\x41</body></html>".to_vec())` returns a DOM whose body text decodes to `"ア"`.
+  - **ADR required:** NO (`encoding_rs` is already on the dependency shortlist per ADR-0007).
+  - **Architecture doc:** `docs/architecture/fmt.md` (constraints section update).
+- [ ] **Packet 2.9.4** — `TextEncoder` / `TextDecoder` builtins (UTF-8 default).
+  - **Spec:** Web Encoding Standard §4.1 (`TextDecoder`) and §4.2 (`TextEncoder`).
+  - **Crates affected:** `spiral-vortex` (new builtins module `encoding.rs`).
+  - **Call sites expected:** `crates/spiral-vortex/src/builtins/encoding.rs` registers `TextEncoder` and `TextDecoder` on the `window` global; `vortex_eval("new TextDecoder().decode(new Uint8Array([65,66]))")` returns `Ok(JsValue::String("AB"))`.
+  - **Tests expected:** `crates/spiral-vortex/tests/text_encoding.rs` — `TextEncoder` UTF-8 round-trips ASCII; `TextDecoder` accepts `'utf-8'` label; `fatal: true` throws on invalid bytes; `TextEncoder().encoding === 'utf-8'`.
+  - **End-to-end surface:** `vortex_eval("new TextDecoder('utf-8', {fatal: true}).decode(new Uint8Array([0xC0]))")` returns `Err(VortexError::Throw)`.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/vortex.md`.
+
+### Step 2.10 — Text infrastructure (line break + bidi + normalisation)
+> **Scope rationale.** Continues the table-stakes bet. Wires Rust
+> crates for UAX #9 (bidi), UAX #14 (line break), UAX #15
+> (normalisation), UAX #11 (East Asian Width). All four feed
+> Gyre's text-shape pass in Step 2.11.
+- [ ] **Packet 2.10.1** — Unicode bidi (UAX #9) via `unicode-bidi`.
+  - **Spec:** UAX #9 Unicode Bidirectional Algorithm; CSS Text 3 §9.1 `direction` + §9.2 `unicode-bidi`.
+  - **Crates affected:** `spiral-gyre` (new `text/bidi.rs` module); workspace dep `unicode-bidi`.
+  - **Call sites expected:** `spiral_gyre::LayoutEngine::text_bidi_pass` is called after layout for every text node with a `direction: rtl` style or any RTL code point. `crates/spiral-gyre/src/lib.rs` adds the call.
+  - **Tests expected:** `crates/spiral-gyre/tests/bidi.rs` — `"a\u{0627}b"` (Arabic between Latin) resolves to visual order `[a, Arabic, b]`; `direction: rtl` reverses the whole line; `unicode-bidi: embed` keeps the parent direction; `dir="auto"` heuristic chooses RTL when the first strong char is Arabic.
+  - **End-to-end surface:** Running `parse_html("<div dir='rtl'>abc</div>")` then `LayoutEngine::layout` returns a `LayoutNode` whose `text_run[0].visual_order` is `[2, 1, 0]`.
+  - **ADR required:** NO (crate choice pre-cleared by ADR-0007).
+  - **Architecture doc:** `docs/architecture/gyre.md` (text shape section).
+- [ ] **Packet 2.10.2** — Line breaking (UAX #14) via `linebreak`.
+  - **Spec:** UAX #14 Line Breaking Properties; CSS Text 3 §5 `word-break`, §6 `line-break`, §7 `overflow-wrap`, §8 `hyphens`.
+  - **Crates affected:** `spiral-gyre` (new `text/linebreak.rs`); workspace dep `linebreak`.
+  - **Call sites expected:** `spiral_gyre::text::line_break_breaks(text: &str, style: &ComputedStyle) -> Vec<BreakOpportunity>` consumed by the layout iterator. `crates/spiral-gyre/src/text/mod.rs` (new module) owns the wiring.
+  - **Tests expected:** `crates/spiral-gyre/tests/linebreak.rs` — `"hello world"` breaks between `o` and `w`; `"hello\u{00A0}world"` (NBSP) does NOT break; CSS `word-break: break-all` breaks between any two ideographs; `hyphens: auto` adds break opportunities at soft hyphens.
+  - **End-to-end surface:** A `LayoutNode` containing `"hello world"` rendered into a 40 px wide box has at least one `BreakOpportunity` between `o` and `w`.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/gyre.md`.
+- [ ] **Packet 2.10.3** — Unicode normalisation (NFC, NFD, NFKC, NFKD) via `unicode-normalization`.
+  - **Spec:** UAX #15 Unicode Normalization Forms; Web IDL `String.prototype.normalize(form)` (ECMA-262 §22.1.3.13).
+  - **Crates affected:** `spiral-vortex` (extend `String` builtins with `normalize`); workspace dep `unicode-normalization`.
+  - **Call sites expected:** `crates/spiral-vortex/src/builtins/string.rs` adds the `normalize` method; `vortex_eval("'é'.normalize('NFC').length")` returns `Ok(JsValue::Number(1.0))` for precomposed, `2.0` for decomposed on `'e\u{0301}'`.
+  - **Tests expected:** `crates/spiral-vortex/tests/normalize.rs` — NFC, NFD, NFKC, NFKD round-trips; invalid form string throws RangeError; default form is NFC.
+  - **End-to-end surface:** `vortex_eval("'\\u00e9'.normalize()")` returns `Ok(JsValue::String("\u00e9"))`; `vortex_eval("'\\u0065\\u0301'.normalize('NFC')")` returns `Ok(JsValue::String("\u00e9"))`.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/vortex.md`.
+- [ ] **Packet 2.10.4** — East Asian Width (UAX #11) via `unicode-width`.
+  - **Spec:** UAX #11 East Asian Width; affects CSS `text-align: justify` and tab-stop calculations.
+  - **Crates affected:** `spiral-gyre` (text justification module); workspace dep `unicode-width`.
+  - **Call sites expected:** `spiral_gyre::text::ea_width(c: char) -> u8` consumed by the justification pass. `crates/spiral-gyre/src/text/justify.rs` (new) is the consumer.
+  - **Tests expected:** `crates/spiral-gyre/tests/justify.rs` — East Asian width of `'あ'` is 2; `'A'` is 1; mixed-width justification distributes extra space by EAW weight.
+  - **End-to-end surface:** `LayoutNode` for `"Aあ"` with `text-align: justify` in a wide box has inter-word spacing of 0 and inter-character spacing > 0 (per CSS Text 3).
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/gyre.md`.
+
+### Step 2.11 — Complex text layout (rustybuzz integration)
+> **Scope rationale.** The single biggest i18n gap closer.
+> Wires Servo's pure-Rust HarfBuzz port (`rustybuzz`) for
+> Indic, Arabic, Hebrew, Thai, Khmer shaping. Rows 71 and
+> partial coverage of row 88 (OpenType features) on
+> `docs/research/09-i18n-engine.md`. See ADR-0007 for the
+> crate-choice rationale.
+- [ ] **Packet 2.11.1** — `rustybuzz` dependency + `Face`/`Buffer` wrapper in `spiral-gyre::text::shaper`.
+  - **Spec:** OpenType Layout (`OTL`) — GSUB/GPOS tables consumed via the HarfBuzz API surface that `rustybuzz` mirrors. Script tags per ISO 15924; language tags per ISO 639-2.
+  - **Crates affected:** `spiral-gyre` (new `text/shaper.rs`); workspace dep `rustybuzz` (default off behind a `harfbuzz` feature flag per ADR-0007).
+  - **Call sites expected:** `spiral_gyre::text::shaper::shape(text: &str, face_id: FaceId, script: Script, lang: Language) -> Vec<Glyph>` consumed by the layout iterator at `crates/spiral-gyre/src/lib.rs:36` (the `layout()` walk).
+  - **Tests expected:** `crates/spiral-gyre/tests/shape.rs` — Bengali conjunct `ক্ষ` (U+0995 U+09CD U+09B7) shapes to a single glyph cluster; Arabic `الْعَرَبِيَّةُ` produces 8 glyphs with correct diacritic positions; Hebrew `שלום` produces 4 glyphs LTR.
+  - **End-to-end surface:** A `LayoutNode` containing `"שלום"` has `glyphs.len() == 4` and a `LayoutNode` containing `"الْعَرَبِيَّةُ"` has `glyphs.len() == 8`.
+  - **ADR required:** NO (pre-cleared by ADR-0007).
+  - **Architecture doc:** `docs/architecture/gyre.md` (text shape section rewrite).
+- [ ] **Packet 2.11.2** — Script detection per ICU layout.
+  - **Spec:** UAX #24 Unicode Script Property; ISO 15924.
+  - **Crates affected:** `spiral-gyre` (new `text/script.rs`); workspace dep `unicode-script`.
+  - **Call sites expected:** `spiral_gyre::text::script::detect(text: &str) -> Script` called by the shaper's auto-script path.
+  - **Tests expected:** `crates/spiral-gyre/tests/script.rs` — `"שלום"` → `Hebrew`; `"अरे"` → `Devanagari`; `"あ"` → `Hiragana`; mixed-script returns the first non-Common script per UAX #24.
+  - **End-to-end surface:** `detect("שלום") == Script::Hebrew`.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/gyre.md`.
+- [ ] **Packet 2.11.3** — Script-aware font fallback.
+  - **Spec:** CSS Fonts 4 §5 "Font matching algorithm" + §6 "Font fallback".
+  - **Crates affected:** `spiral-gyre` (extend `shaper.rs`); `spiral-render` (register Noto family in the default font stack).
+  - **Call sites expected:** `spiral_gyre::text::shaper::shape_with_fallback(text, faces) -> Vec<Glyph>` iterates the configured face stack, picks the first face that contains the code point's script, and shapes with that face.
+  - **Tests expected:** `crates/spiral-gyre/tests/font_fallback.rs` — a Hebrew char in an ASCII-only face falls through to the Hebrew face; mixed script text breaks per-script.
+  - **End-to-end surface:** A `LayoutNode` containing `"Aש"` has two glyph runs, the first tagged `face_ascii`, the second `face_hebrew`.
+  - **ADR required:** NO.
+  - **Architecture doc:** `docs/architecture/gyre.md`.
+
+### Step 2.12 — Internationalised hostnames (IDNA + URL handler)
+> **Scope rationale.** Closes row 73 of
+> `docs/research/09-i18n-engine.md`. Wires the `idna` crate to
+> the new `URL` parser in Packet 2.7.1. Replaces the W3C/ICU
+> `uts46` map with the maintained `idna` crate (which itself
+> uses the UTS #46 data).
+- [ ] **Packet 2.12.1** — IDNA 2008 + UTS #46 via `idna`.
+  - **Spec:** RFC 5890-5894 (IDNA 2008) + UTS #46 Unicode IDNA Compatibility Processing. The `URL` host parser (Packet 2.7.1) uses this for any non-ASCII host.
+  - **Crates affected:** `spiral-fmt` (extend the URL parser module — currently in `crates/spiral-fmt/src/` pending the 2.7.1 landing) or `spiral-net` (depends on Packet 2.7.1 ownership); workspace dep `idna`.
+  - **Call sites expected:** The URL host parser calls `idna::domain_to_ascii(host) -> Result<...>` for non-ASCII inputs and the UTS #46 `ToASCII` map for ASCII edge cases (`XN--` prefix decode). Whichever crate owns 2.7.1 gets the new dep edge.
+  - **Tests expected:** `crates/spiral-fmt/tests/idna.rs` (or `spiral-net/tests/idna.rs` if 2.7.1 lands in `spiral-net`) — `"bücher.de"` → `"xn--bcher-kva.de"`; `"☃.com"` (U+2603) → processed via UTS #46 with deviation characters; idempotent on round-trip.
+  - **End-to-end surface:** `parse_url("https://bücher.de/path")` returns `Url { host: "xn--bcher-kva.de", ascii_host: true, ... }`.
+  - **ADR required:** NO (per ADR-0007).
+  - **Architecture doc:** `docs/architecture/fmt.md` (URL section) or `net.md` (depending on Packet 2.7.1 ownership).
+
 ### Wiring & Integration (Phase 2)
 
 - **Crates affected:** `spiral-fmt` (HTML), `spiral-dom`, `spiral-vortex` (JS stdlib).
-- **Call sites:** `spiral-fmt::html::parse_html_fragment(ctx, html)` consumed by `spiral-dom` setters and by Vortex `Element.innerHTML` setter.
+- **Call sites:** `spiral_fmt::html::parse_html_fragment(ctx, html)` consumed by `spiral-dom` setters and by Vortex `Element.innerHTML` setter.
 - **Test coverage:** WPT per-packet; one WPT sub-suite per Step.
 - **End-to-end surface:** `./justfile wpt-fmt` runs the HTML/WPT subset.
+
+#### Wiring & Integration (Steps 2.9–2.12, table-stakes i18n)
+
+- **Crates affected:** `spiral-vortex` (Vortex builtins `navigator`, `TextEncoder`/`TextDecoder`, `String.prototype.normalize`), `spiral-dom` (`lang` field), `spiral-fmt` (encoding detection module, IDNA host parser), `spiral-gyre` (bidi/linebreak/normalisation/EAW/shaper/script-detection modules), `spiral-render` (default Noto font stack).
+- **Call sites:**
+  - `crates/spiral-vortex/src/builtins/navigator.rs` (new) registers `Navigator` on the `window` global.
+  - `crates/spiral-vortex/src/builtins/encoding.rs` (new) registers `TextEncoder`/`TextDecoder` on the `window` global.
+  - `crates/spiral-vortex/src/builtins/string.rs` extends `String.prototype` with `normalize`.
+  - `spiral_fmt::html::tree::TreeBuilder` writes `lang` into `Element.lang` on `</html>` end-tag.
+  - `spiral_fmt::parse_html` accepts `&[u8]` (BOM + meta-sniff + Content-Type decode).
+  - `spiral_gyre::LayoutEngine::text_bidi_pass`, `text::linebreak::breaks`, `text::shaper::shape`, `text::script::detect` are called by the layout iterator at `crates/spiral-gyre/src/lib.rs:36`.
+  - `spiral_net::Url::parse` (Packet 2.7.1 surface) calls `idna::domain_to_ascii` for non-ASCII hosts.
+- **Test coverage:**
+  - `crates/spiral-vortex/tests/{navigator.rs,text_encoding.rs,normalize.rs}` — JS IDL surface.
+  - `crates/spiral-fmt/tests/{lang.rs,encoding.rs,idna.rs}` — HTML attribute, byte-decoding, IDNA host.
+  - `crates/spiral-gyre/tests/{bidi.rs,linebreak.rs,justify.rs,shape.rs,script.rs,font_fallback.rs}` — text-shape pipeline.
+  - WPT subsets: `./justfile wpt-fmt` (lang, encoding), `./justfile wpt-vortex` (`navigator.language`), `./justfile wpt-gyre` (CSS `direction`, `word-break`, `hyphens`).
+- **End-to-end surface:** A smoke test under `crates/spiral-browser/tests/i18n_smoke.rs` (new) loads a fixture page with `<html lang="ja">` containing a Hebrew+Bengali+Latin string into a 60 px box and asserts that (a) `navigator.language` returns `"en-US"`, (b) `document.documentElement.lang` returns `"ja"`, (c) the layout tree contains four glyph runs tagged per-script per the fallback chain, and (d) the host parser accepts `https://bücher.de` and stores the ASCII-encoded form.
+- **Audit expectation:** `./scripts/audit-orphan-exports.sh` must exit 0 after every packet; the `harfbuzz` feature flag on `spiral-gyre` (ADR-0007) keeps the `rustybuzz` dep off the default build.
 
 ---
 
