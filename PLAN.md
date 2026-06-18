@@ -6,6 +6,7 @@
 > **Target platforms:** Windows, macOS, Linux
 > **Scope:** Full production browser, 6–8 year horizon
 > **Status:** Alpha. Phase 0 complete. Phase 1.5 (SSOT Restructure) shipped at `v0.0.0-bootstrap`. Phase 1 in flight.
+> **Methodology:** LLM-assisted, human-directed, adversarially reviewed. See [`docs/methodology.md`](docs/methodology.md).
 
 ---
 
@@ -27,12 +28,14 @@ Spiral exists to be a fourth engine — different in architecture, auditable in 
 4. **Capability-typed page context.** A research-grade runtime (Filter + Context) that gates cross-origin and sensitive operations at compile time.
 5. **A working browser, eventually.** Phase 1 ships a render-only browser. Phase 9 ships a production browser.
 6. **Open source, MPL-2.0, day one.** Every commit, every decision, every metric — public.
+7. **Open methodology.** The way Spiral is built — LLM-assisted, human-directed, adversarially reviewed, with a public failure log — is part of the project. See [`docs/methodology.md`](docs/methodology.md).
 
 ### Non-aims
 
 - **Performance leadership.** We are not faster than V8. We are not aiming to be. We are aiming to be *correct*, *independent*, and *inspectable*.
 - **A privacy browser.** Privacy is a use case the capability types *enable*; we are not building it in the engine.
 - **A drop-in Chrome replacement.** Sites that depend on Chrome-only Web Platform features will not work. We track the standards, not the implementation shortcuts.
+- **A hand-coded artefact.** Spiral is LLM-assisted. We are not Ladybird. We are not claiming craftsmanship as our selling point. We are claiming a methodology.
 - **A proprietary codebase.** Everything is public.
 
 ---
@@ -45,6 +48,7 @@ Spiral exists to be a fourth engine — different in architecture, auditable in 
 4. **Per-packet completeness.** A `pub` symbol is not done when it compiles; it is done when an external consumer uses it. The `audit-orphan-exports.sh` gate enforces this. See `docs/decisions/0006-cross-cutting-features.md`.
 5. **The brand belongs to the engine.** A new engine gets a name. A wire protocol does not.
 6. **Honest novelty claims.** Any claim of "novel", "first", "unique", "no prior art" is verified by a research agent before committing. The M4 audit methodology is the canonical standard.
+7. **Adversarial review over single-author trust.** Every change lands through review — human, mechanical, or both. The audit scripts are the floor, not the ceiling. See [`docs/methodology.md`](docs/methodology.md) §5.
 
 ---
 

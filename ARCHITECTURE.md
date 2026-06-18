@@ -12,6 +12,10 @@
 
 Spiral is a multi-process, multi-threaded web browser. The browser process owns the tab manager, IPC router, UI chrome, and configuration. Each tab runs in a separate renderer process. Networking and GPU run in dedicated processes.
 
+> Spiral is built with LLM assistance under human direction. The
+> methodology is documented at [`docs/methodology.md`](docs/methodology.md)
+> and is part of the project.
+
 The render path is **100% safe Rust** end-to-end. The only `unsafe` in the tree is in audited dependencies and in FFI shims with narrow surface area (Vello's wgpu integration, the image decoder's codec bindings, the OS sandbox syscalls).
 
 Three in-house engines carry the Spiral brand:

@@ -1,14 +1,15 @@
 # Active Context
 
-**Last updated:** 2026-06-17
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · Doc-drift prevention and wiring audit fully green (0 findings)
+**Last updated:** 2026-06-18
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅, Packet 2.1.3 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · **Methodology + failure log SHIPPED** (chunk 11 prior-art survey, `docs/methodology.md`, `docs/failures/`) · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
-*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packet 2.1.1 ✅)*
+*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packets 2.1.1 ✅, 2.1.2 ✅, 2.1.3 ✅)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 **Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
 **SSOT surface:** `docs/glossary.md`, `docs/decisions/`, `docs/agents/`, `docs/architecture/`, `docs/system_architecture.md`, `.spiral/rules/`
 **Architecture bet:** [`docs/architecture/design/shared-everything.md`](architecture/design/shared-everything.md)
+**Methodology:** [`docs/methodology.md`](../docs/methodology.md) (LLM-assisted, human-directed, adversarially reviewed). Failure log: [`docs/failures/`](../docs/failures/). Prior-art survey: [`docs/research/11-llm-assisted-prior-art.md`](../docs/research/11-llm-assisted-prior-art.md).
 
 ## Test posture (verified 2026-06-16)
 

@@ -13,6 +13,11 @@ paths:
 > Where this file and `AGENTS.md` disagree, this file wins for
 > architecture-specific questions; `workflow.md` wins for
 > "what tool, when".
+>
+> Spiral is built with LLM assistance under human direction. The
+> architecture is the result of the methodology. The methodology is
+> not derived from the architecture. See
+> [`docs/methodology.md`](../docs/methodology.md).
 
 ## Workflow Tools (mandatory)
 

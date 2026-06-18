@@ -2,9 +2,11 @@
 
 ![Spiral Browser Logo](resources/icons/logo.png)
 
-> **A fully independent web browser, built from scratch in Rust.**
+> **A fully independent web browser, built from scratch in Rust — LLM-assisted, human-directed, adversarially reviewed.**
 > Not based on Chromium. Not based on WebKit. Not based on Gecko.
 > Every engine we ship carries the Spiral brand.
+>
+> **Methodology:** [`docs/methodology.md`](docs/methodology.md) · **Website:** [spiralbrowser.com](https://spiralbrowser.com)
 
 ---
 
@@ -24,6 +26,7 @@ The bet is straightforward: building a from-scratch browser in 2026 is feasible,
 - **Capability-typed page context.** Every cross-origin or sensitive operation is gated by a compile-time-checked capability. A page cannot reach the network unless it holds a `Network` capability. This is the *Filter* and *Context* work — research-grade in 2026, but the design is end-state.
 - **A working browser, eventually.** Spiral is a real product, not a research project. The Phase 1 line delivers a browser that can render HTML+CSS and run trivial JavaScript. The Phase 2 line delivers DOM depth. The Phase 5 line delivers the capability-typed runtime. The Phase 9 line ships the production browser.
 - **Open source, MPL-2.0.** All code is published. All decisions are ADRs. All progress is in the public ledger.
+- **Open methodology.** The way Spiral is built — LLM-assisted, human-directed, adversarially reviewed, with a public failure log — is part of the project. See [`docs/methodology.md`](docs/methodology.md) for the full description and the audit-script enforcement layer that makes it operative.
 
 ### Non-goals
 
@@ -31,6 +34,7 @@ The bet is straightforward: building a from-scratch browser in 2026 is feasible,
 - **Not a privacy browser.** Spiral is a general-purpose browser. The capability types *enable* a strong privacy story; we are not building one in the engine itself.
 - **Not a drop-in Chrome replacement.** Sites that depend on Chrome-only Web Platform features will not work. We track the standards, not the implementation shortcuts.
 - **Not a proprietary codebase.** Everything is public from day one. There is no private fork.
+- **Not a benchmark on the AI axis.** We are not claiming the AI does the work, nor that the human does the work. The methodology is documented; the result is the result. If you read the code and find a bug, file an issue. If you read the methodology and find a flaw, file an issue.
 
 ### Core principles
 
@@ -39,6 +43,8 @@ The bet is straightforward: building a from-scratch browser in 2026 is feasible,
 3. **Memory safety as architecture, not patch.** No `unsafe` in the engines. No `unsafe` in the parser. `unsafe` only at the FFI boundary, and every `unsafe` block has a safety comment.
 4. **Per-packet completeness.** A `pub` symbol is not done when it compiles; it is done when an external consumer uses it. The `audit-orphan-exports.sh` gate enforces this.
 5. **The brand belongs to the engine.** A new engine gets a name. A wire protocol does not.
+6. **Adversarial review over single-author trust.** Every change lands through review — human, mechanical, or both. The audit scripts are the floor, not the ceiling. See [`docs/methodology.md`](docs/methodology.md) §5.
+7. **Honest failure log over polished reputation.** LLM-specific mistakes are recorded in [`docs/failures/`](docs/failures/) when they are caught. The methodology is grounded in the failures, not in the absence of them.
 
 ---
 
@@ -184,6 +190,10 @@ CI runs 11 jobs on every push to `main` and on every PR: `fmt`, `clippy` × 3 OS
 | [`SECURITY.md`](SECURITY.md) | Vulnerability disclosure policy and supported versions. |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to land a packet, run the gates, name a branch, open a PR. |
 | [`LICENSE`](LICENSE) | MPL-2.0 licence terms. |
+| [`docs/methodology.md`](docs/methodology.md) | How Spiral is built: LLM-assisted, human-directed, adversarially reviewed. Single source of truth for the methodology. |
+| [`docs/failures/`](docs/failures/) | Public failure log: LLM-specific mistakes the project has caught, fixed, and documented. |
+| [`docs/research/11-llm-assisted-prior-art.md`](docs/research/11-llm-assisted-prior-art.md) | Prior-art survey for the methodology framing. Evidence base for the novelty-gate check. |
+| [spiralbrowser.com](https://spiralbrowser.com) | Marketing site. AGPL-3.0. Cloudflare Pages. |
 
 ### Build and operation
 

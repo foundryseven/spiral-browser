@@ -113,4 +113,17 @@ specific keyword (e.g. a CSS property name) keep the spec spelling.
 - Crate-level doc comment on the crate root with: purpose, the
   public surface, the "owns" types, the consumers.
 
+## AI-assisted commits
+
+Spiral is LLM-assisted (see [`docs/methodology.md`](../docs/methodology.md)).
+Commits produced with LLM assistance MUST add a
+`Assisted-by: <model>` footer to the commit body. The footer is a
+transparency signal, not a stigma. Example:
+`Assisted-by: Claude Opus 4.7`. Human-authored commits do not need
+the footer.
+
+The commit-message type/scope table in `AGENTS.md` § Commit Messages
+is unchanged. The `Assisted-by:` line is added to the body, not to
+the type/scope table.
+
 Borrowed 2026-06-16 from the Zeus repo's `.zeus/rules/coding-standards.md`.

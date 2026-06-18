@@ -18,6 +18,7 @@
 - **Scope:** Independent browser. Not Chromium, not WebKit, not Gecko. Three in-house engines: **Gyre** (layout), **Vortex** (JavaScript), **Fmt** (HTML+CSS parsers).
 - **Workspace:** 20 crates
 - **CI:** 11 jobs on every push to `main` and on every PR (`.github/workflows/ci.yml`)
+- **Methodology:** LLM-assisted, human-directed, adversarially reviewed. See [`docs/methodology.md`](docs/methodology.md).
 
 | Status (SSOT) | File |
 |---------------|------|
@@ -26,6 +27,8 @@
 | Live phase state | [`docs/active_context.md`](docs/active_context.md) |
 | Why was X decided? | [`docs/decisions/`](docs/decisions/) (ADRs) |
 | Engine brand identity | [`docs/glossary.md`](docs/glossary.md) |
+| Methodology | [`docs/methodology.md`](docs/methodology.md) |
+| Failure log | [`docs/failures/`](docs/failures/) |
 | Workflow contract | [`AGENTS.md`](AGENTS.md) |
 | Rule files | [`.spiral/rules/`](.spiral/rules/) |
 | Role contracts | [`docs/agents/`](docs/agents/) |

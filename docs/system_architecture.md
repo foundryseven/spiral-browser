@@ -19,6 +19,13 @@ and is the in-flight decision. The canonical `ARCHITECTURE.md` does not yet
 reflect it; this delta file is authoritative for the new design until the
 canonical doc is updated.
 
+> **Methodology.** Spiral's architecture is the result of an
+> LLM-assisted, human-directed, adversarially-reviewed methodology.
+> The methodology is documented at
+> [`docs/methodology.md`](methodology.md) and is part of the
+> project. The architecture is downstream of the methodology, not
+> the other way around.
+
 ---
 
 ## Per-subsystem architecture

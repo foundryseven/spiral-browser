@@ -243,6 +243,14 @@ fork is wider than a single-crate bug fix, write the
 ADR. **The ADR is in the same commit as the
 implementation, not in a follow-up commit.**
 
+> **AI-assisted commits.** Spiral is LLM-assisted (see
+> [`docs/methodology.md`](../../docs/methodology.md)). Commits
+> produced with LLM assistance SHOULD add a
+> `Assisted-by: <model>` footer to the commit body. The
+> footer is a transparency signal, not a stigma. Human-authored
+> commits do not need the footer. The rule lives in
+> `.spiral/rules/coding-standards.md` § AI-assisted commits.
+
 ---
 
 ## 5. The Verification Checklist

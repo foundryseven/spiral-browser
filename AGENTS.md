@@ -4,6 +4,18 @@ This document tells LLM agents how to work on the Spiral Browser codebase.
 Global developer instructions are in `~/.config/opencode/AGENTS.md` (read-only,
 do not override).
 
+> **Methodology.** Spiral is LLM-assisted, human-directed, adversarially
+> reviewed, and test-verified. The single source of truth for the
+> methodology is [`docs/methodology.md`](docs/methodology.md). The
+> failure log is [`docs/failures/`](docs/failures/). The prior-art
+> survey is [`docs/research/11-llm-assisted-prior-art.md`](docs/research/11-llm-assisted-prior-art.md).
+>
+> Note: the "no-code-agentic" framing in this file refers to the *user*
+> (the human operates the workflow via the agent). The *project* is
+> LLM-assisted in a different sense (the implementation is produced
+> with LLM assistance under human direction). These are different
+> statements. The methodology doc covers the second.
+
 ---
 
 ## Workflow Discipline (Compulsory)
@@ -230,12 +242,21 @@ Scopes: core, ipc, fmt, css, gyre, render, dom, vortex, net, network, ui, theme,
 > were the pre-rename names. Use `vortex` and `gyre` instead. Old commits
 > stay unchanged for traceability.
 
+**AI-assisted commits.** Spiral is LLM-assisted (see
+[`docs/methodology.md`](docs/methodology.md)). Commits produced with
+LLM assistance SHOULD add a `Assisted-by: <model>` footer to the
+commit body. The footer is a transparency signal, not a stigma.
+Example: `Assisted-by: Claude Opus 4.7`. Human-authored commits do
+not need the footer.
+
 Example:
 ```
 feat(gyre): implement flex container alignment
 
 Added flex-start, center, flex-end alignment for the main axis.
 Works for both horizontal and vertical axes.
+
+Assisted-by: Claude Opus 4.7
 ```
 
 ### Wiring & Integration

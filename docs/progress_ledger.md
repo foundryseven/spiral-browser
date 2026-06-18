@@ -4706,3 +4706,52 @@ identified. Key findings:
   - `docs/progress_ledger.md` — this entry.
 - **Status:** Public-facing doc overhaul shipped. The eight root docs are now consistent in brand voice, project narrative, and cross-references. A new contributor or LLM agent can land on `README.md`, follow the `## Project documents` table, and reach every relevant doc with one click. The `## Workflow` table in `README.md` and the `## Workflow tools (canonical surface)` section in `CODEX.md` are the two primary entry points for the agent-driven workflow contract.
 
+
+## 2026-06-18 — Methodology, failure log, prior-art survey, and root-doc cross-refs
+
+- **What:** The Spiral project markets itself as LLM-assisted, human-directed, adversarially reviewed, and test-verified. The eight public-facing root docs (rewritten 2026-06-18) made no commitment to that framing. The audit chain (audit-orphan-exports.sh, audit-doc-drift.sh) is the enforcement layer that makes the methodology operative, but the methodology itself was undocumented. This packet adds the methodology doc, the public failure log, the prior-art survey, and the cross-references from the eight root docs.
+- **Files changed (12):**
+  - `docs/methodology.md` — new, 9 sections. Position, model, what the human decides, what the AI does, adversarial review (human + mechanical), test-and-regression discipline, named failures, what this is not (cites Ladybird and FastRender as prior art), what this commits to. The single source of truth for the methodology.
+  - `docs/failures/README.md` — new, the schema for the public failure log (file naming, body schema, the three categories that have emerged: wiring leaks, third-party-crate dependence, vocabulary drift).
+  - `docs/failures/2026-06-18-001-render-node-id.md` — new, the first entry. `spiral-core::RenderNodeId` was over-published with no external consumer; caught by audit-orphan-exports.sh on its first run during the M4.4 SSOT restructure; fixed in commit 19dcf9e by adding tests/spiral-core-surface.rs with 3 integration tests.
+  - `docs/research/11-llm-assisted-prior-art.md` — new, the prior-art survey that grounds the novelty-gate check. Two prior projects cited: Ladybird (Kling, 2026-02-23) and FastRender (Lin / Cursor, 2026-01). The narrow novelty claim that survives — first browser to enforce the LLM-assisted methodology by audit-script CI on every commit — is the load-bearing claim.
+  - `README.md` — added methodology + adversarial review + honest failure log principles (7th goal, 5th non-goal, principles 6 and 7). Added a project-doc row for docs/methodology.md, docs/failures/, docs/research/11-llm-assisted-prior-art.md, and the spiralbrowser.com marketing site.
+  - `AGENTS.md` — added a top-of-file methodology cross-ref that distinguishes the "user is no-code-agentic" framing (workflow) from the "project is LLM-assisted" framing (authorship). Added an AI-assisted-commits section to the Commit Messages block: the Assisted-by: <model> footer is a transparency signal, not a stigma.
+  - `PLAN.md` — added the methodology to the project header, added a 7th aim (open methodology), added a 4th non-aim (not a hand-coded artefact), added a 7th principle (adversarial review).
+  - `ROADMAP.md` — added a one-line methodology callout under the "shape of the project" header.
+  - `CODEX.md` — added the methodology to the "Project at a glance" block and to the SSOT surface table.
+  - `ARCHITECTURE.md` — added a one-sentence methodology note in §1.
+  - `docs/system_architecture.md` — added a methodology blockquote under the "Current Architecture" header.
+  - `docs/active_context.md` — added a Methodology row to the header pointing at docs/methodology.md, docs/failures/, and docs/research/11-llm-assisted-prior-art.md. Updated the Last-updated and Status lines to reflect the new packet.
+  - `.spiral/rules/coding-standards.md` — added the AI-assisted-commits rule with the Assisted-by: <model> footer policy. Opt-in per author.
+  - `.spiral/rules/architecture.md` — added a one-line methodology cross-ref at the top.
+  - `docs/agents/implementer.md` — added a cross-ref to the coding-standards AI-assisted-commits rule, satisfying the R5 tool-coverage gate.
+- **What was deliberately left alone:**
+  - **The 7 rule files themselves** — no changes other than the methodology cross-refs in `coding-standards.md` and `architecture.md`. The rule-file rewrite was R3 and is shipped; re-touching it would be churn.
+  - **`docs/implementation_tracker.md`** — no new packet. This is a doc-only change; the methodology is a project attribute, not a packet.
+  - **`docs/decisions/0007-i18n-table-stakes-bet.md`** — read but not modified. The methodology and the ADR are different documents; the ADR captures a specific decision, the methodology captures how the project is built.
+  - **The 8 public-facing root docs** (other than the methodology additions above) — the 2026-06-18 rewrite is shipped. Adding the methodology callouts to all 8 would have been bloat; only the 4 most public (README, AGENTS, PLAN, CODEX) plus ARCHITECTURE got the inline addition. The other 3 (CHANGELOG, SECURITY, CONTRIBUTING) reference the methodology through the README and AGENTS links.
+- **Wiring & Integration:**
+  - **Files affected (12):** see the file list above.
+  - **Call sites:** the methodology is referenced from `README.md:8` (hero blockquote), `AGENTS.md:9-16` (top-of-file note), `PLAN.md:9` (header), `ROADMAP.md:9` (shape of the project), `CODEX.md:21` (Project at a glance) and the SSOT surface table, `ARCHITECTURE.md:15` (§1), `docs/system_architecture.md:25-31` (Current Architecture), `docs/active_context.md:14` (header). The failure log is referenced from `README.md` and the methodology doc. The prior-art survey is referenced from the methodology doc §8.
+  - **Test coverage:** the methodology doc itself is not testable, but the audit-script enforcement that the doc commits to is testable. audit-orphan-exports.sh and audit-doc-drift.sh are the standing tests; an exit 1 from either is a build break. The first failure-log entry is a worked example.
+  - **End-to-end surface:** a reviewer opening the PR sees the methodology doc, the failure log, the prior-art survey, and the cross-reference updates. A hostile reviewer can verify the prior art by following the URLs in docs/research/11-llm-assisted-prior-art.md. A new contributor can find the methodology by following any of the cross-references in the root docs.
+- **Verification (pre-push):**
+  - `grep -nE 'docs/methodology.md'` README.md AGENTS.md PLAN.md ROADMAP.md CODEX.md ARCHITECTURE.md docs/system_architecture.md docs/active_context.md ✓ all 8 docs reference the methodology.
+  - `grep -nE 'docs/failures/'` README.md AGENTS.md docs/methodology.md docs/active_context.md ✓ all 4 reference the failure log.
+  - `grep -nE 'docs/research/11-llm-assisted' README.md AGENTS.md docs/methodology.md docs/active_context.md ✓ all 4 reference the prior-art survey.
+  - `just verify-fast` ✓ all green.
+  - `just verify-rules` ✓ nightly clippy + both audits green.
+  - `audit-orphan-exports.sh` ✓ 0 orphans across 20 crates.
+  - `audit-orphan-exports.sh --tool-coverage` ✓ every tool is named in a rule.
+  - `audit-doc-drift.sh` ✓ 0 findings across 7 checks.
+- **SSOT updates:**
+  - `docs/methodology.md` — new.
+  - `docs/failures/README.md` + `docs/failures/2026-06-18-001-render-node-id.md` — new.
+  - `docs/research/11-llm-assisted-prior-art.md` — new.
+  - 8 root docs updated with cross-references.
+  - 2 rule files updated.
+  - 1 role contract updated (implementer.md).
+  - `docs/active_context.md` — header updated.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** Methodology, failure log, and prior-art survey shipped. The Spiral project now has a documented methodology that is grounded in research-verified prior art, a public failure log that demonstrates the methodology in practice, and audit-script enforcement that makes the methodology operative. The cross-references in the eight root docs make the methodology discoverable to any new contributor or LLM agent. The branch is ready to merge; the next-session implementer runs `bin/spiral-pr.sh chore/link-spiralbrowser-com` to push and open the PR.

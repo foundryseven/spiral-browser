@@ -6,6 +6,8 @@
 
 The roadmap vocabulary is **Group → Phase → Step → Packet**. The time-based `Month` / `Sprint` / `Chunk` / `Item` vocabulary is **retired** as of 2026-06-16. There are no calendar estimates.
 
+> **Methodology.** Spiral is LLM-assisted, human-directed, adversarially reviewed. The single source of truth is [`docs/methodology.md`](docs/methodology.md).
+
 ---
 
 ## The shape of the project
