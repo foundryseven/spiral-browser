@@ -4798,3 +4798,21 @@ identified. Key findings:
   3. PR #4 merge (the workflow file must be on main for the cron to trigger).
   After merge + secret setup, the bot's first run will target PR #3.
 
+---
+
+## 2026-06-18 — Spiral-Bot switched from Codacy to SonarQube Cloud
+
+- **What:** Replaced Codacy with SonarQube Cloud as the code-quality tool for Spiral-Bot. Codacy's v3 API does not expose commit-level findings programmatically (every endpoint shape returned 404 during API probing), and the AI Reviewer is gated behind a manual human click in the Codacy dashboard (`action_required` check-run status), which blocks automated merge-gate enforcement. SonarQube Cloud was chosen for: (1) self-serve free-for-OSS plan, (2) full Web API v1+v2 with bearer-token auth, (3) programmatic issue access via `GET /api/issues/search?componentKeys=&pullRequest=`, (4) quality-gate check-runs on PRs without manual intervention, (5) 345,437+ GitHub App installs (largest in the category). PR #3 was closed as superseded (the bot's architecture replaces the polling-loop workflow change). Codacy GitHub App was not removed from the repo yet — leaving it installed but unused is safer than interrupting the Codacy dashboard's audit history.
+- **Wiring & Integration:**
+  - **Files affected:** `bin/codacy-bot/` renamed to `bin/spiral-bot/`; `bin/spiral-bot/codacy.ts` deleted, replaced by `bin/spiral-bot/sonarqube.ts`; `bin/spiral-bot/__tests__/codacy.test.ts` deleted, replaced by `bin/spiral-bot/__tests__/sonarqube.test.ts`; `bin/spiral-bot/prompts/codacy-fix.md` deleted, replaced by `bin/spiral-bot/prompts/sonarqube-fix.md`; `.github/workflows/codacy-bot.yml` deleted, replaced by `.github/workflows/spiral-bot.yml`; `bin/spiral-bot/index.ts` and `bin/spiral-bot/package.json` updated to reference `SONAR_TOKEN` and `SONAR_PROJECT_KEY` instead of `CODACY_API_TOKEN`.
+  - **Call sites:** `bin/spiral-bot/index.ts` (orchestrator), `bin/spiral-bot/sonarqube.ts` (SonarQube Cloud API client at `https://sonarcloud.io/api/issues/search`).
+  - **Test coverage:** 15 tests across 3 test files. `classifyIssue` routing (6 tests: BLOCKER/CRITICAL/MAJOR → t2, MINOR/INFO/unknown → t1), `applyDiff` (7 tests), AI module smoke (2 tests). All pass with `bun test`.
+  - **End-to-end surface:** GitHub Actions cron (every 5 min) triggers `.github/workflows/spiral-bot.yml`. Workflow runs `bun run bin/spiral-bot/index.ts`. Bot lists open PRs via `GET /repos/{owner}/{repo}/pulls?state=open`, fetches SonarQube issues via `GET /api/issues/search?componentKeys=<project>&pullRequest=<n>&resolved=false&paged`, applies fixes via the GitHub Contents API, commits via `PUT /repos/{owner}/{repo}/contents/{path}`.
+- **Tests:** `bun test` in `bin/spiral-bot/` — 15 pass, 0 fail.
+- **SSOT updates:**
+  - `AGENTS.md` — Workflow Tools table now references `spiral-bot.yml` as the SonarQube merge gate enforcer. Prohibited behaviour updated: agent MUST NOT bypass SonarQube because Spiral-Bot drives it to green automatically.
+  - `bin/README.md` — `spiral-bot/` script documented alongside the other bin/ entries.
+  - `docs/active_context.md` — Spiral-Bot section updated to reflect the Codacy → SonarQube Cloud switch, with the rationale recorded.
+  - `docs/progress_ledger.md` — this entry.
+- **Status:** PR #4 still open at https://github.com/foundryseven/spiral-browser/pull/4. After merge + `OPENCODE_GO_API_KEY` + `SONAR_TOKEN` secrets set, the bot's first run targets the next open PR.
+

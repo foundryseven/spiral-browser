@@ -10,7 +10,7 @@ remember flag combinations.
 |--------|---------|----------|
 | `spiral-context.sh` | Print the 5-10 files most relevant to a given packet (or session start). The biggest session-pace win — kills the 15-20 minute context re-load that every fresh LLM session pays. | <1s |
 | `spiral-pr.sh` | Pre-flight checks + push + open PR for a packet. Wraps `cargo fmt`, `cargo clippy`, `cargo test --workspace`, the audit scripts, and `gh pr create` so PRs always go out clean. | 1-3 min |
-| `codacy-bot/` | **Spiral-Bot** — CI fix-bot for Codacy. GitHub Actions workflow (`.github/workflows/codacy-bot.yml`) polls Codacy API v3 on a 5-min cron schedule. Calls OpenCode Go (MiMo-V2.5 / DeepSeek V4 Flash) to draft fixes. Commits via `GITHUB_TOKEN`. Runs in CI, not locally. | 1-5 min (CI) |
+| `spiral-bot/` | **Spiral-Bot** — CI fix-bot for SonarQube Cloud. GitHub Actions workflow (`.github/workflows/spiral-bot.yml`) polls SonarQube on a 5-min cron schedule. Calls OpenCode Go (MiMo-V2.5 / DeepSeek V4 Flash) to draft fixes. Commits via `GITHUB_TOKEN`. Runs in CI, not locally. | 1-5 min (CI) |
 
 ## Flags
 

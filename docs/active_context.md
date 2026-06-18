@@ -496,16 +496,17 @@ here so future agents don't reinvent or accidentally claim them.
   cap and unlocks Durable Objects + R2 + cron triggers. We do not
   have a budget figure recorded here; the user owns the billing.
 
-### Spiral-Bot CI fix-bot (registered 2026-06-18)
+### Spiral-Bot CI fix-bot (registered 2026-06-18, switched to SonarQube Cloud 2026-06-18)
 
-- **Purpose:** Drives Codacy to green automatically on PRs. Polls Codacy API v3 on a 5-min cron schedule, reads findings, calls OpenCode Go (MiMo-V2.5 T1 / DeepSeek V4 Flash T2) to draft fixes, commits and pushes via `GITHUB_TOKEN`.
-- **Workflow:** `.github/workflows/codacy-bot.yml`
-- **Code:** `bin/codacy-bot/` (4 source files, 3 test files, 1 prompt template)
+- **Purpose:** Drives SonarQube Cloud to green automatically on PRs. Polls SonarQube Cloud API on a 5-min cron schedule, reads findings, calls OpenCode Go (MiMo-V2.5 T1 / DeepSeek V4 Flash T2) to draft fixes, commits and pushes via `GITHUB_TOKEN`.
+- **Switched from Codacy 2026-06-18:** Codacy's v3 API does not expose commit-level findings programmatically (every endpoint shape returned 404), and the AI Reviewer is gated behind a manual human click (`action_required` status). Replaced with SonarQube Cloud which has a fully documented REST API with bearer-token auth and self-serve free-for-OSS.
+- **Workflow:** `.github/workflows/spiral-bot.yml`
+- **Code:** `bin/spiral-bot/` (4 source files: sonarqube.ts, ai.ts, github.ts, index.ts + 3 test files + 1 prompt template)
 - **Identity:** Commits as `Spiral-Bot`. PR comments prefixed with `## Spiral-Bot:`.
-- **Auth:** `OPENCODE_GO_API_KEY` + `CODACY_API_TOKEN` in repo Settings > Secrets > Actions. `GITHUB_TOKEN` auto-injected.
+- **Auth:** `OPENCODE_GO_API_KEY` + `SONAR_TOKEN` in repo Settings > Secrets > Actions. `GITHUB_TOKEN` auto-injected.
 - **Retry policy:** 3 iterations per issue, 10-min gap. Circuit-breaker opens GitHub Issue on exhaustion. "Having a rest" comment on OpenCode Go cap hit.
 - **Model strategy:** T1 `opencode-go/mimo-v2.5` (default, mechanical fixes), T2 `opencode-go/deepseek-v4-flash` (escalation, complex fixes).
-- **Status:** PR #4 open. Blocked on secret setup (OPENCODE_GO_API_KEY, CODACY_API_TOKEN). After PR #4 merges, bot's first run targets PR #3.
+- **Status:** PR #4 open. Blocked on secret setup (OPENCODE_GO_API_KEY, SONAR_TOKEN). After PR #4 merges, bot's first run targets the next open PR.
 
 ### What's deliberately *not* recorded
 
