@@ -48,7 +48,45 @@ The agent MUST satisfy each gate below; failure to do so is a blocking issue.
 | After a `pub` API change | `just test-with-deps <crate>` | Computes reverse-dep fan-out and runs all impacted crates. |
 | Before claiming complete | `just verify-packet <crate>` | Wraps `fmt + clippy + test + audit-orphan-exports` into one scoped command. |
 | Pre-commit / pre-merge | `./scripts/audit-orphan-exports.sh` AND `./scripts/audit-doc-drift.sh` | Both audits exit 0 on success; exit 1 = blocking. |
-| End of session (PR wanted) | `bin/spiral-pr.sh <packet-id>` | Runs all pre-flight checks, pushes, opens PR. Do not call `gh pr create` manually. |
+| End of session (PR wanted) | `bin/spiral-pr.sh <packet-id>` | Runs all pre-flight checks, pushes, opens PR, polls Codacy, and either enables `gh pr merge --auto` (when Codacy is green) or alerts the human to click the green merge button. Do not call `gh pr create` manually. |
+
+### Codacy merge gate (binding)
+
+Codacy Static Code Analysis is the binding merge gate for every PR opened
+by `bin/spiral-pr.sh`. The agent MUST drive the workflow as follows:
+
+1. **Pre-flight.** Run `cargo fmt --all -- --check`,
+   `cargo clippy --workspace --all-targets -- -D warnings`,
+   `cargo test --workspace`,
+   `./scripts/audit-orphan-exports.sh`, and
+   `./scripts/audit-doc-drift.sh`. Any failure aborts before the PR
+   is pushed.
+2. **Push + open.** Push the branch and open (or update) the PR with
+   the standardised body. Do not invoke `gh pr create` manually.
+3. **Wait for Codacy.** Poll `gh pr checks <branch>` until Codacy's
+   conclusion is `success` or `failure`. The default timeout is 15
+   minutes; configurable via `--codacy-timeout <seconds>`.
+4. **If Codacy passes:** enable auto-merge with
+   `gh pr merge --auto --squash` (requires the repo to allow auto-merge
+   — the script enables it via `gh repo edit --enable-auto-merge`
+   the first time it runs) **AND** post a PR comment with the
+   green-merge-button URL so the human can click the button. The
+   actual click is the human's call per the audit-enforcement
+   model — the agent does not have merge authority on `main`.
+5. **If Codacy fails:** the agent MUST fix the findings on the
+   branch, push the fix, and re-trigger Codacy by re-running
+   `bin/spiral-pr.sh` (or the agent's equivalent). The retry
+   loop continues until Codacy passes or the timeout fires.
+   When Codacy passes, proceed to step 4.
+6. **If the timeout fires with Codacy still failing:** the agent
+   MUST abort, post a PR comment summarising the findings, and
+   surface the situation to the human. The agent MUST NOT
+   force-merge with failing checks.
+
+The agent MUST NOT bypass Codacy by disabling it on the branch,
+skipping the check, or force-merging. The merge gate is the
+single source of truth for "ready to merge" per the methodology
+in [`docs/methodology.md`](docs/methodology.md) §5.
 
 ### Prohibited behaviour
 
@@ -59,6 +97,9 @@ The agent MUST satisfy each gate below; failure to do so is a blocking issue.
   the audit scripts catch wiring and doc-drift regressions that clippy does not.
 - The agent MUST NOT invoke `gh pr create` directly. `bin/spiral-pr.sh` is the
   entry point and runs the pre-flight checks automatically.
+- The agent MUST NOT bypass Codacy. The merge gate is binding.
+  Force-merging with a failing Codacy check is a project-defining
+  failure and MUST be recorded in `docs/failures/`.
 - The agent MUST NOT add a directive that contradicts the rules in
   `.spiral/rules/`. When in doubt, the rule file wins; file a ledger note to
   propose an amendment.
