@@ -119,6 +119,39 @@ documents the absence of `Intl` as a P3–P5 gap.
 For a Phase 2 / M9 base, the minimum viable i18n delivery is rows
 45–47, 50, 51, 64–66, 72–74. Everything else slots in via P5+.
 
+## Packet-to-row mapping (2026-06-18, ADR-0007)
+
+The Phase 2 Steps 2.9–2.12 close the cheap and medium i18n wins per
+[`docs/decisions/0007-i18n-table-stakes-bet.md`](../decisions/0007-i18n-table-stakes-bet.md).
+Rows that are still "not-started" after Steps 2.9–2.12 land are
+flagged below as `deferred-v0.2+`.
+
+| Row | Capability | Packet | Crate | Dep |
+|-----|------------|--------|-------|-----|
+| 45 | `navigator.language` | 2.9.1 | `spiral-vortex` | (none) |
+| 46 | `navigator.languages` (Accept-Language) | 2.9.1 | `spiral-vortex` | (none) |
+| 47 | `<html lang>` / `xml:lang` | 2.9.2 | `spiral-dom` + `spiral-fmt` | (none) |
+| 50 | `Intl.NumberFormat` | `deferred-v0.2+` (Phase 5) | — | `icu` crate (M61+) |
+| 51 | `Intl.DateTimeFormat` | `deferred-v0.2+` (Phase 5) | — | `icu` crate |
+| 64 | Bidi (UAX #9) | 2.10.1 | `spiral-gyre` | `unicode-bidi` |
+| 65 | CSS `direction`, `unicode-bidi`, `<bdi>`, `<bdo>` | 2.10.1 | `spiral-gyre` | `unicode-bidi` |
+| 66 | `dir="auto"` heuristic | 2.10.1 | `spiral-gyre` | `unicode-bidi` + `unicode-script` (via 2.11.2) |
+| 68 | Line breaking (UAX #14), `line-break`, `word-break`, `overflow-wrap`, `hyphens` | 2.10.2 | `spiral-gyre` | `linebreak` |
+| 69 | East Asian Width (UAX #11) | 2.10.4 | `spiral-gyre` | `unicode-width` |
+| 71 | Complex text layout (Indic / Arabic / Hebrew / Thai / Khmer shaping) | 2.11.1 + 2.11.2 + 2.11.3 | `spiral-gyre` | `rustybuzz` (behind `harfbuzz` feature flag) + `unicode-script` |
+| 72 | Unicode normalisation (NFC, NFD, NFKC, NFKD) | 2.10.3 | `spiral-vortex` | `unicode-normalization` |
+| 73 | IDNA 2008 + UTS #46 for URL hostnames | 2.12.1 | `spiral-fmt` or `spiral-net` (TBD by 2.7.1) | `idna` |
+| 74 | Character encoding detection (BOM, `<meta>`, `Content-Type`) | 2.9.3 | `spiral-fmt` | `encoding_rs` |
+| 75 | Default output UTF-8 / `TextEncoder` / `TextDecoder` | 2.9.4 | `spiral-vortex` | (none — uses Vortex `String` UTF-8) |
+| 48, 49, 52–63, 76–90 | All other i18n rows | `deferred-v0.2+` (Phase 5+) | — | `icu` crate family |
+
+After Steps 2.9–2.12 ship, the matrix goes from "46 of 46 not-started"
+to "12 not-started, all Phase 5+ work behind ICU integration." The
+"deferred-v0.2+" rows are documented here for traceability; their
+packets will be added to a future Phase 5 sub-Phase when the architectural
+bet is proven.
+45–47, 50, 51, 64–66, 72–74. Everything else slots in via P5+.
+
 ## Open questions for the user
 
 1. **Intl namespace shape.** Is the plan a single `Intl` global object

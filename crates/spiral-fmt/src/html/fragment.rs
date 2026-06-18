@@ -81,10 +81,10 @@ pub(crate) fn parse(
         let token = tokeniser.next_token()?;
         if matches!(token, Token::Eof) {
             // Feed the EOF so the builder finalises state.
-            builder.feed(&token, &tokeniser)?;
+            builder.feed(&token, &mut tokeniser)?;
             break;
         }
-        builder.feed(&token, &tokeniser)?;
+        builder.feed(&token, &mut tokeniser)?;
     }
 
     let ctx_id = builder.fragment_context_id();

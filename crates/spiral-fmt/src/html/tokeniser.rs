@@ -1478,7 +1478,7 @@ pub(crate) fn tokenise_into(source: &str, builder: &mut TreeBuilder) -> Result<(
                 tokeniser.exit_raw_mode();
             }
         }
-        builder.feed(&token, &tokeniser)?;
+        builder.feed(&token, &mut tokeniser)?;
         if is_eof {
             return Ok(());
         }
@@ -1504,11 +1504,18 @@ fn raw_mode_for_start_tag(name: &str) -> Option<(Mode, &'static str)> {
         "iframe" => Some((Mode::Rawtext, "iframe")),
         "noembed" => Some((Mode::Rawtext, "noembed")),
         "noframes" => Some((Mode::Rawtext, "noframes")),
-        // `<noscript>` is rawtext outside of `<head>`; inside
-        // `<head>` it is a metadata element. The M4.4.1 tree
-        // builder only uses noscript in the head list, so
-        // treating it as rawtext here is the safer default.
-        "noscript" => Some((Mode::Rawtext, "noscript")),
+        // `<noscript>` is **not** in this list. Per WHATWG HTML
+        // §4.6.7 + §13, the tokeniser's behaviour for
+        // `<noscript>` depends on the tree-builder's insertion
+        // mode (and the scripting flag): inside `<head>` it is
+        // a metadata element with its contents parsed normally;
+        // outside `<head>` it switches to rawtext. The tokeniser
+        // has no view of the insertion mode, so the tree
+        // builder drives the rawtext switch via
+        // `Tokeniser::enter_raw_mode` and `exit_raw_mode`
+        // (called from `TreeBuilder::handle_start_tag` and
+        // `handle_end_tag` for the `InBody` arm).
+        "noscript" => None,
         _ => None,
     }
 }

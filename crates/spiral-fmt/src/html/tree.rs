@@ -25,6 +25,7 @@
 
 use crate::cursor::Position;
 use crate::error::FormatError;
+use crate::html::tokeniser::Mode;
 use crate::token::{DoctypeMode, Token};
 
 /// Insertion mode the tree builder is currently in. Per WHATWG
@@ -41,6 +42,14 @@ pub(crate) enum InsertionMode {
     BeforeHead,
     /// Inside `<head>`; head-only tags are handled here.
     InHead,
+    /// Packet 2.1.3 — inside `<head><noscript>`. Per WHATWG
+    /// §4.6.7 with scripting off, the children of `<noscript>`
+    /// in `<head>` are parsed as regular HTML, but the
+    /// open-elements stack still has `<noscript>` on top of
+    /// `<head>`. We mirror the `InBody` rules for this mode
+    /// (so `<p>`, `<a>`, etc. become children of `<noscript>`)
+    /// and restore `InHead` on the matching `</noscript>`.
+    InHeadNoscript,
     /// Between `<head>` and `<body>`.
     AfterHead,
     /// Inside `<body>`; the main mode for body content.
@@ -250,7 +259,7 @@ impl TreeBuilder {
     pub(crate) fn feed(
         &mut self,
         token: &Token,
-        tokeniser: &super::tokeniser::Tokeniser<'_>,
+        tokeniser: &mut super::tokeniser::Tokeniser<'_>,
     ) -> Result<(), FormatError> {
         match token {
             Token::Eof => {
@@ -346,7 +355,7 @@ impl TreeBuilder {
         name: &str,
         attributes: &Vec<crate::token::Attribute>,
         position: Position,
-        tokeniser: &super::tokeniser::Tokeniser<'_>,
+        tokeniser: &mut super::tokeniser::Tokeniser<'_>,
     ) -> Result<(), FormatError> {
         let lower = name.to_ascii_lowercase();
         match self.mode {
@@ -404,6 +413,24 @@ impl TreeBuilder {
                         return self.handle_start_tag(name, attributes, position, tokeniser);
                     }
                     _ => {
+                        // Packet 2.1.3: if the stack top is a
+                        // `<noscript>` (i.e. we are inside
+                        // `<head><noscript>...</noscript>`), keep
+                        // head+noscript on the stack and switch
+                        // to the `InHeadNoscript` pseudo-mode.
+                        // Its arms mirror the `InBody` rules, so
+                        // children parse as regular HTML but
+                        // become children of `<noscript>`. On
+                        // `</noscript>` we restore `InHead`.
+                        if self
+                            .stack
+                            .last()
+                            .map(|&id| self.dom.get_tag(id) == Some("noscript"))
+                            .unwrap_or(false)
+                        {
+                            self.mode = InsertionMode::InHeadNoscript;
+                            return self.handle_start_tag(name, attributes, position, tokeniser);
+                        }
                         // Anything else: close head, transition to body.
                         self.pop_until(|tag| tag == "head");
                         self.create_body()?;
@@ -430,7 +457,7 @@ impl TreeBuilder {
                 self.mode = InsertionMode::InBody;
                 return self.handle_start_tag(name, attributes, position, tokeniser);
             }
-            InsertionMode::InBody => {
+            InsertionMode::InBody | InsertionMode::InHeadNoscript => {
                 if lower == "button" {
                     if self.node_in_scope_by_tag("button") {
                         self.handle_end_tag("button", position, tokeniser)?;
@@ -439,6 +466,24 @@ impl TreeBuilder {
                     let _id = self.create_element("button")?;
                     self.apply_attributes_to_current(attributes, position, tokeniser)?;
                     self.active_formatting_elements.push(ActiveElement::Marker);
+                    return Ok(());
+                }
+
+                // Packet 2.1.3: `<noscript>` in body. Per WHATWG
+                // §4.6.7 with the scripting flag on (Spiral v0.1),
+                // a `<noscript>` start tag in body switches the
+                // tokeniser to rawtext mode (RAWTEXT, end-tag
+                // "noscript") so its children are taken as opaque
+                // text rather than parsed as HTML. The tokeniser
+                // itself does not know about the insertion mode
+                // (see `is_rawtext_element`), so the tree builder
+                // drives the switch here.
+                if lower == "noscript" {
+                    self.reconstruct_active_formatting_elements()?;
+                    let _id = self.create_element("noscript")?;
+                    self.apply_attributes_to_current(attributes, position, tokeniser)?;
+                    tokeniser.enter_raw_mode(Mode::Rawtext, "noscript");
+                    self.rawtext_depth += 1;
                     return Ok(());
                 }
 
@@ -684,7 +729,7 @@ impl TreeBuilder {
         &mut self,
         name: &str,
         _position: Position,
-        _tokeniser: &super::tokeniser::Tokeniser<'_>,
+        tokeniser: &mut super::tokeniser::Tokeniser<'_>,
     ) -> Result<(), FormatError> {
         let lower = name.to_ascii_lowercase();
         match self.mode {
@@ -700,7 +745,7 @@ impl TreeBuilder {
                 if lower == "head" || lower == "body" || lower == "html" || lower == "br" {
                     self.create_head()?;
                     self.mode = InsertionMode::InHead;
-                    return self.handle_end_tag(name, _position, _tokeniser);
+                    return self.handle_end_tag(name, _position, tokeniser);
                 }
                 Ok(())
             }
@@ -729,7 +774,7 @@ impl TreeBuilder {
                         self.stack.pop();
                     }
                     self.mode = InsertionMode::AfterHead;
-                    return self.handle_end_tag(name, _position, _tokeniser);
+                    return self.handle_end_tag(name, _position, tokeniser);
                 }
                 if is_rawtext_element(&lower) {
                     self.pop_until(|tag| tag == lower);
@@ -749,21 +794,62 @@ impl TreeBuilder {
                 if lower == "body" || lower == "html" || lower == "br" {
                     self.create_body()?;
                     self.mode = InsertionMode::InBody;
-                    return self.handle_end_tag(name, _position, _tokeniser);
+                    return self.handle_end_tag(name, _position, tokeniser);
                 }
                 if lower == "head" {
                     return Ok(());
                 }
                 self.mode = InsertionMode::InBody;
-                self.handle_end_tag(name, _position, _tokeniser)
+                self.handle_end_tag(name, _position, tokeniser)
             }
-            InsertionMode::InBody => {
+            InsertionMode::InBody | InsertionMode::InHeadNoscript => {
                 if lower == "body" {
                     self.mode = InsertionMode::AfterBody;
                     return Ok(());
                 }
                 if lower == "html" {
                     self.mode = InsertionMode::AfterBody;
+                    return Ok(());
+                }
+                // Packet 2.1.3: `</noscript>` arm — handles
+                // both `InBody` (the noscript element was opened
+                // with rawtext, so close means exit rawtext) and
+                // `InHeadNoscript` (the noscript element was
+                // opened in `<head>`, so close means restore
+                // `InHead` mode). The two cases diverge only on
+                // the tokeniser / mode handling; the stack pop
+                // is the same.
+                if lower == "noscript" {
+                    if self
+                        .stack
+                        .iter()
+                        .rev()
+                        .any(|&id| self.dom.get_tag(id) == Some("noscript"))
+                    {
+                        self.pop_until(|tag| tag == "noscript");
+                        if self
+                            .stack
+                            .last()
+                            .map(|&id| self.dom.get_tag(id) == Some("noscript"))
+                            .unwrap_or(false)
+                        {
+                            self.stack.pop();
+                        }
+                        match self.mode {
+                            InsertionMode::InBody => {
+                                if self.rawtext_depth > 0 {
+                                    self.rawtext_depth -= 1;
+                                    tokeniser.exit_raw_mode();
+                                }
+                            }
+                            InsertionMode::InHeadNoscript => {
+                                // Restore `InHead` so the rest
+                                // of `<head>` is parsed correctly.
+                                self.mode = InsertionMode::InHead;
+                            }
+                            _ => {}
+                        }
+                    }
                     return Ok(());
                 }
                 if lower == "button" {
@@ -834,7 +920,7 @@ impl TreeBuilder {
                 {
                     self.pop_until(|tag| tag == "tbody" || tag == "thead" || tag == "tfoot");
                     self.mode = InsertionMode::InTable;
-                    return self.handle_end_tag(name, _position, _tokeniser);
+                    return self.handle_end_tag(name, _position, tokeniser);
                 }
                 Ok(())
             }
@@ -852,7 +938,7 @@ impl TreeBuilder {
                     if self.stack_contains("tr") {
                         self.pop_until(|tag| tag == "tr");
                         self.mode = InsertionMode::InTableBody;
-                        return self.handle_end_tag(name, _position, _tokeniser);
+                        return self.handle_end_tag(name, _position, tokeniser);
                     }
                 }
                 Ok(())
@@ -872,7 +958,7 @@ impl TreeBuilder {
                     if self.stack_contains("td") || self.stack_contains("th") {
                         self.pop_until(|tag| tag == "td" || tag == "th");
                         self.mode = InsertionMode::InRow;
-                        return self.handle_end_tag(name, _position, _tokeniser);
+                        return self.handle_end_tag(name, _position, tokeniser);
                     }
                 }
                 Ok(())
@@ -946,6 +1032,20 @@ impl TreeBuilder {
                 if text.chars().all(|c| c.is_ascii_whitespace()) {
                     return self.append_text_to_current(text, tokeniser);
                 }
+                // Packet 2.1.3: if the stack top is `<noscript>`,
+                // keep head+noscript on the stack and switch to
+                // `InHeadNoscript` for the duration of the
+                // noscript content. This is the same dispatch as
+                // the start-tag `_ =>` arm above.
+                if self
+                    .stack
+                    .last()
+                    .map(|&id| self.dom.get_tag(id) == Some("noscript"))
+                    .unwrap_or(false)
+                {
+                    self.mode = InsertionMode::InHeadNoscript;
+                    return self.handle_character(text, tokeniser);
+                }
                 self.pop_until(|tag| tag == "head");
                 if self
                     .stack
@@ -958,6 +1058,19 @@ impl TreeBuilder {
                 self.create_body()?;
                 self.mode = InsertionMode::InBody;
                 return self.handle_character(text, tokeniser);
+            }
+            InsertionMode::InHeadNoscript => {
+                // Packet 2.1.3: text inside
+                // `<head><noscript>...</noscript>` is a child of
+                // `<noscript>` — same handling as `InBody` text.
+                // This arm is a near-clone of the `InBody` arm
+                // below because the `InBody` arm has logic that
+                // mutates the mode (e.g. reconstructs AFE,
+                // transitions to `InTable`). We avoid that
+                // mutation by replicating the simple text path
+                // here. The `InHeadNoscript` mode persists until
+                // `</noscript>`.
+                self.append_text_to_current(text, tokeniser)
             }
             InsertionMode::AfterHead => {
                 if text.chars().all(|c| c.is_ascii_whitespace()) {
@@ -1718,20 +1831,16 @@ impl TreeBuilder {
 /// Per the WHATWG spec this is the union of the "raw text" and
 /// "script data" sets, restricted to the elements that are not
 /// also foreign content. `<plaintext>` is omitted from the
-/// M4.4.1 minimum because it has no end tag.
+/// M4.4.1 minimum because it has no end tag. `<noscript>` is
+/// also omitted because its tokeniser mode is insertion-mode
+/// dependent: in `<head>` it is a metadata element; in `<body>`
+/// the tree builder drives the rawtext switch via
+/// `Tokeniser::enter_raw_mode` / `exit_raw_mode` (packet 2.1.3).
 fn is_rawtext_element(tag: &str) -> bool {
     let lower = tag.to_ascii_lowercase();
     matches!(
         lower.as_str(),
-        "script"
-            | "style"
-            | "title"
-            | "textarea"
-            | "xmp"
-            | "iframe"
-            | "noembed"
-            | "noframes"
-            | "noscript"
+        "script" | "style" | "title" | "textarea" | "xmp" | "iframe" | "noembed" | "noframes"
     )
 }
 

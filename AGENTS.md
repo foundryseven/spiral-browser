@@ -63,7 +63,7 @@ The agent MUST satisfy each gate below; failure to do so is a blocking issue.
 
 | Field | Value |
 |-------|-------|
-| **Phase** | Phase 1 — Engines Foundation 🔄 IN FLIGHT (Step 1.6 Vortex GC rewrite; packets 1.6.1-1.6.5 SHIPPED, packets 1.6.6-1.6.8 retired to Step 2.8; packets 2.8.1 SHIPPED, 2.8.2 SHIPPED, 2.8.3 SHIPPED; Packet 2.1.1 SHIPPED, Packet 2.1.2 SHIPPED) |
+| **Phase** | Phase 1 — Engines Foundation 🔄 IN FLIGHT (Step 1.6 Vortex GC rewrite; packets 1.6.1-1.6.5 SHIPPED, packets 1.6.6-1.6.8 retired to Step 2.8; packets 2.8.1 SHIPPED, 2.8.2 SHIPPED, 2.8.3 SHIPPED; Packet 2.1.1 SHIPPED, Packet 2.1.2 SHIPPED, Packet 2.1.3 SHIPPED); **Phase 2 Steps 2.9–2.12 added 2026-06-18 (table-stakes i18n, ADR-0007)** |
 | **Phase 1.5 SSOT Restructure** | ✅ SHIPPED at `v0.0.0-bootstrap` (2026-06-16) |
 | **Active state** | [`docs/active_context.md`](docs/active_context.md) (live pointer) |
 | **Status SSOT** | [`docs/implementation_tracker.md`](docs/implementation_tracker.md) (Group → Phase → Step → Packet) |

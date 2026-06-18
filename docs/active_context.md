@@ -1,9 +1,9 @@
 # Active Context
 
-**Last updated:** 2026-06-17
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · Doc-drift prevention and wiring audit fully green (0 findings)
+**Last updated:** 2026-06-18
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅, Packet 2.1.3 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · **Steps 2.9–2.12 ADDED (table-stakes i18n, ADR-0007)** · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
-*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packet 2.1.1 ✅)*
+*(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅, Packet 2.1.3 ✅)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
 **Spec:** [`specs/GAP_ANALYSIS.md`](../specs/GAP_ANALYSIS.md) is the **spec** (status moved to the implementation tracker per the SSOT restructure of 2026-06-16).
 **Iteration plans:** [`docs/plans/iteration-options.md`](plans/iteration-options.md) (strategy only; scheduling in the tracker)
@@ -129,7 +129,7 @@ The top-20 competitive gaps identified by the research are foundational P2 work 
 **Step 2.1 — Fragment parsing (Phase 2):**
 - [x] **Packet 2.1.1** — Fragment parsing algorithm (WHATWG HTML §12.4). Required for innerHTML, insertAdjacentHTML, template content. ✅ SHIPPED 2026-06-17.
 - [x] **Packet 2.1.2** — Quirk mode classifier (WHATWG HTML §12.1). Required for `<table>` in quirks-mode and CSS box-model differences. ✅ SHIPPED 2026-06-17.
-- [ ] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7).
+- [x] **Packet 2.1.3** — `<noscript>` element (WHATWG HTML §4.6.7). ✅ SHIPPED 2026-06-18.
 - [ ] **Packet 2.1.4** — `<template>` content document-fragment construction.
 - [ ] **Packet 2.1.7** — `URL` + `URLSearchParams` (WHATWG URL §4).
 
@@ -349,12 +349,36 @@ Step 2.8 (AAA + AFE + foster parenting) shipped 2026-06-17 — see the
 ledger entry. Packet 2.1.1 (fragment parsing algorithm, WHATWG
 HTML §12.4) shipped 2026-06-17 — see the same ledger. Packet 2.1.2
 (quirk mode classifier, WHATWG HTML §12.1) shipped 2026-06-17 —
-see the latest ledger entry. **Next up: Packet 2.1.3 (`<noscript>`
-element, WHATWG HTML §4.6.7)** followed by Packet 2.1.4 (`<template>`
-content document-fragment construction, WHATWG HTML §13.2.6.4).
-The template packet depends on the quirks-mode classifier (the
-template element's contents parse in the mode of the containing
-document).
+see the same ledger. Packet 2.1.3 (`<noscript>` element, WHATWG
+HTML §4.6.7) shipped 2026-06-18 — see the latest ledger entry.
+**Next up: Packet 2.1.4 (`<template>` content document-fragment
+construction, WHATWG HTML §13.2.6.4)**. The template packet
+depends on the quirks-mode classifier (the template element's
+contents parse in the mode of the containing document).
+
+### New — Steps 2.9–2.12 (table-stakes i18n, 2026-06-18)
+
+Per ADR-0007, four new Steps slot in after the Phase 2 fragment
+parsing work and slot *before* Phase 3 Networking. They close the
+cheapest i18n gaps on the `docs/research/09-i18n-engine.md` matrix
+(rows 45-47, 64-66, 68-72, 74-75) using existing Rust crates
+(`encoding_rs`, `unicode-bidi`, `unicode-normalization`,
+`unicode-width`, `linebreak`, `rustybuzz`, `idna`).
+
+- **Step 2.9 — Locale detection + character encoding** (4 packets, 1-2 weeks each): `navigator.language` IDL, `<html lang>` reflection, byte-decoding via BOM/meta/Content-Type, `TextEncoder`/`TextDecoder`.
+- **Step 2.10 — Text infrastructure** (4 packets, 2-3 weeks each): UAX #9 bidi, UAX #14 line break, UAX #15 normalisation, UAX #11 East Asian Width.
+- **Step 2.11 — Complex text layout** (3 packets, 4-12 weeks): `rustybuzz` shaper, ICU script detection, script-aware font fallback.
+- **Step 2.12 — Internationalised hostnames** (1 packet, 1-2 weeks): `idna` for non-ASCII URL hosts.
+
+WPT budget for Steps 2.9–2.12 is the existing Phase 2 per-packet WPT
+allocation: one WPT sub-suite per packet via `./justfile wpt-fmt`,
+`./justfile wpt-vortex`, and `./justfile wpt-gyre`. The smoke test
+under `crates/spiral-browser/tests/i18n_smoke.rs` is the
+end-to-end surface (a Hebrew+Bengali+Latin page in a 60 px box).
+
+**Do not pull Steps 2.9–2.12 forward** before Step 2.1.7 (`URL` +
+`URLSearchParams`) ships — Packet 2.12.1 owns the IDNA host parser
+and depends on the `URL` parser landing first.
 
 ## Completed (packets shipped)
 
