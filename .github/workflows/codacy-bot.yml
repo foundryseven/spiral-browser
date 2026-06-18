@@ -1,0 +1,40 @@
+name: Spiral-Bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to process (leave empty for all open PRs)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+  CODACY_API_TOKEN: ${{ secrets.CODACY_API_TOKEN }}
+  BOT_NAME: "Spiral-Bot"
+  MAX_RETRIES: 3
+  RETRY_INTERVAL_MS: "600000"
+
+jobs:
+  codacy-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install
+        working-directory: bin/codacy-bot
+      - name: Run Spiral-Bot
+        run: bun run bin/codacy-bot/index.ts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}

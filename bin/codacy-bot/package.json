@@ -1,0 +1,16 @@
+{
+  "name": "spiral-codacy-bot",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "check": "bun run index.ts",
+    "typecheck": "bun x tsc --noEmit"
+  },
+  "dependencies": {
+    "bun-types": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
