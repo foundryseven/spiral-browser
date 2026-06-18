@@ -1,7 +1,7 @@
 # Active Context
 
 **Last updated:** 2026-06-18
-**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅, Packet 2.1.3 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · **Methodology + failure log SHIPPED** (chunk 11 prior-art survey, `docs/methodology.md`, `docs/failures/`) · Doc-drift prevention and wiring audit fully green (0 findings)
+**Status:** 🟢 Phase 1 Step 1.6 SHIPPED (packets 1.6.1–1.6.5) · Phase 2 Step 2.8 SHIPPED (packets 2.8.1 ✅, 2.8.2 ✅, 2.8.3 ✅) · Step 2.1 in flight — Packet 2.1.1 ✅, Packet 2.1.2 ✅, Packet 2.1.3 ✅ · **Workflow Refactor R1–R6 SHIPPED** + **R7 CI gap-fill SHIPPED** (11-job CI pipeline) · **Methodology + failure log SHIPPED** (chunk 11 prior-art survey, `docs/methodology.md`, `docs/failures/`) · **Marketing site scaffold SHIPPED** (`foundryseven/spiralbrowser.com`, Astro + Tailwind, 4 locales, Cloudflare Pages target wired up) · Doc-drift prevention and wiring audit fully green (0 findings)
 Current phase: Phase 2 — Spec Compliance 🔄 IN FLIGHT
 *(Phase 1 Steps 1.1–1.6 done; Step 2.8 SHIPPED; Step 2.1 in flight — Packets 2.1.1 ✅, 2.1.2 ✅, 2.1.3 ✅)*
 **Phase state pointer:** [`docs/implementation_tracker.md`](../docs/implementation_tracker.md) (Group → Phase → Step → Packet)
@@ -445,11 +445,15 @@ here so future agents don't reinvent or accidentally claim them.
 
 ### Domain
 
-- **`spiralbrowser.com`** — registered. Reserved for the official
-  project site, update-check endpoint, and download hosting once
-  binaries exist. Do not park unrelated content on this domain.
-  No DNS records or hosting target are wired up in this repo today;
-  the asset registration is a note, not a deployment.
+- **`spiralbrowser.com`** — registered. CNAME file pointing at the
+  Cloudflare Pages deployment of the marketing site. Source lives
+  in `foundryseven/spiralbrowser.com` (separate repository, AGPL-3.0).
+  Reserved for the official project site, update-check endpoint,
+  and download hosting once binaries exist. Do not park unrelated
+  content on this domain. The asset is wired up — the marketing
+  site is scaffolded, the production deploy runs through Cloudflare
+  Pages on push to `main` of the site repo. DNS is configured to
+  point at the Cloudflare Pages target.
 
 ### Cloudflare account (paid Workers plan)
 
