@@ -10,31 +10,34 @@ on:
         required: false
         type: string
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
+permissions: {}
 
 env:
-  OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
-  CODACY_API_TOKEN: ${{ secrets.CODACY_API_TOKEN }}
-  BOT_NAME: "Spiral-Bot"
-  MAX_RETRIES: 3
+  MAX_RETRIES: "3"
   RETRY_INTERVAL_MS: "600000"
+  BOT_NAME: "Spiral-Bot"
 
 jobs:
   codacy-fix:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
+      - name: Checkout repo
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@1350d2c746b942a6c2b68598fb98b1ba5b5c592f # v2.0.0
         with:
-          bun-version: latest
+          bun-version: 1.1.42
       - name: Install dependencies
         run: bun install
         working-directory: bin/codacy-bot
       - name: Run Spiral-Bot
         run: bun run bin/codacy-bot/index.ts
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OPENCODE_GO_API_KEY: ${{ secrets.OPENCODE_GO_API_KEY }}
+          CODACY_API_TOKEN: ${{ secrets.CODACY_API_TOKEN }}
           PR_NUMBER: ${{ inputs.pr_number }}
