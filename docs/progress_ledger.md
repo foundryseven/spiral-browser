@@ -4778,3 +4778,23 @@ identified. Key findings:
   - `docs/active_context.md` — status line + "Next up" (next is packet 2.1.4, `<template>` content document fragment construction, per the existing dependency note).
 - **Status:** Implementation complete, all audits green, ready for PR via `bin/spiral-pr.sh 2.1.3`. No commits made (per `AGENTS.md` "Only commit, amend, push, or create PRs when explicitly requested" — the user can invoke `bin/spiral-pr.sh 2.1.3` to land the change).
 
+---
+
+## 2026-06-18 — Spiral-Bot CI fix-bot (Codacy merge gate automation)
+
+- **What:** Built Spiral-Bot, a GitHub Actions-based CI fix-bot that drives Codacy to green automatically. The bot polls Codacy API v3 on a 5-min cron schedule, reads findings, calls OpenCode Go (MiMo-V2.5 for T1, DeepSeek V4 Flash for T2) to draft fixes, and commits and pushes via `GITHUB_TOKEN`. Bounded retry: 3 iterations, 10-min gap. Circuit-breaker opens a GitHub Issue on exhaustion. "Having a rest" message on OpenCode Go cap hit.
+- **Wiring & Integration:**
+  - **Files affected:** `.github/workflows/codacy-bot.yml` (new), `bin/codacy-bot/index.ts` (new), `bin/codacy-bot/codacy.ts` (new), `bin/codacy-bot/ai.ts` (new), `bin/codacy-bot/github.ts` (new), `bin/codacy-bot/prompts/codacy-fix.md` (new), `bin/codacy-bot/package.json` (new), `bin/codacy-bot/.gitignore` (new), `bin/codacy-bot/__tests__/codacy.test.ts` (new), `bin/codacy-bot/__tests__/ai.test.ts` (new), `bin/codacy-bot/__tests__/github.test.ts` (new).
+  - **Call sites:** `bin/codacy-bot/index.ts` (orchestrator entry), `bin/codacy-bot/codacy.ts` (Codacy API v3 client), `bin/codacy-bot/ai.ts` (OpenCode Go client at `https://opencode.ai/zen/go/v1/chat/completions`), `bin/codacy-bot/github.ts` (GITHUB_TOKEN-based Contents API commits + Issues API comments).
+  - **Test coverage:** 14 tests across 3 test files. `classifyIssue` routing (5 tests), `applyDiff` (7 tests: single-hunk, multi-hunk, additions, replacements, offset, trailing content), AI module smoke (2 tests). All pass.
+  - **End-to-end surface:** GitHub Actions cron (every 5 min) triggers the workflow. Bot lists open PRs, fetches Codacy issues, applies fixes, commits via Contents API. PR #3 is the first real exercise.
+- **Tests:** `bun test` in `bin/codacy-bot/` — 14 pass, 0 fail.
+- **SSOT updates:**
+  - `docs/progress_ledger.md` — this entry.
+  - `docs/active_context.md` — Spiral-Bot added to infrastructure notes.
+- **Status:** PR #4 open at https://github.com/foundryseven/spiral-browser/pull/4. Blocked on:
+  1. `OPENCODE_GO_API_KEY` secret (requires separate OpenCode Go workspace creation).
+  2. `CODACY_API_TOKEN` secret (requires Codacy dashboard token generation).
+  3. PR #4 merge (the workflow file must be on main for the cron to trigger).
+  After merge + secret setup, the bot's first run will target PR #3.
+

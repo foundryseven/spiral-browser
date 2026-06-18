@@ -36,7 +36,7 @@ The agent MUST satisfy each gate below; failure to do so is a blocking issue.
 | After a `pub` API change | `just test-with-deps <crate>` | Computes reverse-dep fan-out and runs all impacted crates. |
 | Before claiming complete | `just verify-packet <crate>` | Wraps `fmt + clippy + test + audit-orphan-exports` into one scoped command. |
 | Pre-commit / pre-merge | `./scripts/audit-orphan-exports.sh` AND `./scripts/audit-doc-drift.sh` | Both audits exit 0 on success; exit 1 = blocking. |
-| End of session (PR wanted) | `bin/spiral-pr.sh <packet-id>` | Runs all pre-flight checks, pushes, opens PR. Do not call `gh pr create` manually. |
+| End of session (PR wanted) | `bin/spiral-pr.sh <packet-id>` | Runs all pre-flight checks, pushes, opens PR. Do not call `gh pr create` manually. Codacy merge gate is enforced by **Spiral-Bot** (`.github/workflows/codacy-bot.yml`) — the bot auto-fixes Codacy findings on PRs. See `docs/active_context.md` for Spiral-Bot details. |
 
 ### Prohibited behaviour
 
@@ -47,6 +47,9 @@ The agent MUST satisfy each gate below; failure to do so is a blocking issue.
   the audit scripts catch wiring and doc-drift regressions that clippy does not.
 - The agent MUST NOT invoke `gh pr create` directly. `bin/spiral-pr.sh` is the
   entry point and runs the pre-flight checks automatically.
+- The agent MUST NOT bypass Codacy. Spiral-Bot (`.github/workflows/codacy-bot.yml`)
+  drives Codacy to green automatically on PRs. If Spiral-Bot is blocked (missing
+  secrets, OpenCode Go cap), the agent MUST surface the situation to the human.
 - The agent MUST NOT add a directive that contradicts the rules in
   `.spiral/rules/`. When in doubt, the rule file wins; file a ledger note to
   propose an amendment.
